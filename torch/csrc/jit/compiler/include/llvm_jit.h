@@ -1,5 +1,4 @@
-#ifndef NNC_LIB_LLVM_JIT_H_
-#define NNC_LIB_LLVM_JIT_H_
+#pragma once
 
 #include <algorithm>
 #include <memory>
@@ -95,6 +94,4 @@ class PytorchLLVMJIT {
 };
 
 }  // end namespace orc
-}  // end namespace llvm
-
-#endif  // NNC_LIB_LLVM_JIT_H_
+} // end namespace llvm
