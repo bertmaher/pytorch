@@ -8,6 +8,8 @@ class Add;
 class Sub;
 class Mul;
 class Div;
+class Max;
+class Min;
 class IntImm;
 class FloatImm;
 class Cast;
@@ -26,6 +28,8 @@ class IRVisitor {
   virtual void visit(const Sub* v);
   virtual void visit(const Mul* v);
   virtual void visit(const Div* v);
+  virtual void visit(const Max* v);
+  virtual void visit(const Min* v);
   virtual void visit(const IntImm* v);
   virtual void visit(const FloatImm* v);
   virtual void visit(const Cast* v);

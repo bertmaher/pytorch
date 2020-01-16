@@ -140,9 +140,15 @@ class SimpleIREvaluator : public IRVisitor {
   void visit(const Div* v) override {
     visit_binary_op(v);
   }
+  void visit(const Max* v) override {
+    visit_binary_op(v, v->propagate_nans());
+  }
+  void visit(const Min* v) override {
+    visit_binary_op(v, v->propagate_nans());
+  }
 
   template <typename T>
-  Value binary_op(const Value& lhs, const Value& rhs, IRNodeType op_type) {
+  Value binary_op(const Value& lhs, const Value& rhs, IRNodeType op_type, bool option = false) {
     std::vector<T> lhs_v = lhs.as_vec<T>();
     std::vector<T> rhs_v = rhs.as_vec<T>();
     std::vector<T> result_v(lhs_v.size());
@@ -160,6 +166,28 @@ class SimpleIREvaluator : public IRVisitor {
         case IRNodeType::kDiv:
           result_v[i] = lhs_v[i] / rhs_v[i];
           break;
+        case IRNodeType::kMax:
+          result_v[i] = fmax(lhs_v[i], rhs_v[i]);
+          if (option) {
+            // Propagate NaNs
+            if (isnan(lhs_v[i])) {
+              result_v[i] = lhs_v[i];
+            } else if (isnan(rhs_v[i])) {
+              result_v[i] = rhs_v[i];
+            }
+          }
+          break;
+        case IRNodeType::kMin:
+          result_v[i] = fmin(lhs_v[i], rhs_v[i]);
+          if (option) {
+            // Propagate NaNs
+            if (isnan(lhs_v[i])) {
+              result_v[i] = lhs_v[i];
+            } else if (isnan(rhs_v[i])) {
+              result_v[i] = rhs_v[i];
+            }
+          }
+          break;
         default:
           // TODO: change to a proper error report
           throw std::runtime_error("invalid operator type");
@@ -169,7 +197,7 @@ class SimpleIREvaluator : public IRVisitor {
   }
 
   template <typename Op>
-  void visit_binary_op(const BinaryOpNode<Op>* v) {
+  void visit_binary_op(const BinaryOpNode<Op>* v, bool option = false) {
     v->lhs().accept(this);
     Value lhs_v = value_;
     v->rhs().accept(this);

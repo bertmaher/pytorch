@@ -182,6 +182,56 @@ void LLVMCodeGen::visit(const Div* v) {
   }
 }
 
+void LLVMCodeGen::visit(const Max* v) {
+  v->lhs().accept(this);
+  auto lhs = this->value_;
+  v->rhs().accept(this);
+  auto rhs = this->value_;
+
+  if (v->dtype() == kInt32) {
+    auto icmp = irb_.CreateICmpSGT(lhs, rhs);
+    value_ = irb_.CreateSelect(icmp, lhs, rhs);
+    return;
+  }
+
+  auto fmax = irb_.CreateBinaryIntrinsic(llvm::Intrinsic::maxnum, lhs, rhs);
+
+  if (!v->propagate_nans()) {
+    value_ = fmax;
+    return;
+  }
+
+  auto fcmp1 = irb_.CreateFCmp(llvm::FCmpInst::FCMP_UNO, lhs, lhs);
+  auto fcmp2 = irb_.CreateFCmp(llvm::FCmpInst::FCMP_UNO, rhs, rhs);
+  value_ = irb_.CreateSelect(fcmp1, lhs, fmax);
+  value_ = irb_.CreateSelect(fcmp2, rhs, value_);
+}
+
+void LLVMCodeGen::visit(const Min* v) {
+  v->lhs().accept(this);
+  auto lhs = this->value_;
+  v->rhs().accept(this);
+  auto rhs = this->value_;
+
+  if (v->dtype() == kInt32) {
+    auto icmp = irb_.CreateICmpSLT(lhs, rhs);
+    value_ = irb_.CreateSelect(icmp, lhs, rhs);
+    return;
+  }
+
+  auto fmin = irb_.CreateBinaryIntrinsic(llvm::Intrinsic::minnum, lhs, rhs);
+
+  if (!v->propagate_nans()) {
+    value_ = fmin;
+    return;
+  }
+
+  auto fcmp1 = irb_.CreateFCmp(llvm::FCmpInst::FCMP_UNO, lhs, lhs);
+  auto fcmp2 = irb_.CreateFCmp(llvm::FCmpInst::FCMP_UNO, rhs, rhs);
+  value_ = irb_.CreateSelect(fcmp1, lhs, fmin);
+  value_ = irb_.CreateSelect(fcmp2, rhs, value_);
+}
+
 void LLVMCodeGen::visit(const IntImm* v) {
   value_ = llvm::ConstantInt::getSigned(int32Ty_, v->value());
 }

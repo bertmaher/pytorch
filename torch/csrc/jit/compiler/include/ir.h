@@ -14,6 +14,8 @@ enum IRNodeType {
   kSub,
   kMul,
   kDiv,
+  kMax,
+  kMin,
 };
 
 class Buffer;
@@ -103,6 +105,38 @@ class Div : public BinaryOpNode<Div> {
   Div(const Expr& lhs, const Expr& rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kDiv) {}
   friend class BinaryOpNode<Div>;
+};
+
+class Max : public BinaryOpNode<Max> {
+  private:
+  bool propagate_nans_;
+  Max(const Expr& lhs, const Expr& rhs, bool propagate_nans)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kMax), propagate_nans_(propagate_nans) {}
+  friend class BinaryOpNode<Max>;
+
+  public:
+  bool propagate_nans() const { return propagate_nans_; }
+
+  static Expr make(const Expr& lhs, const Expr& rhs) = delete;
+  static Expr make(const Expr& lhs, const Expr& rhs, bool propagate_nans) {
+    return Expr(new Max(lhs, rhs, propagate_nans));
+  }
+};
+
+class Min : public BinaryOpNode<Min> {
+  private:
+  bool propagate_nans_;
+  Min(const Expr& lhs, const Expr& rhs, bool propagate_nans)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kMin), propagate_nans_(propagate_nans) {}
+  friend class BinaryOpNode<Min>;
+
+  public:
+  bool propagate_nans() const { return propagate_nans_; }
+
+  static Expr make(const Expr& lhs, const Expr& rhs) = delete;
+  static Expr make(const Expr& lhs, const Expr& rhs, bool propagate_nans) {
+    return Expr(new Min(lhs, rhs, propagate_nans));
+  }
 };
 
 // Encode an integer immediate value.
