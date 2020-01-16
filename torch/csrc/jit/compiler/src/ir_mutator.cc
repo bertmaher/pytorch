@@ -8,7 +8,7 @@ namespace jit {
 namespace compiler {
 
 template <typename Op>
-static Expr mutate_binary_op(const BinaryOpNode<Op>* v, IRMutator* mutator) {
+static Expr mutate_binary_op(const BinaryOpNode<Op>* v, IRMutator* mutator, bool option = false) {
   Expr lhs = v->lhs();
   Expr rhs = v->rhs();
   Expr lhs_new = lhs.accept_mutator(mutator);
@@ -26,6 +26,10 @@ static Expr mutate_binary_op(const BinaryOpNode<Op>* v, IRMutator* mutator) {
       return Mul::make(lhs_new, rhs_new);
     case IRNodeType::kDiv:
       return Div::make(lhs_new, rhs_new);
+    case IRNodeType::kMax:
+      return Max::make(lhs_new, rhs_new, option);
+    case IRNodeType::kMin:
+      return Min::make(lhs_new, rhs_new, option);
     default:
       LOG(FATAL) << "unsupported expr_type" << static_cast<int>(expr_type);
   }
@@ -45,6 +49,14 @@ Expr IRMutator::mutate(const Mul* v) {
 
 Expr IRMutator::mutate(const Div* v) {
   return mutate_binary_op(v, this);
+}
+
+Expr IRMutator::mutate(const Max* v) {
+  return mutate_binary_op(v, this, v->propagate_nans());
+}
+
+Expr IRMutator::mutate(const Min* v) {
+  return mutate_binary_op(v, this, v->propagate_nans());
 }
 
 Expr IRMutator::mutate(const IntImm* v) {

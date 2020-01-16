@@ -39,6 +39,22 @@ void IRPrinter::visit(const Div* v) {
   BINARY_ACCEPT(os, v, "/");
 }
 
+void IRPrinter::visit(const Max* v) {
+  os << "Max(";
+  v->lhs().accept(this);
+  os << ", ";
+  v->rhs().accept(this);
+  os << ", " << (unsigned int)v->propagate_nans() << ")";
+}
+
+void IRPrinter::visit(const Min* v) {
+  os << "Min(";
+  v->lhs().accept(this);
+  os << ", ";
+  v->rhs().accept(this);
+  os << ", " << (unsigned int)v->propagate_nans() << ")";
+}
+
 void IRPrinter::visit(const IntImm* v) {
   os << v->value();
 }
