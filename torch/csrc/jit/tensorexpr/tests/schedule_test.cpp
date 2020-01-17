@@ -101,16 +101,11 @@ TEST(TensorExpr, Simple02) {
   }
 
   {
-    // Evaluate its execution
-    SimpleIREvaluator ir_eval;
-    SimpleIREvaluator::BufferMapping buffer_mapping;
-    // TODO: make this a standard testing helper.
     PaddedBuffer<float> f_v(26, 5, "f_v");
     PaddedBuffer<float> f_ref(26, 5, "f_res");
 
-    buffer_mapping[tensor.function().func_var().node()] = f_v.data();
-    ir_eval.SetBufferMapping(buffer_mapping);
-    stmt.accept(&ir_eval);
+    SimpleIREvaluator ir_eval(stmt, tensor);
+    ir_eval(f_v);
 
     for (int x = 0; x < 26; x++) {
       for (int y = 0; y < 5; y++) {
