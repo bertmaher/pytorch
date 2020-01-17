@@ -3,9 +3,9 @@
 #include <memory>
 #include <unordered_map>
 
+#include <c10/util/Logging.h>
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
-#include "torch/csrc/jit/tensorexpr/logging.h"
 #include "torch/csrc/jit/tensorexpr/refcount.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
 
@@ -154,6 +154,7 @@ class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
   // One Stmt for each output group
   virtual Stmt ConvertToNewArgs(Stmt* stmt, int group_index) {
     LOG(FATAL) << "unmiplemented";
+    return Stmt();
   }
 
   int output_group_count() const {

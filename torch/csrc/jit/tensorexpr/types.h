@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "torch/csrc/jit/tensorexpr/logging.h"
+#include <c10/util/Logging.h>
 
 namespace torch {
 namespace jit {
@@ -73,7 +73,7 @@ inline Dtype BinaryOpDtype(Dtype op1_dtype, Dtype op2_dtype) {
     return op1_dtype;
   }
   LOG(FATAL) << "Invalid dtypes: " << op1_dtype << ", " << op2_dtype;
-  assert_unreachable("Invalid dtypes");
+  return op1_dtype;
 }
 
 } // namespace compiler

@@ -262,6 +262,7 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     return Lower(node->first_child());
   } else {
     LOG(FATAL) << "Unsupported node type";
+    return Stmt();
   }
 }
 

@@ -24,18 +24,6 @@ if (ENABLE_LLVM)
   add_definitions(-DENABLE_LLVM ${LLVM_DEFINITIONS})
 endif (ENABLE_LLVM)
 
-# asmjit dependency
-
-set(ASMJIT_EMBED TRUE)
-add_definitions(-DASMJIT_STATIC)
-
-get_filename_component(
-  ASMJIT_DIR
-  "../../../../third_party/fbgemm/third_party/asmjit"
-  ABSOLUTE)
-include("${ASMJIT_DIR}/CMakeLists.txt")
-include_directories("${ASMJIT_DIR}/src")
-
 add_library(nnc
   expr.cpp
   function.cpp
@@ -49,12 +37,9 @@ add_library(nnc
   ir_mutator.cpp
   schedule.cpp
   tensor.cpp
-  ${ASMJIT_SRC}
   )
-
+target_link_libraries(nnc PUBLIC c10 asmjit)
 set_source_files_properties(llvm_jit.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
-
-target_include_directories(nnc PUBLIC "../../../../")
 
 if (LLVM_FOUND)
   llvm_map_components_to_libnames(LLVM_LINK_LIBS
@@ -80,8 +65,7 @@ set(TEST_SRCS
 add_library(test_lib
   tests/padded_buffer.cpp
   )
-target_include_directories(test_lib PUBLIC "../../../../")
-target_include_directories(test_lib PUBLIC "../../../../third_party/googletest/googletest/include")
+target_link_libraries(test_lib PUBLIC c10 gtest)
 
 foreach(test_path ${TEST_SRCS})
   get_filename_component(filename ${test_path} NAME)

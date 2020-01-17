@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "torch/csrc/jit/tensorexpr/logging.h"
+#include <c10/util/Logging.h>
 
 namespace torch {
 namespace jit {
