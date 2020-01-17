@@ -32,6 +32,7 @@ static Expr mutate_binary_op(const BinaryOpNode<Op>* v, IRMutator* mutator, bool
       return Min::make(lhs_new, rhs_new, option);
     default:
       LOG(FATAL) << "unsupported expr_type" << static_cast<int>(expr_type);
+      return Expr();
   }
 }
 

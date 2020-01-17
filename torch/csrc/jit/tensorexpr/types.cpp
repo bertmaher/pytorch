@@ -25,6 +25,7 @@ Dtype Dtype::scalar_type() const {
       return kFloat32;
     default:
       LOG(FATAL) << "invalid scalar type: " << scalar_type_;
+      return kUninitialized;
   }
 }
 
