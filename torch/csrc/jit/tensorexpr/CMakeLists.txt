@@ -74,6 +74,7 @@ set(TEST_SRCS
   tests/type_test.cpp
   tests/ir_printer_test.cpp
   tests/schedule_test.cpp
+  tests/aten_test.cpp
   )
 
 add_library(test_lib
