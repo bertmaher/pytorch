@@ -1,5 +1,6 @@
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
 
 #include <gtest/gtest.h>
 
@@ -909,5 +910,71 @@ TEST(ATenTest, reciprocal) {
   for (int i = 0; i < kTotalSize; ++i) {
     EXPECT_EQ(a_v(i), i) << "index: " << i;
     EXPECT_EQ(b_v(i), 1.0f / i) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, reluInt) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      Max::make(load_a, 0, false),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<int> a_v(kTotalSize);
+  PaddedBuffer<int> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i - 64;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i - 64) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::max(a_v(i), 0)) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, reluFloat) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      Max::make(load_a, 0, false), // relu does not propagate nans
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i - 64;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i - 64) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::fmax(a_v(i), 0)) << "index: " << i;
   }
 }
