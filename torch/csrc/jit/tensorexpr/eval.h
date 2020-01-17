@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <math.h>
 
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
