@@ -115,7 +115,11 @@ class SimpleIREvaluator : public IRVisitor {
 
   template <typename... Ts>
   SimpleIREvaluator(const Stmt& stmt, Ts... ts)
-      : stmt_(stmt), buffer_args_({BufferArg(ts)...}) {}
+    : ir_node_(stmt.node()), buffer_args_({BufferArg(ts)...}) {}
+
+  template <typename... Ts>
+  SimpleIREvaluator(const Expr& expr, Ts... ts)
+    : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
 
   template <typename... Ts>
   void operator()(const Ts&... ts) {
@@ -126,7 +130,7 @@ class SimpleIREvaluator : public IRVisitor {
       buffer_mapping[buffer_args_[i].var().node()] = args[i].data();
     }
     this->SetBufferMapping(buffer_mapping);
-    stmt_.accept(this);
+    ir_node_.node()->accept(this);
   }
 
   void visit(const Add* v) override {
@@ -386,6 +390,11 @@ class SimpleIREvaluator : public IRVisitor {
     }
   }
 
+  Value value() const {
+    return value_;
+  }
+
+ private:
   using BufferMapping = std::unordered_map<const BaseExprNode*, void*>;
   void SetBufferMapping(const BufferMapping& buffer_mapping) {
     buffer_mapping_ = buffer_mapping;
@@ -396,12 +405,7 @@ class SimpleIREvaluator : public IRVisitor {
     }
   }
 
-  Value value() const {
-    return value_;
-  }
-
- private:
-  Stmt stmt_;
+  RefHandle<IRNode> ir_node_;
   std::vector<BufferArg> buffer_args_;
 
   Value value_;

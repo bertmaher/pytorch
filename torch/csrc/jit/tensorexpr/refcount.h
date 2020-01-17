@@ -81,7 +81,6 @@ class RefHandle {
     return node_ == nullptr;
   }
 
- protected:
   virtual ~RefHandle() {
     reset();
   }
@@ -93,12 +92,13 @@ class RefHandle {
     }
   }
 
-  RefHandle(const RefHandle& other) {
-    this->reset();
-    node_ = other.node_;
-    if (node_ != nullptr) {
-      node_->Ref();
-    }
+  explicit RefHandle(const RefHandle& other) {
+    CopyFrom(other);
+  }
+  
+  template <typename U>
+  explicit RefHandle(const RefHandle<U>& other) {
+    CopyFrom(other);
   }
 
   RefHandle(RefHandle&& other) {
@@ -110,11 +110,16 @@ class RefHandle {
     if (this == &other) {
       return *this;
     }
-    this->reset();
-    node_ = other.node_;
-    if (node_ != nullptr) {
-      node_->Ref();
+    CopyFrom(other);
+    return *this;
+  }
+
+  template <typename U>
+  RefHandle& operator=(const RefHandle<U>& other) {
+    if (this == &other) {
+      return *this;
     }
+    CopyFrom(other);
     return *this;
   }
 
@@ -142,7 +147,18 @@ class RefHandle {
   }
 
  private:
+  template <typename U>
+  void CopyFrom(const RefHandle<U>& other) {
+    this->reset();
+    node_ = other.node_;
+    if (node_ != nullptr) {
+      node_->Ref();
+    }
+  }
+
   NodeType* node_ = nullptr;
+  template <typename U>
+  friend class RefHandle;
 };
 
 } // namespace compiler
