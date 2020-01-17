@@ -510,8 +510,8 @@ TEST(LLVMTest, ElemwiseMaximumNaNFloat) {
   ASSERT_EQ(b_buffer.size(), N);
   ASSERT_EQ(c_buffer.size(), N);
   for (int i = 0; i < N; ++i) {
-    ASSERT_TRUE(isnan(a_buffer[i]));
-    ASSERT_TRUE(isnan(c_buffer[i]));
+    ASSERT_TRUE(std::isnan(a_buffer[i]));
+    ASSERT_TRUE(std::isnan(c_buffer[i]));
   }
 }
 
@@ -573,8 +573,8 @@ TEST(LLVMTest, ElemwiseMinimumNaNFloat) {
   ASSERT_EQ(b_buffer.size(), N);
   ASSERT_EQ(c_buffer.size(), N);
   for (int i = 0; i < N; ++i) {
-    ASSERT_TRUE(isnan(a_buffer[i]));
-    ASSERT_TRUE(isnan(c_buffer[i]));
+    ASSERT_TRUE(std::isnan(a_buffer[i]));
+    ASSERT_TRUE(std::isnan(c_buffer[i]));
   }
 }
 #endif
