@@ -10,18 +10,19 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build" FORCE)
 endif()
 
-find_package(LLVM REQUIRED CONFIG)
+set(ENABLE_LLVM ON CACHE BOOL "Enable LLVM")
+find_package(LLVM)
+if (NOT LLVM_FOUND)
+  set(ENABLE_LLVM OFF)
+endif(NOT LLVM_FOUND)
 
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+if (ENABLE_LLVM)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-# Set your project compile flags.
-# E.g. if using the C++ header files
-# you will need to enable C++11 support
-# for your compiler.
-
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
+  include_directories(${LLVM_INCLUDE_DIRS})
+  add_definitions(-DENABLE_LLVM ${LLVM_DEFINITIONS})
+endif (ENABLE_LLVM)
 
 # asmjit dependency
 
@@ -55,11 +56,13 @@ set_source_files_properties(llvm_jit.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 
 target_include_directories(nnc PUBLIC "../../../../")
 
-llvm_map_components_to_libnames(LLVM_LINK_LIBS
+if (LLVM_FOUND)
+  llvm_map_components_to_libnames(LLVM_LINK_LIBS
   support core irreader analysis executionengine instcombine object orcJIT
   runtimedyld scalaropts transformutils native ipo orcjit)
 
-target_link_libraries(nnc PRIVATE ${LLVM_LINK_LIBS})
+  target_link_libraries(nnc PRIVATE ${LLVM_LINK_LIBS})
+endif (LLVM_FOUND)
 
 add_custom_target(cpptest)
 add_subdirectory(../../../../third_party/googletest/ googletest EXCLUDE_FROM_ALL)

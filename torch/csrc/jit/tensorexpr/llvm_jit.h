@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ENABLE_LLVM
+
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -32,3 +34,5 @@ class PytorchLLVMJIT {
 
 } // end namespace orc
 } // end namespace llvm
+
+#endif // ENABLE LLVM

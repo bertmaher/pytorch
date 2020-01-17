@@ -1,3 +1,5 @@
+#ifdef ENABLE_LLVM
+
 #include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
 
 #include <memory>
@@ -485,3 +487,5 @@ void LLVMCodeGen::optimize(llvm::Module& M) {
   FPM.doFinalization();
   PM.run(M);
 }
+
+#endif // ENABLE_LLVM

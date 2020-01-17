@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ENABLE_LLVM
+
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_visitor.h"
@@ -116,3 +118,5 @@ class LLVMCodeGen : public IRVisitor {
 } // namespace compiler
 } // namespace jit
 } // namespace torch
+
+#endif // ENABLE_LLVM
