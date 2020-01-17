@@ -1,8 +1,8 @@
 #pragma once
 
+#include <cmath>
 #include <unordered_map>
 #include <vector>
-#include <math.h>
 
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
@@ -171,9 +171,9 @@ class SimpleIREvaluator : public IRVisitor {
           result_v[i] = fmax(lhs_v[i], rhs_v[i]);
           if (option) {
             // Propagate NaNs
-            if (isnan(lhs_v[i])) {
+            if (std::isnan(lhs_v[i])) {
               result_v[i] = lhs_v[i];
-            } else if (isnan(rhs_v[i])) {
+            } else if (std::isnan(rhs_v[i])) {
               result_v[i] = rhs_v[i];
             }
           }
@@ -182,9 +182,9 @@ class SimpleIREvaluator : public IRVisitor {
           result_v[i] = fmin(lhs_v[i], rhs_v[i]);
           if (option) {
             // Propagate NaNs
-            if (isnan(lhs_v[i])) {
+            if (std::isnan(lhs_v[i])) {
               result_v[i] = lhs_v[i];
-            } else if (isnan(rhs_v[i])) {
+            } else if (std::isnan(rhs_v[i])) {
               result_v[i] = rhs_v[i];
             }
           }
