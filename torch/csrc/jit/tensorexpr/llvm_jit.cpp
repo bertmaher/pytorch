@@ -1,3 +1,5 @@
+#ifdef ENABLE_LLVM
+
 #include "torch/csrc/jit/tensorexpr/llvm_jit.h"
 
 #include <algorithm>
@@ -53,3 +55,5 @@ const DataLayout& PytorchLLVMJIT::getDataLayout() {
 
 } // end namespace orc
 } // end namespace llvm
+
+#endif // ENABLE_LLVM

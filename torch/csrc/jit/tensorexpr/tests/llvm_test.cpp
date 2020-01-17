@@ -1,3 +1,5 @@
+#ifdef ENABLE_LLVM
+
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 #include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
@@ -667,3 +669,5 @@ TEST(LLVMTest, BroadcastAdd) {
     }
   }
 }
+
+#endif // ENABLE_LLVM
