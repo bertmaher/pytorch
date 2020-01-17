@@ -31,6 +31,7 @@ class IRPrinter : public IRVisitor {
   void visit(const Block* v) override;
   void visit(const Store* v) override;
   void visit(const Broadcast* v) override;
+  void visit(const Intrinsics* v) override;
 
  private:
   std::ostream& os;

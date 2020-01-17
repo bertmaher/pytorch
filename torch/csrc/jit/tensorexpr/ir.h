@@ -108,14 +108,17 @@ class Div : public BinaryOpNode<Div> {
 };
 
 class Max : public BinaryOpNode<Max> {
-  private:
+ private:
   bool propagate_nans_;
   Max(const Expr& lhs, const Expr& rhs, bool propagate_nans)
-      : BinaryOpNode(lhs, rhs, IRNodeType::kMax), propagate_nans_(propagate_nans) {}
+      : BinaryOpNode(lhs, rhs, IRNodeType::kMax),
+        propagate_nans_(propagate_nans) {}
   friend class BinaryOpNode<Max>;
 
-  public:
-  bool propagate_nans() const { return propagate_nans_; }
+ public:
+  bool propagate_nans() const {
+    return propagate_nans_;
+  }
 
   static Expr make(const Expr& lhs, const Expr& rhs) = delete;
   static Expr make(const Expr& lhs, const Expr& rhs, bool propagate_nans) {
@@ -124,14 +127,17 @@ class Max : public BinaryOpNode<Max> {
 };
 
 class Min : public BinaryOpNode<Min> {
-  private:
+ private:
   bool propagate_nans_;
   Min(const Expr& lhs, const Expr& rhs, bool propagate_nans)
-      : BinaryOpNode(lhs, rhs, IRNodeType::kMin), propagate_nans_(propagate_nans) {}
+      : BinaryOpNode(lhs, rhs, IRNodeType::kMin),
+        propagate_nans_(propagate_nans) {}
   friend class BinaryOpNode<Min>;
 
-  public:
-  bool propagate_nans() const { return propagate_nans_; }
+ public:
+  bool propagate_nans() const {
+    return propagate_nans_;
+  }
 
   static Expr make(const Expr& lhs, const Expr& rhs) = delete;
   static Expr make(const Expr& lhs, const Expr& rhs, bool propagate_nans) {
@@ -436,6 +442,122 @@ class Broadcast : public ExprNode<Broadcast> {
         lanes_(lanes) {}
   Expr value_;
   int lanes_;
+};
+
+template <typename Op>
+class BaseCallOp : public ExprNode<Op> {
+ public:
+  enum CallType {
+    kIntrinsics,
+  };
+
+  int nparams() const {
+    return params_.size();
+  }
+
+  Expr& param(int index) {
+    return params_[index];
+  }
+  const Expr& param(int index) const {
+    return params_[index];
+  }
+
+  virtual std::string func_name() const = 0;
+
+ protected:
+  BaseCallOp(Dtype dtype, CallType call_type, const std::vector<Expr>& params)
+      : ExprNode<Op>(dtype), call_type_(call_type), params_(params) {}
+
+ private:
+  template <class U>
+  friend class ExprNode;
+
+  CallType call_type_;
+  std::vector<Expr> params_;
+};
+
+enum IntrinsicsOp {
+  kSin,
+  kCos,
+  kTan,
+  kAsin,
+  kAcos,
+  kAtan,
+  kSinh,
+  kCosh,
+  kTanh,
+  kExp,
+  kFabs,
+  kLog,
+  kLog2,
+  kLog10,
+  kErf,
+  kSqrt,
+  kRsqrt,
+  kPow,
+  kCeil,
+  kFloor,
+  kRound,
+  kTrunc,
+  kFmod,
+  kFmax,
+  kFmin,
+  kRand, // We need more discussions on this. Should we consider stateful?
+};
+
+class Intrinsics : public BaseCallOp<Intrinsics> {
+ public:
+  static Expr make(IntrinsicsOp op_type, const Expr& v1) {
+    return Expr(new Intrinsics(op_type, v1));
+  }
+
+  static Expr make(IntrinsicsOp op_type, const Expr& v1, const Expr& v2) {
+    return Expr(new Intrinsics(op_type, v1, v2));
+  }
+
+  static Expr make(IntrinsicsOp op_type, const std::vector<Expr>& params) {
+    return Expr(new Intrinsics(op_type, params));
+  }
+
+  IntrinsicsOp op_type() const {
+    return op_type_;
+  }
+
+  std::string func_name() const override;
+
+ private:
+  using BaseClass = BaseCallOp<Intrinsics>;
+
+  static int OpArgCount(IntrinsicsOp op_type);
+
+  Intrinsics(IntrinsicsOp op_type, const Expr& v1)
+      : BaseClass(IntrinsicsDtype(op_type, v1.dtype()), kIntrinsics, {v1}),
+        op_type_(op_type) {
+    CHECK_EQ(OpArgCount(op_type), 1);
+  }
+
+  Intrinsics(IntrinsicsOp op_type, const Expr& v1, const Expr& v2)
+      : BaseClass(
+            IntrinsicsDtype(op_type, v1.dtype(), v2.dtype()),
+            kIntrinsics,
+            {v1, v2}),
+        op_type_(op_type) {
+    CHECK_EQ(OpArgCount(op_type), 2);
+  }
+
+  Intrinsics(IntrinsicsOp op_type, const std::vector<Expr>& params)
+      : BaseClass(IntrinsicsDtype(op_type, params), kIntrinsics, params),
+        op_type_(op_type) {
+    CHECK_EQ(OpArgCount(op_type), params.size());
+  }
+
+  static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1);
+  static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1, Dtype dt2);
+  static Dtype IntrinsicsDtype(
+      IntrinsicsOp op_type,
+      const std::vector<Expr>& params);
+
+  IntrinsicsOp op_type_;
 };
 
 } // namespace compiler

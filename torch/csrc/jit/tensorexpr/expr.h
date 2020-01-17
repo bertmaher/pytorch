@@ -156,6 +156,32 @@ inline bool same_node(const Stmt& stmt1, const Stmt& stmt2) {
   return stmt1.AsNode<BaseStmtNode>() == stmt2.AsNode<BaseStmtNode>();
 }
 
+Expr sin(const Expr& v);
+Expr cos(const Expr& v);
+Expr tan(const Expr& v);
+Expr asin(const Expr& v);
+Expr acos(const Expr& v);
+Expr atan(const Expr& v);
+Expr sinh(const Expr& v);
+Expr cosh(const Expr& v);
+Expr tanh(const Expr& v);
+Expr exp(const Expr& v);
+Expr fabs(const Expr& v);
+Expr log(const Expr& v);
+Expr log2(const Expr& v);
+Expr log10(const Expr& v);
+Expr erf(const Expr& v);
+Expr sqrt(const Expr& v);
+Expr rsqrt(const Expr& v);
+Expr ceil(const Expr& v);
+Expr floor(const Expr& v);
+Expr round(const Expr& v);
+Expr trunc(const Expr& v);
+Expr pow(const Expr& v1, const Expr& v2);
+Expr fmod(const Expr& v1, const Expr& v2);
+Expr fmax(const Expr& v1, const Expr& v2);
+Expr fmin(const Expr& v1, const Expr& v2);
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

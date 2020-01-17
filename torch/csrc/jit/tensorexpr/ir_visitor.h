@@ -21,6 +21,7 @@ class For;
 class Block;
 class Store;
 class Broadcast;
+class Intrinsics;
 
 class IRVisitor {
  public:
@@ -41,6 +42,7 @@ class IRVisitor {
   virtual void visit(const Block* v);
   virtual void visit(const Store* v);
   virtual void visit(const Broadcast* v);
+  virtual void visit(const Intrinsics* v);
 };
 
 } // namespace compiler

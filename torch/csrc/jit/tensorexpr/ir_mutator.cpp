@@ -8,7 +8,10 @@ namespace jit {
 namespace compiler {
 
 template <typename Op>
-static Expr mutate_binary_op(const BinaryOpNode<Op>* v, IRMutator* mutator, bool option = false) {
+static Expr mutate_binary_op(
+    const BinaryOpNode<Op>* v,
+    IRMutator* mutator,
+    bool option = false) {
   Expr lhs = v->lhs();
   Expr rhs = v->rhs();
   Expr lhs_new = lhs.accept_mutator(mutator);
@@ -130,6 +133,23 @@ Expr IRMutator::mutate(const Broadcast* v) {
     return Expr(v);
   }
   return Broadcast::make(value_new, lanes);
+}
+
+Expr IRMutator::mutate(const Intrinsics* v) {
+  std::vector<Expr> params(v->nparams());
+  bool any_change = false;
+  for (int i = 0; i < v->nparams(); i++) {
+    Expr value = v->param(i);
+    Expr value_new = value.accept_mutator(this);
+    if (!same_node(value, value_new)) {
+      any_change = true;
+    }
+    params[i] = std::move(value_new);
+  }
+  if (any_change) {
+    return Expr(v);
+  }
+  return Intrinsics::make(v->op_type(), params);
 }
 
 Stmt IRMutator::mutate(const For* v) {

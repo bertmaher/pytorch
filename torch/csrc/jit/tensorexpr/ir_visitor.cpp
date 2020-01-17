@@ -81,6 +81,12 @@ void IRVisitor::visit(const Broadcast* v) {
   v->value().accept(this);
 }
 
+void IRVisitor::visit(const Intrinsics* v) {
+  for (int i = 0; i < v->nparams(); i++) {
+    v->param(i).accept(this);
+  }
+}
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

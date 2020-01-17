@@ -115,11 +115,11 @@ class SimpleIREvaluator : public IRVisitor {
 
   template <typename... Ts>
   SimpleIREvaluator(const Stmt& stmt, Ts... ts)
-    : ir_node_(stmt.node()), buffer_args_({BufferArg(ts)...}) {}
+      : ir_node_(stmt.node()), buffer_args_({BufferArg(ts)...}) {}
 
   template <typename... Ts>
   SimpleIREvaluator(const Expr& expr, Ts... ts)
-    : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
+      : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
 
   template <typename... Ts>
   void operator()(const Ts&... ts) {
@@ -153,7 +153,11 @@ class SimpleIREvaluator : public IRVisitor {
   }
 
   template <typename T>
-  Value binary_op(const Value& lhs, const Value& rhs, IRNodeType op_type, bool option = false) {
+  Value binary_op(
+      const Value& lhs,
+      const Value& rhs,
+      IRNodeType op_type,
+      bool option = false) {
     std::vector<T> lhs_v = lhs.as_vec<T>();
     std::vector<T> rhs_v = rhs.as_vec<T>();
     std::vector<T> result_v(lhs_v.size());
@@ -172,7 +176,7 @@ class SimpleIREvaluator : public IRVisitor {
           result_v[i] = lhs_v[i] / rhs_v[i];
           break;
         case IRNodeType::kMax:
-          result_v[i] = fmax(lhs_v[i], rhs_v[i]);
+          result_v[i] = std::fmax(lhs_v[i], rhs_v[i]);
           if (option) {
             // Propagate NaNs
             if (std::isnan(lhs_v[i])) {
@@ -183,7 +187,7 @@ class SimpleIREvaluator : public IRVisitor {
           }
           break;
         case IRNodeType::kMin:
-          result_v[i] = fmin(lhs_v[i], rhs_v[i]);
+          result_v[i] = std::fmin(lhs_v[i], rhs_v[i]);
           if (option) {
             // Propagate NaNs
             if (std::isnan(lhs_v[i])) {
@@ -390,11 +394,105 @@ class SimpleIREvaluator : public IRVisitor {
     }
   }
 
+  void visit(const Intrinsics* v) override {
+    std::vector<Value> values(v->nparams());
+    for (int i = 0; i < v->nparams(); i++) {
+      v->param(i).accept(this);
+      values[i] = this->value();
+    }
+    std::vector<float> v1;
+    if (values.size() >= 1) {
+      v1 = values[0].as_vec<float>();
+    }
+    std::vector<float> v2;
+    if (values.size() >= 2) {
+      v2 = values[1].as_vec<float>();
+      CHECK_EQ(v1.size(), v2.size()) << "mismatch vectorize sizes";
+    }
+    CHECK_LE(values.size(), 2)
+        << "no support for intrinsics for more than two operand yet";
+    std::vector<float> result(v1.size(), -1);
+    if (values.size() == 1) {
+      for (int i = 0; i < v1.size(); i++) {
+        result[i] = compute_intrinsics(v->op_type(), v1[i]);
+      }
+    } else {
+      for (int i = 0; i < v1.size(); i++) {
+        result[i] = compute_intrinsics(v->op_type(), v1[i], v2[i]);
+      }
+    }
+    value_ = Value(result);
+  }
+
   Value value() const {
     return value_;
   }
 
  private:
+  static float compute_intrinsics(IntrinsicsOp op_type, float v) {
+    switch (op_type) {
+      case kSin:
+        return std::sin(v);
+      case kCos:
+        return std::cos(v);
+      case kTan:
+        return std::tan(v);
+      case kAsin:
+        return std::asin(v);
+      case kAcos:
+        return std::acos(v);
+      case kAtan:
+        return std::atan(v);
+      case kSinh:
+        return std::sinh(v);
+      case kCosh:
+        return std::cosh(v);
+      case kTanh:
+        return std::tanh(v);
+      case kExp:
+        return std::exp(v);
+      case kFabs:
+        return std::fabs(v);
+      case kLog:
+        return std::log(v);
+      case kLog2:
+        return std::log2(v);
+      case kLog10:
+        return std::log10(v);
+      case kErf:
+        return std::erf(v);
+      case kSqrt:
+        return std::sqrt(v);
+      case kRsqrt:
+        return 1.0f / std::sqrt(v);
+      case kCeil:
+        return std::ceil(v);
+      case kFloor:
+        return std::floor(v);
+      case kRound:
+        return std::round(v);
+      case kTrunc:
+        return std::trunc(v);
+      default:
+        throw std::runtime_error("invalid op_type: " + op_type);
+    }
+  }
+
+  static float compute_intrinsics(IntrinsicsOp op_type, float v1, float v2) {
+    switch (op_type) {
+      case kPow:
+        return std::pow(v1, v2);
+      case kFmod:
+        return std::fmod(v1, v2);
+      case kFmax:
+        return std::fmax(v1, v2);
+      case kFmin:
+        return std::fmin(v1, v2);
+      default:
+        throw std::runtime_error("nvalid op_type: " + op_type);
+    }
+  }
+
   using BufferMapping = std::unordered_map<const BaseExprNode*, void*>;
   void SetBufferMapping(const BufferMapping& buffer_mapping) {
     buffer_mapping_ = buffer_mapping;

@@ -23,6 +23,7 @@ class Store;
 class Broadcast;
 class Expr;
 class Stmt;
+class Intrinsics;
 
 class IRMutator {
  public:
@@ -40,6 +41,7 @@ class IRMutator {
   virtual Expr mutate(const Ramp* v);
   virtual Expr mutate(const Load* v);
   virtual Expr mutate(const Broadcast* v);
+  virtual Expr mutate(const Intrinsics* v);
 
   virtual Stmt mutate(const For* v);
   virtual Stmt mutate(const Block* v);

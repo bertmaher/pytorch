@@ -41,6 +41,119 @@ Store::Store(
   CHECK_EQ(buffer.dtype().scalar_type(), value.dtype().scalar_type());
 }
 
+Dtype Intrinsics::IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1) {
+  // TODO: check the op_type and make a real decision
+  return dt1;
+}
+
+Dtype Intrinsics::IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1, Dtype dt2) {
+  // TODO: check the op_type and make a real decision
+  return dt1;
+}
+
+Dtype Intrinsics::IntrinsicsDtype(
+    IntrinsicsOp op_type,
+    const std::vector<Expr>& params) {
+  // TODO: check the op_type an dmake a real decision
+  CHECK_GE(params.size(), 1);
+  return params[0].dtype();
+}
+
+int Intrinsics::OpArgCount(IntrinsicsOp op_type) {
+  switch (op_type) {
+    case kSin:
+    case kCos:
+    case kTan:
+    case kAsin:
+    case kAcos:
+    case kAtan:
+    case kSinh:
+    case kCosh:
+    case kTanh:
+    case kExp:
+    case kFabs:
+    case kLog:
+    case kLog2:
+    case kLog10:
+    case kErf:
+    case kSqrt:
+    case kRsqrt:
+    case kCeil:
+    case kFloor:
+    case kRound:
+    case kTrunc:
+      return 1;
+    case kRand:
+      return 0;
+    case kFmod:
+    case kFmax:
+    case kFmin:
+    case kPow:
+      return 2;
+    default:
+      throw std::runtime_error("invalid op_type: " + op_type);
+  }
+}
+
+std::string Intrinsics::func_name() const {
+  switch (op_type()) {
+    case kSin:
+      return "sin";
+    case kCos:
+      return "cos";
+    case kTan:
+      return "tan";
+    case kAsin:
+      return "asin";
+    case kAcos:
+      return "acos";
+    case kAtan:
+      return "atan";
+    case kSinh:
+      return "sinh";
+    case kCosh:
+      return "cosh";
+    case kTanh:
+      return "tanh";
+    case kExp:
+      return "exp";
+    case kFabs:
+      return "fabs";
+    case kLog:
+      return "log";
+    case kLog2:
+      return "log2";
+    case kLog10:
+      return "log10";
+    case kErf:
+      return "erf";
+    case kSqrt:
+      return "sqrt";
+    case kRsqrt:
+      return "rsqrt";
+    case kPow:
+      return "pow";
+    case kCeil:
+      return "ceil";
+    case kFloor:
+      return "floor";
+    case kRound:
+      return "round";
+    case kTrunc:
+      return "trunc";
+    case kRand:
+      return "rand";
+    case kFmod:
+      return "fmod";
+    case kFmax:
+      return "fmax";
+    case kFmin:
+      return "fmin";
+    default:
+      throw std::runtime_error("invalid op_type: " + op_type());
+  }
+}
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

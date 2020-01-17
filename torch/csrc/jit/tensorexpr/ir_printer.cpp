@@ -117,6 +117,18 @@ void IRPrinter::visit(const Broadcast* v) {
   os << "Broadcast(" << v->value() << ", " << v->lanes() << ")";
 }
 
+void IRPrinter::visit(const Intrinsics* v) {
+  // TODO: handle the mask
+  os << v->func_name() << "(";
+  for (int i = 0; i < v->nparams(); i++) {
+    if (i > 0) {
+      os << ", ";
+    }
+    os << v->param(i);
+  }
+  os << ")";
+}
+
 std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
   IRPrinter p(stream);
   p.print(expr);
