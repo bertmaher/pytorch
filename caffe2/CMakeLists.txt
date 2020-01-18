@@ -462,6 +462,7 @@ if (NOT INTERN_BUILD_MOBILE OR NOT BUILD_CAFFE2_MOBILE)
     ${TORCH_SRC_DIR}/csrc/jit/fuser/fallback.cpp
     ${TORCH_SRC_DIR}/csrc/jit/function.cpp
     ${TORCH_SRC_DIR}/csrc/jit/vararg_functions.cpp
+
     ${TORCH_SRC_DIR}/csrc/jit/tensorexpr/expr.cpp
     ${TORCH_SRC_DIR}/csrc/jit/tensorexpr/function.cpp
     ${TORCH_SRC_DIR}/csrc/jit/tensorexpr/ir.cpp
@@ -475,6 +476,22 @@ if (NOT INTERN_BUILD_MOBILE OR NOT BUILD_CAFFE2_MOBILE)
     ${TORCH_SRC_DIR}/csrc/jit/tensorexpr/schedule.cpp
     ${TORCH_SRC_DIR}/csrc/jit/tensorexpr/tensor.cpp
     )
+
+  if (USE_LLVM)
+    message(STATUS "Looking for LLVM in ${USE_LLVM}")
+    find_package(LLVM QUIET PATHS ${USE_LLVM} NO_DEFAULT_PATH)
+
+    if (LLVM_FOUND)
+      message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+      message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+      include_directories(${LLVM_INCLUDE_DIRS})
+      add_definitions(-DENABLE_LLVM ${LLVM_DEFINITIONS})
+    endif (LLVM_FOUND)
+  endif (USE_LLVM)
+
+  set_source_files_properties(${TORCH_SRC_DIR}/csrc/jit/tensorexpr/llvm_jit.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+
 
   if (NOT INTERN_BUILD_MOBILE)
     set (MOBILE_SRCS
@@ -638,6 +655,14 @@ endif()
 
 add_library(torch_cpu ${Caffe2_CPU_SRCS})
 torch_compile_options(torch_cpu)  # see cmake/public/utils.cmake
+
+if (LLVM_FOUND)
+  llvm_map_components_to_libnames(LLVM_LINK_LIBS
+  support core irreader analysis executionengine instcombine object orcJIT
+  runtimedyld scalaropts transformutils native ipo orcjit)
+
+  target_link_libraries(torch_cpu PRIVATE ${LLVM_LINK_LIBS})
+endif (LLVM_FOUND)
 
 # This is required for older versions of CMake, which don't allow
 # specifying add_library() without a list of source files
