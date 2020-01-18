@@ -484,10 +484,6 @@ class SimpleIREvaluator : public IRVisitor {
         return std::pow(v1, v2);
       case kFmod:
         return std::fmod(v1, v2);
-      case kFmax:
-        return std::fmax(v1, v2);
-      case kFmin:
-        return std::fmin(v1, v2);
       default:
         throw std::runtime_error("nvalid op_type: " + op_type);
     }

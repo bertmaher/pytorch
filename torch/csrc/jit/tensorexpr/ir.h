@@ -500,8 +500,6 @@ enum IntrinsicsOp {
   kRound,
   kTrunc,
   kFmod,
-  kFmax,
-  kFmin,
   kRand, // We need more discussions on this. Should we consider stateful?
 };
 

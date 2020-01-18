@@ -227,10 +227,6 @@ TEST(ExprTest, BinaryMath01) {
        [](float v1, float v2) { return std::pow(v1, v2); }},
       {[](const Expr& v1, const Expr& v2) { return fmod(v1, v2); },
        [](float v1, float v2) { return std::fmod(v1, v2); }},
-      {[](const Expr& v1, const Expr& v2) { return fmax(v1, v2); },
-       [](float v1, float v2) { return std::fmax(v1, v2); }},
-      {[](const Expr& v1, const Expr& v2) { return fmin(v1, v2); },
-       [](float v1, float v2) { return std::fmin(v1, v2); }},
   };
 
   for (const TestConfig& test_config : test_configs) {

@@ -179,8 +179,6 @@ Expr round(const Expr& v);
 Expr trunc(const Expr& v);
 Expr pow(const Expr& v1, const Expr& v2);
 Expr fmod(const Expr& v1, const Expr& v2);
-Expr fmax(const Expr& v1, const Expr& v2);
-Expr fmin(const Expr& v1, const Expr& v2);
 
 } // namespace compiler
 } // namespace jit

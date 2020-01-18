@@ -118,7 +118,6 @@ void IRPrinter::visit(const Broadcast* v) {
 }
 
 void IRPrinter::visit(const Intrinsics* v) {
-  // TODO: handle the mask
   os << v->func_name() << "(";
   for (int i = 0; i < v->nparams(); i++) {
     if (i > 0) {

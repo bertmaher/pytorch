@@ -118,14 +118,6 @@ Expr fmod(const Expr& v1, const Expr& v2) {
   return Intrinsics::make(kFmod, v1, v2);
 }
 
-Expr fmax(const Expr& v1, const Expr& v2) {
-  return Intrinsics::make(kFmax, v1, v2);
-}
-
-Expr fmin(const Expr& v1, const Expr& v2) {
-  return Intrinsics::make(kFmin, v1, v2);
-}
-
 } // namespace compiler
 } // namespace jit
 } // namespace torch

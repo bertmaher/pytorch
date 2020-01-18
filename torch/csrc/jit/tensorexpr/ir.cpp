@@ -86,8 +86,6 @@ int Intrinsics::OpArgCount(IntrinsicsOp op_type) {
     case kRand:
       return 0;
     case kFmod:
-    case kFmax:
-    case kFmin:
     case kPow:
       return 2;
     default:
@@ -145,10 +143,6 @@ std::string Intrinsics::func_name() const {
       return "rand";
     case kFmod:
       return "fmod";
-    case kFmax:
-      return "fmax";
-    case kFmin:
-      return "fmin";
     default:
       throw std::runtime_error("invalid op_type: " + op_type());
   }
