@@ -136,6 +136,11 @@ Expr IRMutator::mutate(const Broadcast* v) {
 }
 
 Expr IRMutator::mutate(const Intrinsics* v) {
+  const BaseCallNode* base = v;
+  return this->mutate(base);
+}
+
+Expr IRMutator::mutate(const BaseCallNode* v) {
   std::vector<Expr> params(v->nparams());
   bool any_change = false;
   for (int i = 0; i < v->nparams(); i++) {
@@ -149,7 +154,7 @@ Expr IRMutator::mutate(const Intrinsics* v) {
   if (any_change) {
     return Expr(v);
   }
-  return Intrinsics::make(v->op_type(), params);
+  return v->DefaultMutator(params);
 }
 
 Stmt IRMutator::mutate(const For* v) {

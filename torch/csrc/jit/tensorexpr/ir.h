@@ -444,8 +444,7 @@ class Broadcast : public ExprNode<Broadcast> {
   int lanes_;
 };
 
-template <typename Op>
-class BaseCallOp : public ExprNode<Op> {
+class BaseCallNode : public BaseExprNode {
  public:
   enum CallType {
     kIntrinsics,
@@ -464,16 +463,32 @@ class BaseCallOp : public ExprNode<Op> {
 
   virtual std::string func_name() const = 0;
 
+  CallType call_type() const {
+    return call_type_;
+  }
+
  protected:
-  BaseCallOp(Dtype dtype, CallType call_type, const std::vector<Expr>& params)
-      : ExprNode<Op>(dtype), call_type_(call_type), params_(params) {}
+  BaseCallNode(Dtype dtype, CallType call_type, const std::vector<Expr>& params)
+      : BaseExprNode(dtype), call_type_(call_type), params_(params) {}
 
  private:
-  template <class U>
+  // The handler for the default ir_mutator to make a copy of this node with new
+  // params.
+  virtual Expr DefaultMutator(const std::vector<Expr>& new_params) const = 0;
+
+  template <class U, class B>
   friend class ExprNode;
+  friend class IRMutator;
 
   CallType call_type_;
   std::vector<Expr> params_;
+};
+
+template <typename Op>
+class CallNode : public ExprNode<Op, BaseCallNode> {
+ public:
+  using BaseClass = ExprNode<Op, BaseCallNode>;
+  using BaseClass::BaseClass;
 };
 
 enum IntrinsicsOp {
@@ -503,7 +518,7 @@ enum IntrinsicsOp {
   kRand, // We need more discussions on this. Should we consider stateful?
 };
 
-class Intrinsics : public BaseCallOp<Intrinsics> {
+class Intrinsics : public CallNode<Intrinsics> {
  public:
   static Expr make(IntrinsicsOp op_type, const Expr& v1) {
     return Expr(new Intrinsics(op_type, v1));
@@ -524,7 +539,7 @@ class Intrinsics : public BaseCallOp<Intrinsics> {
   std::string func_name() const override;
 
  private:
-  using BaseClass = BaseCallOp<Intrinsics>;
+  using BaseClass = CallNode<Intrinsics>;
 
   static int OpArgCount(IntrinsicsOp op_type);
 
@@ -547,6 +562,10 @@ class Intrinsics : public BaseCallOp<Intrinsics> {
       : BaseClass(IntrinsicsDtype(op_type, params), kIntrinsics, params),
         op_type_(op_type) {
     CHECK_EQ(OpArgCount(op_type), params.size());
+  }
+
+  Expr DefaultMutator(const std::vector<Expr>& new_params) const override {
+    return Intrinsics::make(this->op_type(), new_params);
   }
 
   static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1);

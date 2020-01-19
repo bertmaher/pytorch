@@ -394,6 +394,10 @@ class SimpleIREvaluator : public IRVisitor {
     }
   }
 
+  void visit(const BaseCallNode* v) override {
+    LOG(FATAL) << "unsupported";
+  }
+
   void visit(const Intrinsics* v) override {
     std::vector<Value> values(v->nparams());
     for (int i = 0; i < v->nparams(); i++) {

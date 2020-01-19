@@ -39,15 +39,16 @@ class BaseStmtNode : public IRNode {
 
 // A CRTP pattern to accept visitors for children class,
 // and dispatch back to the children.
-template <class Op>
-class ExprNode : public BaseExprNode {
+template <class Op, class Base = BaseExprNode>
+class ExprNode : public Base {
  public:
   using ExprNodeBase = ExprNode<Op>;
   void accept(IRVisitor* visitor) const override {
     visitor->visit(static_cast<const Op*>(this));
   }
   Expr accept_mutator(IRMutator* mutator) override;
-  explicit ExprNode(Dtype dtype) : BaseExprNode(dtype) {}
+  // pass the constructor to the base class
+  using Base::Base;
 };
 
 template <class Op>
@@ -136,8 +137,8 @@ class Stmt : public RefHandle<BaseStmtNode> {
   }
 };
 
-template <class Op>
-Expr ExprNode<Op>::accept_mutator(IRMutator* mutator) {
+template <class Op, class Base>
+Expr ExprNode<Op, Base>::accept_mutator(IRMutator* mutator) {
   ExprNode* this_mutable = const_cast<ExprNode*>(this);
   return mutator->mutate(static_cast<Op*>(this_mutable));
 }

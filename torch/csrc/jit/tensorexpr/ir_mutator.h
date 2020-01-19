@@ -23,6 +23,7 @@ class Store;
 class Broadcast;
 class Expr;
 class Stmt;
+class BaseCallNode;
 class Intrinsics;
 
 class IRMutator {
@@ -41,6 +42,13 @@ class IRMutator {
   virtual Expr mutate(const Ramp* v);
   virtual Expr mutate(const Load* v);
   virtual Expr mutate(const Broadcast* v);
+  // BaseCallNode is the base class for all call nodes.
+  // For any visitors that only needs the common behavior, only override this
+  // function is enough. This is because all derived class handlers will call
+  // this function by default.
+  // Override the derived class handler only if the logic is more specific to
+  // that.
+  virtual Expr mutate(const BaseCallNode* v);
   virtual Expr mutate(const Intrinsics* v);
 
   virtual Stmt mutate(const For* v);

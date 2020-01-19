@@ -81,10 +81,15 @@ void IRVisitor::visit(const Broadcast* v) {
   v->value().accept(this);
 }
 
-void IRVisitor::visit(const Intrinsics* v) {
+void IRVisitor::visit(const BaseCallNode* v) {
   for (int i = 0; i < v->nparams(); i++) {
     v->param(i).accept(this);
   }
+}
+
+void IRVisitor::visit(const Intrinsics* v) {
+  const BaseCallNode* base = v;
+  this->visit(base);
 }
 
 } // namespace compiler
