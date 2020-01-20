@@ -140,6 +140,11 @@ Expr IRMutator::mutate(const Intrinsics* v) {
   return this->mutate(base);
 }
 
+Expr IRMutator::mutate(const FunctionCall* v) {
+  const BaseCallNode* base = v;
+  return this->mutate(base);
+}
+
 Expr IRMutator::mutate(const BaseCallNode* v) {
   std::vector<Expr> params(v->nparams());
   bool any_change = false;

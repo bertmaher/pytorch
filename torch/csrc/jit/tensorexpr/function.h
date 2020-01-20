@@ -45,6 +45,9 @@ class FunctionNode : public RefCounted {
     CHECK_LT(index, dims_.size()) << "index out of upper bound";
     return dims_[index];
   }
+  const std::vector<Expr>& dims() const {
+    return dims_;
+  }
   const Var& arg(int index) const {
     CHECK_GE(index, 0) << "index out of lower bound";
     CHECK_LT(index, dims_.size()) << "index out of upper bound";
@@ -80,6 +83,9 @@ class Function : public RefHandle<FunctionNode> {
   }
   const Expr& dim(int index) const {
     return node()->dim(index);
+  }
+  const std::vector<Expr>& dims() const {
+    return node()->dims();
   }
   const Var& arg(int index) const {
     return node()->arg(index);

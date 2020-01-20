@@ -180,13 +180,41 @@ TEST(TensorTest, FunctionCall01) {
   Tensor d = Compute(
       "d",
       {{M, "m"}, {N, "n"}, {K, "k"}},
-      [&](const Var& m, const Var& n, const Var& k) {
-        return c(m, n, k) + 1;
-      });
+      [&](const Var& m, const Var& n, const Var& k) { return c(m, n, k) + 1; });
 
   Schedule sch({d});
   Stmt stmt = sch.Lower();
   std::ostringstream oss;
   oss << stmt;
   ASSERT_GT(oss.str().size(), 100);
+
+  PaddedBuffer<float> a_v(M, N);
+  PaddedBuffer<float> b_v(N, K);
+  PaddedBuffer<float> c_v(M, N, K);
+  PaddedBuffer<float> d_v(M, N, K);
+  PaddedBuffer<float> d_ref(M, N, K);
+
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+      a_v(i, j) = i * i;
+    }
+  }
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < K; j++) {
+      b_v(i, j) = j * j;
+    }
+  }
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+      for (int k = 0; k < K; k++) {
+        d_ref(i, j, k) = a_v(i, j) + b_v(j, k) + 1;
+      }
+    }
+  }
+
+  // TODO: get rid of specifying c
+  SimpleIREvaluator eval(stmt, a_buf, b_buf, d, c);
+  eval(a_v, b_v, d_v, c_v);
+
+  ExpectAllNear(d_v, d_ref, 1e-5);
 }

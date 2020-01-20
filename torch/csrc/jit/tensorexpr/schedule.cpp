@@ -1,9 +1,15 @@
 #include "torch/csrc/jit/tensorexpr/schedule.h"
 
+#include <queue>
 #include <stdexcept>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/ir_mutator.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
+#include "torch/csrc/jit/tensorexpr/tensor.h"
 
 namespace torch {
 namespace jit {
@@ -28,31 +34,103 @@ ScheduleNode::~ScheduleNode() {
   }
 }
 
+class ScheduleNode::ProducerFinder : public IRVisitor {
+ public:
+  ProducerFinder(const std::vector<Tensor>& output_tensors) {
+    for (int i = 0; i < output_tensors.size(); i++) {
+      const TensorNode* node = output_tensors[i].node();
+      to_process_.push(node);
+      encountered_.insert(node);
+    }
+
+    // Extract all the consumer-producer relationship.
+    while (!to_process_.empty()) {
+      TensorNode* tensor_node = const_cast<TensorNode*>(to_process_.front());
+      to_process_.pop();
+      current_consumer_ = tensor_node;
+      tensor_node->function().body().accept(this);
+    }
+
+    // Topologically sorted all the tensors in encountered_
+    while (!encountered_.empty()) {
+      sort_tensor_node(*encountered_.begin());
+    }
+  }
+
+  std::vector<const TensorNode*> GetTopologicallySorted() const {
+    return topologically_sorted_;
+  }
+
+ private:
+  void visit(const FunctionCall* v) override {
+    const TensorNode* producer = v->tensor().node();
+    add_producer_consumer_pair(current_consumer_, producer);
+  }
+
+  void add_producer_consumer_pair(
+      const TensorNode* consumer,
+      const TensorNode* producer) {
+    producers_[consumer].insert(producer);
+    consumers_[producer].insert(consumer);
+    if (encountered_.count(producer) == 0) {
+      encountered_.insert(producer);
+      to_process_.push(producer);
+    }
+  }
+
+  // topoligically sort the sub tensors under the current node
+  void sort_tensor_node(const TensorNode* tensor_node) {
+    encountered_.erase(tensor_node);
+    auto iter = producers_.find(tensor_node);
+    if (iter != producers_.end()) {
+      for (const TensorNode* producer_node : iter->second) {
+        if (encountered_.count(producer_node) != 0) {
+          sort_tensor_node(producer_node);
+        }
+      }
+    }
+    topologically_sorted_.push_back(tensor_node);
+  }
+
+  std::unordered_map<const TensorNode*, std::unordered_set<const TensorNode*>>
+      producers_;
+  std::unordered_map<const TensorNode*, std::unordered_set<const TensorNode*>>
+      consumers_;
+
+  const TensorNode* current_consumer_ = nullptr;
+  std::unordered_set<const TensorNode*> encountered_;
+  std::queue<const TensorNode*> to_process_;
+  std::vector<const TensorNode*> topologically_sorted_;
+};
+
 ScheduleNode::ScheduleNode(const std::vector<Tensor>& tensors)
-    : tensors_(tensors) {
+    : output_tensors_(tensors) {
+  producer_finder_.reset(new ProducerFinder(tensors));
   root_node_ = this->NewTensorExprNode();
   TensorExprNode* current_func = nullptr;
-  for (const Tensor& tensor : tensors) {
-    const Function& func = tensor.function();
+  std::vector<const TensorNode*> sorted_tensors =
+      producer_finder_->GetTopologicallySorted();
+  for (const TensorNode* tensor_node : sorted_tensors) {
+    const Function& func = tensor_node->function();
     if (current_func == nullptr) {
       current_func = root_node_->NewFirstChild();
     } else {
       current_func = current_func->NewNextSibling();
     }
     // TODO: handles the scalar case where ndims == 0
-    TensorExprNode* node = current_func;
+    TensorExprNode* expr_node = current_func;
     for (int i = 0; i < func.ndim(); i++) {
-      node = node->NewFirstChild();
+      expr_node = expr_node->NewFirstChild();
       LoopAxis* loop_axis = this->NewAxis(func.arg(i), Range(0, func.dim(i)));
-      node->set_loop_axis(loop_axis);
+      expr_node->set_loop_axis(loop_axis);
     }
-    node = node->NewFirstChild();
+    expr_node = expr_node->NewFirstChild();
     TensorExprOp* tensor_expr_op = this->NewTensorExprOp(func);
-    node->set_tensor_expr_op(tensor_expr_op);
+    expr_node->set_tensor_expr_op(tensor_expr_op);
 
     // attach the node to the user provided tensors.
-    Tensor* tensor_mutable = const_cast<Tensor*>(&tensor);
-    tensor_mutable->node()->expr_node_ = node;
+    TensorNode* tensor_mutable = const_cast<TensorNode*>(tensor_node);
+    tensor_mutable->expr_node_ = expr_node;
   }
 }
 
@@ -238,6 +316,17 @@ Stmt ScheduleNode::Lower(TensorExprNode* node) {
   return LowerNoSibling(node);
 }
 
+class Flattener : public IRMutator {
+ private:
+  Expr mutate(const FunctionCall* v) override {
+    Buffer buffer(
+        v->tensor().function().func_var(),
+        v->tensor().function().body().dtype(),
+        v->tensor().function().dims());
+    return buffer(v->params());
+  }
+};
+
 Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
   if (node == nullptr) {
     return Stmt();
@@ -249,7 +338,9 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     CHECK(node->first_child() == nullptr);
     TensorExprOp* expr_op = node->tensor_expr_op();
     Stmt stmt = expr_op->ElementStmt();
-    return stmt;
+    Flattener flattener;
+    Stmt stmt_flat = stmt.accept_mutator(&flattener);
+    return stmt_flat;
   } else if (node->is_loop_axis()) {
     CHECK(node->first_child() != nullptr);
     LoopAxis* loop_axis = node->loop_axis();

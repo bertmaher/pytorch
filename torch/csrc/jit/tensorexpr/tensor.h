@@ -122,15 +122,17 @@ class Tensor : public TensorOperation {
   template <typename... Ts>
   Expr operator()(const Ts&... ts) const;
 
- private:
-  friend class schedule::ScheduleNode;
   TensorNode* node() {
     // TODO: switch to dynamic_cast when it becomes available.
     return static_cast<TensorNode*>(TensorOperation::node());
   }
+
   const TensorNode* node() const {
     return const_cast<Tensor*>(this)->node();
   }
+
+ private:
+  friend class schedule::ScheduleNode;
 };
 
 // A helper structure to store the arguments to specify dimensions. In the
@@ -184,6 +186,13 @@ class FunctionCall : public CallNode<FunctionCall> {
   using BaseClass = CallNode<FunctionCall>;
   static Expr make(const Tensor& tensor, const std::vector<Expr>& params) {
     return Expr(new FunctionCall(tensor, params));
+  }
+
+  const Tensor& tensor() const {
+    return tensor_;
+  }
+  Tensor& tensor() {
+    return tensor_;
   }
 
  private:

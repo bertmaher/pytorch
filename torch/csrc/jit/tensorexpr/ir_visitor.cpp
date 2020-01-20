@@ -1,4 +1,7 @@
+#include "torch/csrc/jit/tensorexpr/ir_visitor.h"
+
 #include "torch/csrc/jit/tensorexpr/ir.h"
+#include "torch/csrc/jit/tensorexpr/tensor.h"
 
 namespace torch {
 namespace jit {
@@ -88,6 +91,11 @@ void IRVisitor::visit(const BaseCallNode* v) {
 }
 
 void IRVisitor::visit(const Intrinsics* v) {
+  const BaseCallNode* base = v;
+  this->visit(base);
+}
+
+void IRVisitor::visit(const FunctionCall* v) {
   const BaseCallNode* base = v;
   this->visit(base);
 }

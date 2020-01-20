@@ -62,7 +62,7 @@ class Buffer {
     CHECK(ndim() == 4);
     return x * strides_[0] + y * strides_[1] + z * strides_[2] + w;
   }
-  Expr Index(const std::vector<Expr>& indices) {
+  Expr Index(const std::vector<Expr>& indices) const {
     CHECK(ndim() == indices.size());
     Expr total_index;
     for (int i = 0; i < indices.size(); i++) {

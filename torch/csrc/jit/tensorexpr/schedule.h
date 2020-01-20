@@ -519,13 +519,15 @@ class ScheduleNode : public RefCounted {
   ScheduleObject* LookUpCloneScheduleObject(ScheduleObject* object);
   Stmt Lower(TensorExprNode* node);
   Stmt LowerNoSibling(TensorExprNode* node);
-
-  std::vector<Tensor> tensors_;
+  std::vector<Tensor> output_tensors_;
+  std::vector<Tensor> indirect_tensors_;
   TensorExprNode* root_node_ = nullptr; // not owned
   std::vector<ScheduleObject*> schedule_objects_; // Owned
   // a mapping between old and new objects during the clone process.
   // whoever creates this map is responsible for releasing it.
   std::unique_ptr<CloneMap> clone_map_;
+  class ProducerFinder;
+  std::unique_ptr<ProducerFinder> producer_finder_;
 };
 
 template <class Object>

@@ -21,8 +21,9 @@ class For;
 class Block;
 class Store;
 class Broadcast;
-class Intrinsics;
 class BaseCallNode;
+class Intrinsics;
+class FunctionCall;
 
 class IRVisitor {
  public:
@@ -51,6 +52,7 @@ class IRVisitor {
   // that.
   virtual void visit(const BaseCallNode* v);
   virtual void visit(const Intrinsics* v);
+  virtual void visit(const FunctionCall* v);
 };
 
 } // namespace compiler

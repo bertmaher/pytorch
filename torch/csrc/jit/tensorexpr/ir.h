@@ -461,6 +461,9 @@ class BaseCallNode : public BaseExprNode {
   const Expr& param(int index) const {
     return params_[index];
   }
+  const std::vector<Expr>& params() const {
+    return params_;
+  }
 
   virtual std::string func_name() const = 0;
 

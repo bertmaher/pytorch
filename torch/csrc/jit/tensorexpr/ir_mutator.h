@@ -25,6 +25,7 @@ class Expr;
 class Stmt;
 class BaseCallNode;
 class Intrinsics;
+class FunctionCall;
 
 class IRMutator {
  public:
@@ -50,6 +51,7 @@ class IRMutator {
   // that.
   virtual Expr mutate(const BaseCallNode* v);
   virtual Expr mutate(const Intrinsics* v);
+  virtual Expr mutate(const FunctionCall* v);
 
   virtual Stmt mutate(const For* v);
   virtual Stmt mutate(const Block* v);
