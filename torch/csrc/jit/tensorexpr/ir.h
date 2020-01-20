@@ -448,6 +448,7 @@ class BaseCallNode : public BaseExprNode {
  public:
   enum CallType {
     kIntrinsics,
+    kFunctionCall,
   };
 
   int nparams() const {
@@ -576,6 +577,8 @@ class Intrinsics : public CallNode<Intrinsics> {
 
   IntrinsicsOp op_type_;
 };
+
+class FunctionCall;
 
 } // namespace compiler
 } // namespace jit

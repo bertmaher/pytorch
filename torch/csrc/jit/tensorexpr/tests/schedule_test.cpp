@@ -164,3 +164,29 @@ TEST(TestSchedule, BroadcastAddBuffer) {
   }
   ExpectAllNear(c_v, c_ref, 1e-5);
 }
+
+TEST(TensorTest, FunctionCall01) {
+  const int M = 4;
+  const int N = 5;
+  const int K = 6;
+  Buffer a_buf("a", kFloat32, {M, N});
+  Buffer b_buf("b", kFloat32, {N, K});
+  Tensor c = Compute(
+      "broadcast_add",
+      {{M, "m"}, {N, "n"}, {K, "k"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return a_buf(m, n) + b_buf(n, k);
+      });
+  Tensor d = Compute(
+      "d",
+      {{M, "m"}, {N, "n"}, {K, "k"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return c(m, n, k) + 1;
+      });
+
+  Schedule sch({d});
+  Stmt stmt = sch.Lower();
+  std::ostringstream oss;
+  oss << stmt;
+  ASSERT_GT(oss.str().size(), 100);
+}

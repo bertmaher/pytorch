@@ -119,6 +119,9 @@ class Tensor : public TensorOperation {
     return node()->output_index();
   }
 
+  template <typename... Ts>
+  Expr operator()(const Ts&... ts) const;
+
  private:
   friend class schedule::ScheduleNode;
   TensorNode* node() {
@@ -175,6 +178,34 @@ Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const std::vector<Var>&)> body_func);
+
+class FunctionCall : public CallNode<FunctionCall> {
+ public:
+  using BaseClass = CallNode<FunctionCall>;
+  static Expr make(const Tensor& tensor, const std::vector<Expr>& params) {
+    return Expr(new FunctionCall(tensor, params));
+  }
+
+ private:
+  Expr DefaultMutator(const std::vector<Expr>& new_params) const override {
+    return FunctionCall::make(tensor_, new_params);
+  }
+
+  std::string func_name() const {
+    return tensor_.function().func_var().name_hint();
+  }
+
+  FunctionCall(const Tensor& tensor, const std::vector<Expr>& params)
+      : BaseClass(tensor.function().body().dtype(), kFunctionCall, params),
+        tensor_(tensor) {}
+  Tensor tensor_;
+};
+
+template <typename... Ts>
+inline Expr Tensor::operator()(const Ts&... ts) const {
+  std::vector<Expr> params({Expr(ts)...});
+  return FunctionCall::make(*this, std::move(params));
+}
 
 } // namespace compiler
 } // namespace jit
