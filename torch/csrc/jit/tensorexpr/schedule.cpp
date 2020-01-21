@@ -34,14 +34,15 @@ ScheduleNode::~ScheduleNode() {
   }
 }
 
-class ScheduleNode::ProducerFinder : public IRVisitor {
+class ScheduleNode::DependencyTracker : public IRVisitor {
  public:
-  virtual ~ProducerFinder() = default;
-  ProducerFinder(const std::vector<Tensor>& output_tensors) {
+  virtual ~DependencyTracker() = default;
+  DependencyTracker(const std::vector<Tensor>& output_tensors) {
     for (int i = 0; i < output_tensors.size(); i++) {
       const TensorNode* node = output_tensors[i].node();
       to_process_.push(node);
       encountered_.insert(node);
+      given_tensors_.insert(node);
     }
 
     // Extract all the consumer-producer relationship.
@@ -60,6 +61,10 @@ class ScheduleNode::ProducerFinder : public IRVisitor {
 
   std::vector<const TensorNode*> GetTopologicallySorted() const {
     return topologically_sorted_;
+  }
+
+  bool is_internal(const TensorNode* tensor_node) const {
+    return (given_tensors_.count(tensor_node) == 0);
   }
 
  private:
@@ -98,6 +103,10 @@ class ScheduleNode::ProducerFinder : public IRVisitor {
   std::unordered_map<const TensorNode*, std::unordered_set<const TensorNode*>>
       consumers_;
 
+  // the tensors given in the constructors. They are either the input or the
+  // output of the entire schedule.
+  std::unordered_set<const TensorNode*> given_tensors_;
+
   const TensorNode* current_consumer_ = nullptr;
   std::unordered_set<const TensorNode*> encountered_;
   std::queue<const TensorNode*> to_process_;
@@ -106,11 +115,11 @@ class ScheduleNode::ProducerFinder : public IRVisitor {
 
 ScheduleNode::ScheduleNode(const std::vector<Tensor>& tensors)
     : output_tensors_(tensors) {
-  producer_finder_.reset(new ProducerFinder(tensors));
+  dependency_tracker_.reset(new DependencyTracker(tensors));
   root_node_ = this->NewTensorExprNode();
   TensorExprNode* current_func = nullptr;
   std::vector<const TensorNode*> sorted_tensors =
-      producer_finder_->GetTopologicallySorted();
+      dependency_tracker_->GetTopologicallySorted();
   for (const TensorNode* tensor_node : sorted_tensors) {
     const Function& func = tensor_node->function();
     if (current_func == nullptr) {
@@ -132,6 +141,10 @@ ScheduleNode::ScheduleNode(const std::vector<Tensor>& tensors)
     // attach the node to the user provided tensors.
     TensorNode* tensor_mutable = const_cast<TensorNode*>(tensor_node);
     tensor_mutable->expr_node_ = expr_node;
+
+    if (dependency_tracker_->is_internal(tensor_node)) {
+      internal_tensors_.push_back(Tensor(const_cast<TensorNode*>(tensor_node)));
+    }
   }
 }
 
@@ -315,6 +328,29 @@ Stmt ScheduleNode::Lower(TensorExprNode* node) {
     return Block::make(siblings);
   }
   return LowerNoSibling(node);
+}
+
+Stmt ScheduleNode::Lower() {
+  Stmt core_stmt = Lower(root_node_);
+  if (internal_tensors_.size() == 0) {
+    return core_stmt;
+  }
+
+  std::vector<Stmt> allocs;
+  std::vector<Stmt> frees;
+  for (int i = 0; i < internal_tensors_.size(); i++) {
+    const Tensor& tensor = internal_tensors_[i];
+    Stmt alloc =
+        Allocate::make(tensor.buffer_var(), tensor.dtype(), tensor.dims());
+    allocs.push_back(alloc);
+    Stmt free = Free::make(tensor.buffer_var());
+    frees.push_back(free);
+  }
+  std::reverse(frees.begin(), frees.end());
+  Stmt alloc_block = Block::make(allocs);
+  Stmt free_block = Block::make(frees);
+  Stmt combined_stmt = Block::make({alloc_block, core_stmt, free_block});
+  return combined_stmt;
 }
 
 class Flattener : public IRMutator {

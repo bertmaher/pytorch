@@ -104,6 +104,20 @@ void IRVisitor::visit(const FunctionCall* v) {
   this->visit(base);
 }
 
+void IRVisitor::visit(const Allocate* v) {
+  Var buffer_var = v->buffer_var();
+  buffer_var.accept(this);
+  std::vector<Expr> dims = v->dims();
+  for (Expr& dim : dims) {
+    dim.accept(this);
+  }
+}
+
+void IRVisitor::visit(const Free* v) {
+  Var buffer_var = v->buffer_var();
+  buffer_var.accept(this);
+}
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

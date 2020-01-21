@@ -27,6 +27,8 @@ class Stmt;
 class BaseCallNode;
 class Intrinsics;
 class FunctionCall;
+class Allocate;
+class Free;
 
 class IRMutator {
  public:
@@ -58,6 +60,9 @@ class IRMutator {
   virtual Stmt mutate(const For* v);
   virtual Stmt mutate(const Block* v);
   virtual Stmt mutate(const Store* v);
+
+  virtual Stmt mutate(const Allocate* v);
+  virtual Stmt mutate(const Free* v);
 };
 
 } // namespace compiler

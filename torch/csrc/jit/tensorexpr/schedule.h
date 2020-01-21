@@ -472,9 +472,7 @@ class ScheduleNode : public RefCounted {
       Var* tail_var,
       TensorExprNode** tail_op);
 
-  Stmt Lower() {
-    return Lower(root_node_);
-  }
+  Stmt Lower();
 
   using CloneMap = std::unordered_map<ScheduleObject*, ScheduleObject*>;
   CloneMap& clone_map() {
@@ -520,14 +518,14 @@ class ScheduleNode : public RefCounted {
   Stmt Lower(TensorExprNode* node);
   Stmt LowerNoSibling(TensorExprNode* node);
   std::vector<Tensor> output_tensors_;
-  std::vector<Tensor> indirect_tensors_;
+  std::vector<Tensor> internal_tensors_;
   TensorExprNode* root_node_ = nullptr; // not owned
   std::vector<ScheduleObject*> schedule_objects_; // Owned
   // a mapping between old and new objects during the clone process.
   // whoever creates this map is responsible for releasing it.
   std::unique_ptr<CloneMap> clone_map_;
-  class ProducerFinder;
-  std::unique_ptr<ProducerFinder> producer_finder_;
+  class DependencyTracker;
+  std::unique_ptr<DependencyTracker> dependency_tracker_;
 };
 
 template <class Object>

@@ -33,6 +33,7 @@ class Dtype {
   bool operator!=(const Dtype& other) const {
     return !(*this == other);
   }
+  int byte_size() const;
 
  private:
   friend std::ostream& operator<<(std::ostream& stream, const Dtype& dtype);

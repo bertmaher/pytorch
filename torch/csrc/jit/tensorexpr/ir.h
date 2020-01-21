@@ -619,6 +619,57 @@ class Intrinsics : public CallNode<Intrinsics> {
 
 class FunctionCall;
 
+// Allocate a buffer of given shapes and dtypes and bind it with the given
+// buffer var. The life span is at most through the current program, until it is
+// explicitly freed. An unfreed memory is likely considered an error.
+class Allocate : public StmtNode<Allocate> {
+ public:
+  static Stmt make(
+      const Var& buffer_var,
+      Dtype dtype,
+      const std::vector<Expr>& dims) {
+    return Stmt(new Allocate(buffer_var, dtype, dims));
+  }
+
+  const Var& buffer_var() const {
+    return buffer_var_;
+  }
+
+  Dtype dtype() const {
+    return dtype_;
+  }
+
+  const std::vector<Expr>& dims() const {
+    return dims_;
+  }
+
+ private:
+  Allocate(const Var& buffer_var, Dtype dtype, const std::vector<Expr>& dims)
+      : buffer_var_(buffer_var), dtype_(dtype), dims_(dims) {}
+
+  Var buffer_var_;
+  Dtype dtype_;
+  std::vector<Expr> dims_;
+  // TODO: add memory types.
+};
+
+// Free the specific buffer. It is an error.
+class Free : public StmtNode<Free> {
+ public:
+  static Stmt make(const Var& buffer_var) {
+    return Stmt(new Free(buffer_var));
+  }
+
+  const Var& buffer_var() const {
+    return buffer_var_;
+  }
+
+ private:
+  Free(const Var& buffer_var) : buffer_var_(buffer_var) {}
+
+  Var buffer_var_;
+};
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

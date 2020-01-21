@@ -212,9 +212,8 @@ TEST(TensorTest, FunctionCall01) {
     }
   }
 
-  // TODO: get rid of specifying c
-  SimpleIREvaluator eval(stmt, a_buf, b_buf, d, c);
-  eval(a_v, b_v, d_v, c_v);
+  SimpleIREvaluator eval(stmt, a_buf, b_buf, d);
+  eval(a_v, b_v, d_v);
 
   ExpectAllNear(d_v, d_ref, 1e-5);
 }

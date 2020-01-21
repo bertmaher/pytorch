@@ -50,11 +50,20 @@ class TensorNode : public TensorOperationNode {
   const Expr& dim(int index) const {
     return function_.dim(index);
   }
+  const std::vector<Expr>& dims() const {
+    return function_.dims();
+  }
   const Function& function() const {
     return function_;
   }
   int output_index() const {
     return output_index_;
+  }
+  const Var& buffer_var() const {
+    return function_.func_var();
+  }
+  Dtype dtype() const {
+    return function_.body().dtype();
   }
 
  private:
@@ -106,17 +115,28 @@ class Tensor : public TensorOperation {
   Tensor(const Function& function, int output_index)
       : TensorOperation(new TensorNode(function, output_index)) {}
 
+  explicit Tensor(TensorNode* tensor_node) : TensorOperation(tensor_node) {}
+
   int ndim() const {
     return node()->ndim();
   }
   const Expr& dim(int index) const {
     return node()->dim(index);
   }
+  const std::vector<Expr>& dims() const {
+    return node()->dims();
+  }
   const Function& function() const {
     return node()->function();
   }
   int output_index() const {
     return node()->output_index();
+  }
+  const Var& buffer_var() const {
+    return node()->buffer_var();
+  }
+  Dtype dtype() const {
+    return node()->dtype();
   }
 
   template <typename... Ts>

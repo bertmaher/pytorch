@@ -33,6 +33,8 @@ class IRPrinter : public IRVisitor {
   void visit(const Store* v) override;
   void visit(const Broadcast* v) override;
   void visit(const BaseCallNode* v) override;
+  void visit(const Allocate* v) override;
+  void visit(const Free* v) override;
 
  private:
   std::ostream& os;

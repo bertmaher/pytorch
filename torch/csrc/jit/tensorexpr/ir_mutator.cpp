@@ -224,6 +224,37 @@ Stmt IRMutator::mutate(const Store* v) {
   return Store::make(base_handle_new, index_new, value_new, mask_new);
 }
 
+Stmt IRMutator::mutate(const Allocate* v) {
+  Var buffer_var_old = v->buffer_var();
+  Var buffer_var_new =
+      Var(buffer_var_old.accept_mutator(this).AsNode<Variable>());
+  bool any_change = same_node(buffer_var_new, buffer_var_old);
+
+  std::vector<Expr> dims_old = v->dims();
+  std::vector<Expr> dims_new(dims_old.size());
+  for (int i = 0; i < dims_old.size(); i++) {
+    dims_new[i] = dims_old[i].accept_mutator(this);
+    any_change |= same_node(dims_new[i], dims_old[i]);
+  }
+
+  if (!any_change) {
+    return Stmt(v);
+  }
+
+  return Allocate::make(buffer_var_new, v->dtype(), dims_new);
+}
+
+Stmt IRMutator::mutate(const Free* v) {
+  Var buffer_var_old = v->buffer_var();
+  Var buffer_var_new =
+      Var(buffer_var_old.accept_mutator(this).AsNode<Variable>());
+  if (same_node(buffer_var_new, buffer_var_old)) {
+    return Stmt(v);
+  }
+
+  return Free::make(buffer_var_new);
+}
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

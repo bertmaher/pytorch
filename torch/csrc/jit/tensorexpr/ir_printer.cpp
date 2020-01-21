@@ -157,6 +157,23 @@ void IRPrinter::visit(const BaseCallNode* v) {
   os << ")";
 }
 
+void IRPrinter::visit(const Allocate* v) {
+  os << "Allocate(" << v->buffer_var() << ", " << v->dtype();
+  os << ", {";
+  const std::vector<Expr>& dims = v->dims();
+  for (int i = 0; i < dims.size(); i++) {
+    if (i != 0) {
+      os << ", ";
+    }
+    os << dims[i];
+  }
+  os << "})";
+}
+
+void IRPrinter::visit(const Free* v) {
+  os << "Free(" << v->buffer_var() << ")";
+}
+
 std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
   IRPrinter p(stream);
   p.print(expr);

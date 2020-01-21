@@ -483,6 +483,36 @@ class SimpleIREvaluator : public IRVisitor {
     value_ = Value(result);
   }
 
+  void visit(const Allocate* v) override {
+    const Variable* buffer_var = v->buffer_var().AsNode<Variable>();
+    std::vector<Expr> dims = v->dims();
+    int total_byte_size = v->dtype().byte_size();
+    for (int i = 0; i < dims.size(); i++) {
+      dims[i].accept(this);
+      total_byte_size *= value_.as<int>();
+    }
+    int int_count = (total_byte_size + sizeof(int) - 1) / sizeof(int);
+    std::unique_ptr<std::vector<int>> buffer(new std::vector<int>(int_count));
+    auto iter = buffer_mapping_.find(buffer_var);
+    if (iter != buffer_mapping_.end() && iter->second != nullptr) {
+      throw std::runtime_error(
+          "Allocate a buffer that has already been allocated: " +
+          buffer_var->name_hint());
+    }
+    buffer_mapping_[buffer_var] = buffer->data();
+    internal_buffers_.insert(std::make_pair(buffer_var, std::move(buffer)));
+  }
+
+  void visit(const Free* v) override {
+    const Variable* buffer_var = v->buffer_var().AsNode<Variable>();
+    int count = internal_buffers_.erase(buffer_var);
+    if (count == 0) {
+      throw std::runtime_error(
+          "Free a buffer that is not currently bound: " +
+          buffer_var->name_hint());
+    }
+  }
+
   Value value() const {
     return value_;
   }
@@ -564,6 +594,8 @@ class SimpleIREvaluator : public IRVisitor {
   Value value_;
   std::unordered_map<const BaseExprNode*, Value> eval_context_;
   BufferMapping buffer_mapping_;
+  std::unordered_map<const Variable*, std::unique_ptr<std::vector<int>>>
+      internal_buffers_;
 };
 
 using VarMapping = std::vector<std::pair<Expr, Expr>>;

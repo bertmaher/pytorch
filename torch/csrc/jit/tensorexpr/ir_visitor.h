@@ -25,6 +25,8 @@ class Broadcast;
 class BaseCallNode;
 class Intrinsics;
 class FunctionCall;
+class Allocate;
+class Free;
 
 class IRVisitor {
  public:
@@ -55,6 +57,8 @@ class IRVisitor {
   virtual void visit(const BaseCallNode* v);
   virtual void visit(const Intrinsics* v);
   virtual void visit(const FunctionCall* v);
+  virtual void visit(const Allocate* v);
+  virtual void visit(const Free* v);
 };
 
 } // namespace compiler

@@ -58,6 +58,22 @@ std::ostream& operator<<(std::ostream& stream, const Dtype& dtype) {
   return stream;
 }
 
+int Dtype::byte_size() const {
+  int scalar_size = -1;
+  switch (scalar_type_) {
+    case kScalarInt32:
+      scalar_size = sizeof(int32);
+      break;
+    case kScalarFloat32:
+      scalar_size = sizeof(float);
+      break;
+    default:
+      throw std::runtime_error(
+          "invalid scalar type; " + std::to_string(scalar_type_));
+  }
+  return scalar_size * lanes();
+}
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch
