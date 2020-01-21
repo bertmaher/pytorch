@@ -1,4 +1,5 @@
 #include "torch/csrc/jit/tensorexpr/types.h"
+#include <torch/csrc/WindowsTorchApiMacro.h>
 
 #include <c10/util/Logging.h>
 
@@ -29,12 +30,12 @@ Dtype Dtype::scalar_type() const {
   }
 }
 
-Dtype kInt32(kScalarInt32, 1);
-Dtype kFloat32(kScalarFloat32, 1);
-Dtype kHandle(kScalarHandle, 1);
-Dtype kUninitialized(kScalarUninitialized, 1);
+TORCH_API Dtype kInt32(kScalarInt32, 1);
+TORCH_API Dtype kFloat32(kScalarFloat32, 1);
+TORCH_API Dtype kHandle(kScalarHandle, 1);
+TORCH_API Dtype kUninitialized(kScalarUninitialized, 1);
 
-std::ostream& operator<<(std::ostream& stream, const Dtype& dtype) {
+TORCH_API std::ostream& operator<<(std::ostream& stream, const Dtype& dtype) {
   switch (static_cast<ScalarType>(dtype.scalar_type_)) {
     case kScalarUninitialized:
       stream << "uninitialized";
