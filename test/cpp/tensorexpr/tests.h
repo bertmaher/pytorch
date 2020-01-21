@@ -9,7 +9,7 @@
 namespace torch {
 namespace jit {
 #define TH_FORALL_TESTS(_)             \
-  _(True)
+  _(BasicValue)                        \
 
 #define TH_FORALL_TESTS_CUDA(_) \
 
