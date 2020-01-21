@@ -36,6 +36,7 @@ ScheduleNode::~ScheduleNode() {
 
 class ScheduleNode::ProducerFinder : public IRVisitor {
  public:
+  virtual ~ProducerFinder() = default;
   ProducerFinder(const std::vector<Tensor>& output_tensors) {
     for (int i = 0; i < output_tensors.size(); i++) {
       const TensorNode* node = output_tensors[i].node();
