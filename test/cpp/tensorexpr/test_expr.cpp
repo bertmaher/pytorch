@@ -10,9 +10,7 @@
 namespace torch {
 namespace jit {
 
-void testTrue() {
-  AT_ASSERT(true);
-}
+using namespace compiler;
 
 void testBasicValue() {
   Expr a = IntImm::make(2), b = IntImm::make(3);
