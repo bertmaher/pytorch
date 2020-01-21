@@ -978,3 +978,201 @@ TEST(ATenTest, reluFloat) {
     EXPECT_EQ(b_v(i), std::fmax(a_v(i), 0)) << "index: " << i;
   }
 }
+
+TEST(ATenTest, logFloat) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      log(load_a),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i + 10;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i + 10) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::log(a_v(i))) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, log10Float) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      log10(load_a),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i + 10;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i + 10) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::log10(a_v(i))) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, log2Float) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      log2(load_a),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i + 10;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i + 10) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::log2(a_v(i))) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, expFloat) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      exp(load_a),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i / 10.0f;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i / 10.0f) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::exp(a_v(i))) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, erfFloat) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      erf(load_a),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i / 10.0f;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i / 10.0f) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::erf(a_v(i))) << "index: " << i;
+  }
+}
+
+TEST(ATenTest, cosFloat) {
+  const int kTotalSize = 128;
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Var index = Var("index", kInt32);
+  Expr load_a = Load::make(
+      a_buf,
+      index,
+      1);
+  Stmt store_b = Store::make(
+      b_buf,
+      index,
+      cos(load_a),
+      1);
+  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+
+  PaddedBuffer<float> a_v(kTotalSize);
+  PaddedBuffer<float> b_v(kTotalSize);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+      a_v(i) = i / 10.0f;
+  }
+
+  SimpleIREvaluator ir_eval(stmt, a_buf, b_buf);
+  ir_eval(a_v, b_v);
+
+  for (int i = 0; i < kTotalSize; ++i) {
+    EXPECT_EQ(a_v(i), i / 10.0f) << "index: " << i;
+    EXPECT_EQ(b_v(i), std::cos(a_v(i))) << "index: " << i;
+  }
+}
