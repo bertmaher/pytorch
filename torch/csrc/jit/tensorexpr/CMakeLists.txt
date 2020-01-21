@@ -49,30 +49,33 @@ if (LLVM_FOUND)
   target_link_libraries(nnc PRIVATE ${LLVM_LINK_LIBS})
 endif (LLVM_FOUND)
 
-add_custom_target(cpptest)
-add_subdirectory(../../../../third_party/googletest/ googletest EXCLUDE_FROM_ALL)
+option(BUILD_TX_TESTS "Build the tensorexpr tests" ON)
 
-set(TEST_SRCS
-  tests/asmjit_test.cpp
-  tests/expr_test.cpp
-  tests/llvm_test.cpp
-  tests/type_test.cpp
-  tests/ir_printer_test.cpp
-  tests/schedule_test.cpp
-  tests/aten_test.cpp
-  )
+if (BUILD_TX_TESTS)
+  add_custom_target(cpptest)
+  add_subdirectory(../../../../third_party/googletest/ googletest EXCLUDE_FROM_ALL)
 
-add_library(test_lib
-  tests/padded_buffer.cpp
-  )
-target_link_libraries(test_lib PUBLIC c10 gtest)
+  set(TEST_SRCS
+    tests/asmjit_test.cpp
+    tests/expr_test.cpp
+    tests/llvm_test.cpp
+    tests/type_test.cpp
+    tests/ir_printer_test.cpp
+    tests/schedule_test.cpp
+    tests/aten_test.cpp
+    )
 
-foreach(test_path ${TEST_SRCS})
-  get_filename_component(filename ${test_path} NAME)
-  string(REPLACE ".cpp" "" test_exec ${filename})
-  add_executable(${test_exec} ${test_path})
-  add_dependencies(cpptest ${test_exec})
-  target_link_libraries(${test_exec} test_lib nnc gtest_main gtest ${ASMJIT_DEPS})
-  # set_target_properties(${test_exec} PROPERTIES EXCLUDE_FROM_ALL 1)
-  set_target_properties(${test_exec} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
-endforeach()
+  add_library(test_lib
+    tests/padded_buffer.cpp
+    )
+  target_link_libraries(test_lib PUBLIC c10 gtest)
+
+  foreach(test_path ${TEST_SRCS})
+    get_filename_component(filename ${test_path} NAME)
+    string(REPLACE ".cpp" "" test_exec ${filename})
+    add_executable(${test_exec} ${test_path})
+    add_dependencies(cpptest ${test_exec})
+    target_link_libraries(${test_exec} test_lib nnc gtest_main gtest ${ASMJIT_DEPS})
+    set_target_properties(${test_exec} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD 1)
+  endforeach()
+endif()
