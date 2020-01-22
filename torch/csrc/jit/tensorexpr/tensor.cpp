@@ -16,7 +16,7 @@ void TensorOperationNode::SplitWithTail(
     Var* inner_var,
     Var* tail_var,
     TensorOperation* tail_op) {
-  CHECK(expr_node_ != nullptr);
+  check_expr_node();
   schedule::ScheduleNode* schedule = expr_node_->schedule();
   schedule::TensorExprNode* tail_expr_node = nullptr;
   schedule->SplitWithTail(
@@ -30,6 +30,19 @@ void TensorOperationNode::SplitWithTail(
       &tail_expr_node);
   if (!tail_expr_node) {
     *tail_op = TensorOperation::make(tail_expr_node);
+  }
+}
+
+void TensorOperationNode::ComputeInline() {
+  check_expr_node();
+  schedule::ScheduleNode* schedule = expr_node_->schedule();
+  schedule->ComputeInline(expr_node_);
+}
+
+void TensorOperationNode::check_expr_node() {
+  if (expr_node_ == nullptr) {
+    throw std::runtime_error(
+        "expr_node in this tensor is null. It is likely that no schedule is attached.");
   }
 }
 

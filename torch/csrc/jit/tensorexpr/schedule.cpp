@@ -148,6 +148,15 @@ ScheduleNode::ScheduleNode(const std::vector<Tensor>& tensors)
   }
 }
 
+void ScheduleNode::ComputeInline(TensorExprNode* expr_node) {
+  if (!expr_node->is_tensor_expr_op()) {
+    throw std::runtime_error("expr_node must be tensor_expr_op");
+  }
+
+  TensorExprOp* texpr_op = expr_node->tensor_expr_op();
+  inlined_functions_.push_back(texpr_op->func());
+}
+
 void ScheduleNode::SplitWithTail(
     TensorExprNode* expr_node,
     const Var& loop_var,
@@ -295,6 +304,99 @@ ScheduleObject* ScheduleNode::CloneScheduleObject(ScheduleObject* object) {
   return new_object;
 }
 
+class Flattener : public IRMutator {
+ private:
+  Expr mutate(const FunctionCall* v) override {
+    Buffer buffer(
+        v->tensor().function().func_var(),
+        v->tensor().function().body().dtype(),
+        v->tensor().function().dims());
+    return buffer(v->params());
+  }
+};
+
+class FunctionInliner : public IRMutator {
+ public:
+  FunctionInliner(const Function& func) : func_(func) {}
+
+ private:
+  // For the target function, insert the caller/callee pair into the replacement
+  // mapping.
+  Expr mutate(const FunctionCall* v) override {
+    const Function& func = v->tensor().function();
+    if (func.node() == func_.node()) {
+      // Insert the caller/callee pair into the mapping.
+      for (int i = 0; i < func.ndim(); i++) {
+        const Variable* func_callee_arg = func.arg(i).AsNode<Variable>();
+        const Expr& func_caller_param = v->param(i);
+        auto iter = inline_mapping_.find(func_callee_arg);
+        if (iter != inline_mapping_.end()) {
+          throw std::runtime_error(
+              "Duplicated variables: " + func_callee_arg->name_hint());
+        }
+        inline_mapping_[func_callee_arg] = func_caller_param;
+      }
+
+      // Call the actual replacement.
+      Expr body = func.body();
+      Expr result = body.accept_mutator(this);
+
+      // Remove the caller/callee relationship.
+      for (int i = 0; i < func.ndim(); i++) {
+        const Variable* func_callee_arg = func.arg(i).AsNode<Variable>();
+        auto iter = inline_mapping_.find(func_callee_arg);
+        if (iter == inline_mapping_.end()) {
+          throw std::runtime_error(
+              "Variable already removed: " + func_callee_arg->name_hint());
+        }
+        inline_mapping_.erase(iter);
+      }
+      return result;
+    } else {
+      return Expr(v);
+    }
+  }
+
+  // Replace the target variable with the caller expressions.
+  Expr mutate(const Variable* v) {
+    auto iter = inline_mapping_.find(v);
+    if (iter == inline_mapping_.end()) {
+      return Expr(v);
+    } else {
+      return iter->second;
+    }
+  }
+
+  // Remove the buffer write the inlined function.
+  Stmt mutate(const Store* v) override {
+    if (v->base_handle().node() == func_.func_var().node()) {
+      return Stmt();
+    } else {
+      return IRMutator::mutate(v);
+    }
+  }
+
+  std::unordered_map<const Variable*, Expr> inline_mapping_;
+  Function func_;
+};
+
+static Stmt InjectInlines(const Stmt& stmt, const Function& func) {
+  FunctionInliner inliner(func);
+  Stmt stmt_old = stmt;
+  Stmt stmt_new = stmt_old.accept_mutator(&inliner);
+  return stmt_new;
+}
+
+static Stmt InjectInlines(
+    const Stmt& stmt,
+    const std::vector<Function>& inlined_funcs) {
+  Stmt current_stmt = stmt;
+  for (int i = 0; i < inlined_funcs.size(); i++) {
+    current_stmt = InjectInlines(current_stmt, inlined_funcs[i]);
+  }
+  return current_stmt;
+}
+
 ScheduleObject* ScheduleNode::LookUpCloneScheduleObject(
     ScheduleObject* object) {
   if (object == nullptr) {
@@ -332,14 +434,32 @@ Stmt ScheduleNode::Lower(TensorExprNode* node) {
 
 Stmt ScheduleNode::Lower() {
   Stmt core_stmt = Lower(root_node_);
+
+  // Inject inlines
+  core_stmt = InjectInlines(core_stmt, inlined_functions_);
+
+  // Flatten function calls.
+  Flattener flattener;
+  core_stmt = core_stmt.accept_mutator(&flattener);
+
+  // Add allocs and frees for intermediate buffers at the global level.
+  // TODO: move allocs and frees to the imemediate areas to reuse buffers.
   if (internal_tensors_.size() == 0) {
     return core_stmt;
   }
 
+  std::unordered_set<const FunctionNode*> inlined_func_set;
+  for (int i = 0; i < inlined_functions_.size(); i++) {
+    inlined_func_set.insert(inlined_functions_[i].node());
+  }
   std::vector<Stmt> allocs;
   std::vector<Stmt> frees;
   for (int i = 0; i < internal_tensors_.size(); i++) {
     const Tensor& tensor = internal_tensors_[i];
+    if (inlined_func_set.count(tensor.function().node()) > 0) {
+      // No need to allocation memory for intermediate tensors.
+      continue;
+    }
     Stmt alloc =
         Allocate::make(tensor.buffer_var(), tensor.dtype(), tensor.dims());
     allocs.push_back(alloc);
@@ -353,17 +473,6 @@ Stmt ScheduleNode::Lower() {
   return combined_stmt;
 }
 
-class Flattener : public IRMutator {
- private:
-  Expr mutate(const FunctionCall* v) override {
-    Buffer buffer(
-        v->tensor().function().func_var(),
-        v->tensor().function().body().dtype(),
-        v->tensor().function().dims());
-    return buffer(v->params());
-  }
-};
-
 Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
   if (node == nullptr) {
     return Stmt();
@@ -375,9 +484,7 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     CHECK(node->first_child() == nullptr);
     TensorExprOp* expr_op = node->tensor_expr_op();
     Stmt stmt = expr_op->ElementStmt();
-    Flattener flattener;
-    Stmt stmt_flat = stmt.accept_mutator(&flattener);
-    return stmt_flat;
+    return stmt;
   } else if (node->is_loop_axis()) {
     CHECK(node->first_child() != nullptr);
     LoopAxis* loop_axis = node->loop_axis();

@@ -459,7 +459,7 @@ class SimpleIREvaluator : public IRVisitor {
   }
 
   void visit(const BaseCallNode* v) override {
-    LOG(FATAL) << "unsupported";
+    LOG(FATAL) << "unsupported visit to BaseCallNode";
   }
 
   void visit(const Intrinsics* v) override {

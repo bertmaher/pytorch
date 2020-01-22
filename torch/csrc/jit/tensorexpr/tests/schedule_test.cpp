@@ -217,3 +217,108 @@ TEST(TensorTest, FunctionCall01) {
 
   ExpectAllNear(d_v, d_ref, 1e-5);
 }
+
+static std::string remove_space(const std::string& str) {
+  std::string str_new = str;
+  str_new.erase(
+      remove_if(str_new.begin(), str_new.end(), isspace), str_new.end());
+  return str_new;
+}
+
+TEST(ScheduleTest, InlineFunc01) {
+  const int M = 4;
+  const int N = 5;
+  const int K = 6;
+  Buffer a_buf("a", kFloat32, {M, N});
+  Buffer b_buf("b", kFloat32, {N, K});
+  Buffer c_buf("c", kFloat32, {M, N});
+  Buffer d_buf("d", kFloat32, {M, K});
+
+  Tensor x = Compute(
+      "x",
+      {{M, "m"}, {N, "n"}, {K, "k"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return a_buf(m, n) * b_buf(n, k);
+      });
+  Tensor y = Compute(
+      "y",
+      {{M, "m"}, {N, "n"}, {K, "k"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return c_buf(m, n) * d_buf(m, k);
+      });
+  Tensor z = Compute(
+      "z",
+      {{M, "m"}, {N, "n"}, {K, "k"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return x(m, n, k) + y(m, n, k);
+      });
+
+  Schedule sch({z});
+  x.ComputeInline();
+  y.ComputeInline();
+  Stmt stmt = sch.Lower();
+
+  std::ostringstream oss;
+  oss << stmt;
+  std::string str1 = remove_space(oss.str());
+
+  {
+    PaddedBuffer<float> a_v(M, N);
+    PaddedBuffer<float> b_v(N, K);
+    PaddedBuffer<float> c_v(M, N);
+    PaddedBuffer<float> d_v(M, K);
+
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < N; j++) {
+        a_v(i, j) = i * i;
+      }
+    }
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < K; j++) {
+        a_v(i, j) = j * j;
+      }
+    }
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < N; j++) {
+        c_v(i, j) = i + j;
+      }
+    }
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < K; j++) {
+        d_v(i, j) = i * j;
+      }
+    }
+
+    PaddedBuffer<float> z_v(M, N, K);
+    PaddedBuffer<float> z_ref(M, N, K);
+    for (int m = 0; m < M; m++) {
+      for (int n = 0; n < N; n++) {
+        for (int k = 0; k < K; k++) {
+          z_ref(m, n, k) = a_v(m, n) * b_v(n, k) + c_v(m, n) * d_v(m, k);
+        }
+      }
+    }
+
+    SimpleIREvaluator eval(stmt, a_buf, b_buf, c_buf, d_buf, z);
+    eval(a_v, b_v, c_v, d_v, z_v);
+    ExpectAllNear(z_v, z_ref, 1e-5);
+  }
+
+  {
+    Tensor z2 = Compute(
+        "z",
+        {{M, "m"}, {N, "n"}, {K, "k"}},
+        [&](const Var& m, const Var& n, const Var& k) {
+          return a_buf(m, n) * b_buf(n, k) + c_buf(m, n) * d_buf(m, k);
+        });
+    Schedule sch2({z2});
+    Stmt stmt2 = sch2.Lower();
+
+    std::ostringstream oss2;
+    oss2 << stmt2;
+    std::string str2 = remove_space(oss2.str());
+
+    ASSERT_EQ(str1, str2);
+    ASSERT_GT(str1.size(), 100);
+  }
+}

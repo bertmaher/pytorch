@@ -27,6 +27,9 @@ class TensorOperationNode : public RefCounted {
       Var* inner_var,
       Var* tail_var,
       TensorOperation* tail_op);
+
+  void ComputeInline();
+
   TensorExprNode* expr_node() {
     return expr_node_;
   }
@@ -37,6 +40,8 @@ class TensorOperationNode : public RefCounted {
       : expr_node_(expr_node) {}
 
  private:
+  void check_expr_node();
+
   friend class TensorOperation;
   friend class schedule::ScheduleNode;
   TensorExprNode* expr_node_ = nullptr;
@@ -104,6 +109,10 @@ class TensorOperation : public RefHandle<TensorOperationNode> {
         inner_var,
         tail_var,
         tail_op);
+  }
+
+  void ComputeInline() {
+    node()->ComputeInline();
   }
 
  protected:

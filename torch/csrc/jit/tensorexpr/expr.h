@@ -131,6 +131,10 @@ class Stmt : public RefHandle<BaseStmtNode> {
     return node()->accept_mutator(mutator);
   }
 
+  bool empty() const {
+    return node() == nullptr;
+  }
+
   template <class Op>
   const Op* AsNode() const {
     return dynamic_cast<const Op*>(this->node());

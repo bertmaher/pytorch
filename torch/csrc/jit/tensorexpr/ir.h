@@ -291,7 +291,17 @@ class Let : public ExprNode<Let> {
 class Block : public StmtNode<Block> {
  public:
   static Stmt make(const std::vector<Stmt>& stmts) {
-    return Stmt(new Block(stmts));
+    std::vector<Stmt> valid_stmts;
+    for (int i = 0; i < stmts.size(); i++) {
+      if (stmts[i].empty()) {
+        continue;
+      }
+      valid_stmts.push_back(stmts[i]);
+    }
+    if (valid_stmts.empty()) {
+      return Stmt();
+    }
+    return Stmt(new Block(valid_stmts));
   }
   int nstmts() const {
     return stmts_.size();
@@ -324,6 +334,9 @@ class For : public StmtNode<For> {
       const Expr& start,
       const Expr& stop,
       const Stmt& body) {
+    if (body.empty()) {
+      return Stmt();
+    }
     return Stmt(new For(var, start, stop, body));
   }
 
