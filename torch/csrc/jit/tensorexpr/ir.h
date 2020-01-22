@@ -381,7 +381,7 @@ class Ramp : public ExprNode<Ramp> {
   int lanes_;
 };
 
-class Load : public ExprNode<Load> {
+class TORCH_API Load : public ExprNode<Load> {
  public:
   const Var& base_handle() const {
     return base_handle_;
@@ -416,7 +416,7 @@ class Load : public ExprNode<Load> {
   Expr mask_;
 };
 
-class Store : public StmtNode<Store> {
+class TORCH_API Store : public StmtNode<Store> {
  public:
   const Var& base_handle() const {
     return base_handle_;
