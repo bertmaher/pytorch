@@ -181,6 +181,12 @@ std::vector<Expr> texprSizes(const c10::VaryingShape& shape) {
   return dims;
 }
 
+std::vector<DimArg> texprDims(torch::jit::Value* v) {
+  auto tt = v->type()->cast<TensorType>();
+  auto exprDims = texprSizes(tt->sizes());
+  return std::vector<DimArg>(exprDims.begin(), exprDims.end());
+}
+
 Buffer texprBuffer(const torch::jit::Value* v) {
   auto tt = v->type()->cast<TensorType>();
   return Buffer(
@@ -197,23 +203,10 @@ size_t bufferSize(T t) {
 }
 
 struct TensorExprKernel {
-  std::vector<Buffer*> buffer_args;
+  std::vector<Buffer> buffer_args;
   Tensor* tensor_output;
-  std::unordered_map<int64_t, Buffer> buffers;
   std::unordered_map<int64_t, Tensor> tensors;
   Stmt stmt;
-
-  template <typename LhsT, typename RhsT>
-  void createAdd(Node* n, LhsT lhs, RhsT rhs) {
-    auto tt = n->output()->type()->cast<TensorType>();
-    auto exprDims = texprSizes(tt->sizes());
-    std::vector<DimArg> dims(exprDims.begin(), exprDims.end());
-    tensors.emplace(
-        n->output()->unique(),
-        Compute("aten_add", dims, [lhs, rhs](const std::vector<Var>& axes) {
-          return lhs(axes[0]) + rhs(axes[0]);
-        }));
-  }
 
   explicit TensorExprKernel(const Node* node) {
     auto subgraph = node->g(attr::Subgraph);
@@ -221,8 +214,16 @@ struct TensorExprKernel {
     // Bind inputs to buffers.
     auto inputs = subgraph->inputs();
     for (auto const& input : subgraph->inputs()) {
-      buffers.emplace(input->unique(), texprBuffer(input));
-      buffer_args.push_back(&buffers.at(input->unique()));
+      Buffer in_buffer = texprBuffer(input);
+      tensors.emplace(
+          input->unique(),
+          Compute(
+              "input",
+              texprDims(input),
+              [in_buffer](const std::vector<Var>& axes) {
+                return in_buffer(axes[0]);
+              }));
+      buffer_args.push_back(std::move(in_buffer));
     }
 
     // Bind nodes to tensor compute expressions.
@@ -241,22 +242,16 @@ struct TensorExprKernel {
       }
 
       if (n->kind() == aten::add) {
-        auto* lhs = n->inputs()[0];
-        auto* rhs = n->inputs()[1];
-        auto luniq = lhs->unique();
-        auto runiq = rhs->unique();
-
-        if (tensors.count(luniq) && tensors.count(runiq)) {
-          createAdd(n, tensors.at(luniq), tensors.at(runiq));
-        } else if (tensors.count(luniq) && buffers.count(runiq)) {
-          createAdd(n, tensors.at(luniq), buffers.at(runiq));
-        } else if (buffers.count(luniq) && tensors.count(runiq)) {
-          createAdd(n, buffers.at(luniq), tensors.at(runiq));
-        } else if (buffers.count(luniq) && buffers.count(runiq)) {
-          createAdd(n, buffers.at(luniq), buffers.at(runiq));
-        } else {
-          LOG(FATAL) << "Unhandled arguments to aten::add";
-        }
+        auto const& lhs = tensors.at(n->inputs()[0]->unique());
+        auto const& rhs = tensors.at(n->inputs()[1]->unique());
+        tensors.emplace(
+            n->output()->unique(),
+            Compute(
+                "aten_add",
+                texprDims(n->output()),
+                [&lhs, &rhs](const std::vector<Var>& axes) {
+                  return lhs(axes[0]) + rhs(axes[0]);
+                }));
         continue;
       }
 
@@ -278,7 +273,7 @@ struct TensorExprKernel {
 
     auto inputs = last(stack, buffer_args.size());
     for (int i = 0; i < buffer_args.size(); i++) {
-      eval.bindBuffer(*buffer_args[i], inputs[i].toTensor().data_ptr());
+      eval.bindBuffer(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
 
     at::Tensor output =
