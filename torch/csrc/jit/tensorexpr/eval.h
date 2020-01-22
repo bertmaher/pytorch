@@ -121,11 +121,6 @@ class SimpleIREvaluator : public IRVisitor {
   SimpleIREvaluator(const Expr& expr, Ts... ts)
       : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
 
-  template <typename Buf, typename Data>
-  void bindBuffer(Buf b, Data d) {
-    buffer_mapping_[BufferArg(b).var().node()] = d.data();
-  }
-
   template <typename Buf>
   void bindBuffer(Buf b, void *d) {
     buffer_mapping_[BufferArg(b).var().node()] = d;
