@@ -18,7 +18,7 @@ TORCH_API std::ostream& operator<<(std::ostream& stream, const Dtype& dtype);
 // Switch to PT/Aten dtypes
 
 // Data types for scalar and vector elements.
-class Dtype {
+class TORCH_API Dtype {
  public:
   explicit Dtype(int type) : scalar_type_(type), lanes_(1) {}
   Dtype(int scalar_type, int lanes)
