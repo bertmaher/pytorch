@@ -108,8 +108,6 @@ void testVectorAdd01() {
   EXPECT_EQ(load_b.dtype(), Dtype(kFloat32, kVectorSize));
   EXPECT_EQ(value.dtype(), Dtype(kFloat32, kVectorSize));
 
-  // TODO: Add functions from padded_buffer
-#if 0
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
   PaddedBuffer<float> c_v(kTotalSize);
@@ -122,7 +120,6 @@ void testVectorAdd01() {
   SimpleIREvaluator ir_eval(stmt, a_buf, b_buf, c_buf);
   ir_eval(a_v, b_v, c_v);
   ExpectAllNear(c_v, c_ref, 1e-5);
-#endif
 }
 
 void testCompareSelectEQ() {
