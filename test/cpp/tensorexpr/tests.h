@@ -10,6 +10,16 @@ namespace torch {
 namespace jit {
 #define TH_FORALL_TESTS(_)             \
   _(BasicValue)                        \
+  _(BasicValue02)                      \
+  _(Let01)                             \
+  _(DISABLED_Let02)                    \
+  _(Tensor01)                          \
+  _(VectorAdd01)                       \
+  _(CompareSelectEQ)                   \
+  _(Substitute01)                      \
+  _(Math01)                            \
+  _(UnaryMath01)                       \
+  _(BinaryMath01)                      \
 
 #define TH_FORALL_TESTS_CUDA(_) \
 
