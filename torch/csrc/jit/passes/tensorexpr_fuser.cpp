@@ -194,20 +194,43 @@ Buffer texprBuffer(const torch::jit::Value* v) {
 }
 
 template <typename T>
-size_t bufferSize(T t) {
-  size_t size = 1;
+int64_t bufferSize(T t) {
+  int64_t size = 1;
   for (int i = 0; i < t.ndim(); i++) {
     size *= t.dim(i).template AsNode<IntImm>()->value();
   }
   return size;
 }
 
-std::vector<int64_t> bufferSizes(const Tensor& t) {
+template <typename T>
+std::vector<int64_t> bufferSizes(const T& t) {
   std::vector<int64_t> sizes;
   for (int i = 0; i < t.ndim(); i++) {
     sizes.push_back(t.dim(i).template AsNode<IntImm>()->value());
   }
   return sizes;
+}
+
+template <typename T>
+std::vector<Expr> broadcastArgs(
+    const std::vector<T>& axes,
+    const std::vector<int64_t>& sizes) {
+  TORCH_CHECK(
+      axes.size() >= sizes.size(), "Cannot broadcast to a lower rank tensor");
+  std::vector<Expr> bcast;
+  auto axis_it = axes.rbegin();
+  auto size_it = sizes.rbegin();
+  while (size_it != sizes.rend()) {
+    if (*size_it == 1) {
+      bcast.push_back(0);
+    } else {
+      bcast.push_back(*axis_it);
+    }
+    ++axis_it;
+    ++size_it;
+  }
+  std::reverse(bcast.begin(), bcast.end());
+  return bcast;
 }
 
 struct TensorExprKernel {
@@ -229,7 +252,8 @@ struct TensorExprKernel {
               "input",
               texprDims(input),
               [in_buffer](const std::vector<Var>& axes) {
-                return in_buffer.call(axes);
+                return in_buffer.call(
+                    broadcastArgs(axes, bufferSizes(in_buffer)));
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
@@ -258,7 +282,8 @@ struct TensorExprKernel {
                 "aten_add",
                 texprDims(n->output()),
                 [&lhs, &rhs](const std::vector<Var>& axes) {
-                  return lhs.call(axes) + rhs.call(axes);
+                  return lhs.call(broadcastArgs(axes, bufferSizes(lhs))) +
+                      rhs.call(broadcastArgs(axes, bufferSizes(rhs)));
                 }));
         continue;
       }
