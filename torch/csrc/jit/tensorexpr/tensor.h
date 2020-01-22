@@ -142,6 +142,9 @@ class Tensor : public TensorOperation {
   template <typename... Ts>
   Expr operator()(const Ts&... ts) const;
 
+  template <typename T>
+  Expr call(const std::vector<T>& args) const;
+
   TensorNode* node() {
     // TODO: switch to dynamic_cast when it becomes available.
     return static_cast<TensorNode*>(TensorOperation::node());
@@ -234,6 +237,12 @@ template <typename... Ts>
 inline Expr Tensor::operator()(const Ts&... ts) const {
   std::vector<Expr> params({Expr(ts)...});
   return FunctionCall::make(*this, std::move(params));
+}
+
+template <typename T>
+inline Expr Tensor::call(const std::vector<T>& args) const {
+  std::vector<Expr> params(args.begin(), args.end());
+  return FunctionCall::make(*this, params);
 }
 
 } // namespace compiler

@@ -45,6 +45,13 @@ class Buffer {
     return LoadValue(index);
   }
 
+  template <typename T>
+  Expr call(const std::vector<T>& args) const {
+    std::vector<Expr> params(args.begin(), args.end());
+    Expr index = Index(params);
+    return LoadValue(index);
+  }
+
  private:
   Expr Index(const Expr& x) const {
     CHECK(ndim() == 1);

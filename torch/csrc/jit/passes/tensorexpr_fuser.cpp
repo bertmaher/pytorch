@@ -202,6 +202,14 @@ size_t bufferSize(T t) {
   return size;
 }
 
+std::vector<int64_t> bufferSizes(const Tensor& t) {
+  std::vector<int64_t> sizes;
+  for (int i = 0; i < t.ndim(); i++) {
+    sizes.push_back(t.dim(i).template AsNode<IntImm>()->value());
+  }
+  return sizes;
+}
+
 struct TensorExprKernel {
   std::vector<Buffer> buffer_args;
   Tensor* tensor_output;
@@ -221,7 +229,7 @@ struct TensorExprKernel {
               "input",
               texprDims(input),
               [in_buffer](const std::vector<Var>& axes) {
-                return in_buffer(axes[0]);
+                return in_buffer.call(axes);
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
@@ -250,7 +258,7 @@ struct TensorExprKernel {
                 "aten_add",
                 texprDims(n->output()),
                 [&lhs, &rhs](const std::vector<Var>& axes) {
-                  return lhs(axes[0]) + rhs(axes[0]);
+                  return lhs.call(axes) + rhs.call(axes);
                 }));
         continue;
       }
@@ -277,7 +285,7 @@ struct TensorExprKernel {
     }
 
     at::Tensor output =
-        at::empty(bufferSize(*tensor_output), at::ScalarType::Float);
+        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
     eval.bindBuffer(*tensor_output, output.data_ptr());
 
     eval.eval();
