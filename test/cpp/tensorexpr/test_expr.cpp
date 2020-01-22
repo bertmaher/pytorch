@@ -20,7 +20,7 @@ void testBasicValue() {
   EXPECT_EQ(eval.value().as<int>(), 5);
 }
 
-void testBasicValueTest02() {
+void testBasicValue02() {
   Expr a(2.0f);
   Expr b(3.0f);
   Expr c(4.0f);
@@ -31,7 +31,7 @@ void testBasicValueTest02() {
   EXPECT_EQ(eval.value().as<float>(), -4.0f);
 }
 
-void testLetTest01() {
+void testLet01() {
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
@@ -41,7 +41,7 @@ void testLetTest01() {
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4));
 }
 
-void testDISABLED_LetTest02() {
+void testDISABLED_Let02() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
