@@ -68,6 +68,19 @@ TEST(ExprTest, Tensor01) {
   }
 }
 
+static Expr test_01(const Expr& expr) {
+  return expr;
+}
+
+TEST(ExprTest, NoLeakTest01) {
+  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
+  {
+    Expr r = 1;
+    r = test_01(r);
+  }
+  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
+}
+
 TEST(ExprTest, FuserStyle) {
   const int kVectorSize = 8;
   const int kVectorCount = 128;
@@ -90,7 +103,7 @@ TEST(ExprTest, FuserStyle) {
         return b(axes[0]) + 1.0f;
       });
 
-  torch::jit::compiler::schedule::Schedule sch({c});
+  torch::jit::compiler::schedule::Schedule sch({b, c});
   Stmt s = sch.Lower();
 
   std::vector<float> a_data(kTotalSize, 7.0f);
@@ -194,6 +207,7 @@ TEST(ExprTest, CompareSelectEQ) {
 }
 
 TEST(ExprTest, Substitute01) {
+  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
   {
     Expr x = Variable::make("x", kFloat32);
     Expr y = Variable::make("y", kFloat32);
@@ -212,7 +226,7 @@ TEST(ExprTest, Substitute01) {
     ASSERT_EQ(e2_str, e2_ref_str);
   }
   // TODO: move this to a test fixture and enable for all tests.
-  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true);
+  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
 }
 
 TEST(ExprTest, Math01) {

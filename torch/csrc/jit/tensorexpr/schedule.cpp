@@ -452,12 +452,20 @@ Stmt ScheduleNode::Lower() {
   for (int i = 0; i < inlined_functions_.size(); i++) {
     inlined_func_set.insert(inlined_functions_[i].node());
   }
+  std::unordered_set<const TensorNode*> output_tensors_set;
+  for (int i = 0; i < output_tensors_.size(); i++) {
+    output_tensors_set.insert(output_tensors_[i].node());
+  }
   std::vector<Stmt> allocs;
   std::vector<Stmt> frees;
   for (int i = 0; i < internal_tensors_.size(); i++) {
     const Tensor& tensor = internal_tensors_[i];
     if (inlined_func_set.count(tensor.function().node()) > 0) {
       // No need to allocation memory for intermediate tensors.
+      continue;
+    }
+    if (output_tensors_set.count(tensor.node()) > 0) {
+      // No need to allocate memory if the tensors are given as input/output.
       continue;
     }
     Stmt alloc =

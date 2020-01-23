@@ -15,9 +15,11 @@ namespace compiler {
 // When the refrence count goes this zero, "this" object will be deleted through
 // the local "delete". This assumes the object is created through "new" on the
 // same heap.
+
 class RefCounted {
  public:
   // Initial reference count is zero.
+
   RefCounted() : ref_(0) {
 #ifndef NDEBUG
     GlobalRefCount()++;
@@ -127,6 +129,7 @@ class RefHandle {
     if (this == &other) {
       return *this;
     }
+    this->reset();
     node_ = other.node_;
     other.node_ = nullptr;
     return *this;
