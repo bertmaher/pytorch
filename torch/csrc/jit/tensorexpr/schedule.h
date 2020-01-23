@@ -73,7 +73,7 @@ class LoopAxisTransform;
 // A loop axis in the Tensor Expr trees.
 // Even if two loops are identical in shapes, the should have separate loop
 // axis. In other words, loop axes should be be shared among differnt loops.
-class LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
+class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
  public:
   enum AxisType {
     kRegular, // a regular axis such as appeared in Compute
@@ -147,7 +147,7 @@ class LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
 // several output groups are generated. Each output group is responsible for
 // producing a subset within the input region. Note that each input axis can be
 // used in at most one transform.
-class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
+class TORCH_API LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
  public:
   LoopAxisTransform() {}
 
@@ -219,7 +219,7 @@ class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
 };
 
 // Basic class for the Split Axis transforms.
-class SplitAxisTransform
+class TORCH_API SplitAxisTransform
     : public Cloneable<SplitAxisTransform, LoopAxisTransform> {
  public:
   using BaseClass = Cloneable<SplitAxisTransform, LoopAxisTransform>;
@@ -273,7 +273,7 @@ class FuseAxisTransform;
 // user-specified tensor expression.
 // This operation, combined with all ancestor axis/nodes in the tree, determines
 // the semantics of this operation.
-class TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
+class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
  public:
   const Var& expr_var() const {
     return func_.func_var();
@@ -318,7 +318,7 @@ class TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
 // This variable type node could contain one of multiple types that follows:
 //   * A single loop axis
 //   * a tensor expr op.
-class TensorExprNode : public Cloneable<TensorExprNode, ScheduleObject> {
+class TORCH_API TensorExprNode : public Cloneable<TensorExprNode, ScheduleObject> {
  public:
   enum NodeType {
     // These could show up in the tensor expression trees.
@@ -430,7 +430,7 @@ class TensorExprNode : public Cloneable<TensorExprNode, ScheduleObject> {
   NodeValue node_value_;
 };
 
-class ScheduleNode : public RefCounted {
+class TORCH_API ScheduleNode : public RefCounted {
  public:
   // Section: user-facing functionalities.
   ~ScheduleNode();
@@ -556,7 +556,7 @@ Object* CloneObject(Object* object) {
   return static_cast<Object*>(new_object);
 }
 
-class Schedule : RefHandle<ScheduleNode> {
+class TORCH_API Schedule : RefHandle<ScheduleNode> {
  public:
   static Schedule make(const std::vector<Tensor>& funcs) {
     return Schedule(new ScheduleNode(funcs));
