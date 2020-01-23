@@ -262,19 +262,21 @@ struct TensorExprKernel {
     // Bind nodes to tensor compute expressions.
     std::unordered_map<int64_t, Expr> constants;
     for (auto const& n : subgraph->nodes()) {
-      if (n->kind() == prim::Constant) {
-        const auto val = toIValue(n->output()).value();
-        if (val.isDouble()) {
-          constants[n->output()->unique()] = FloatImm::make(val.toDouble());
-        } else if (val.isInt()) {
-          constants[n->output()->unique()] = IntImm::make(val.toInt());
-        } else {
-          LOG(FATAL) << "Unhandled constant datatype";
+      switch (n->kind()) {
+      case prim::Constant: {
+        if (n->kind() == prim::Constant) {
+          const auto val = toIValue(n->output()).value();
+          if (val.isDouble()) {
+            constants[n->output()->unique()] = FloatImm::make(val.toDouble());
+          } else if (val.isInt()) {
+            constants[n->output()->unique()] = IntImm::make(val.toInt());
+          } else {
+            LOG(FATAL) << "Unhandled constant datatype";
+          }
         }
-        continue;
-      }
+      } break;
 
-      if (n->kind() == aten::add) {
+      case aten::add: {
         auto const& lhs = tensors.at(n->inputs()[0]->unique());
         auto const& rhs = tensors.at(n->inputs()[1]->unique());
         tensors.emplace(
@@ -288,10 +290,13 @@ struct TensorExprKernel {
                       rhs.call(
                           computeIndicesToBroadcast(axes, bufferSizes(rhs)));
                 }));
-        continue;
-      }
 
-      LOG(FATAL) << "Unhandled node kind";
+      } break;
+
+      default: {
+        LOG(FATAL) << "Unhandled node kind";
+      }
+      }
     }
 
     CHECK(subgraph->outputs().size() == 1)
