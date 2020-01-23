@@ -14,6 +14,8 @@ namespace jit {
   _(ExprLet01)                         \
   _(DISABLED_ExprLet02)                \
   _(ExprTensor01)                      \
+  _(ExprNoLeakTest01)                  \
+  _(ExprFuserStyle)                    \
   _(ExprVectorAdd01)                   \
   _(ExprCompareSelectEQ)               \
   _(ExprSubstitute01)                  \
