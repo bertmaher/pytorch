@@ -38,6 +38,40 @@ namespace jit {
   _(AsmjitIntSubTest)                  \
   _(AsmjitIntMulTest)                  \
   _(AsmjitIntDivTest)                  \
+  _(LLVMIntImm)                        \
+  _(LLVMFloatImm)                      \
+  _(LLVMIntAdd)                        \
+  _(LLVMIntSub)                        \
+  _(LLVMIntMul)                        \
+  _(LLVMIntDiv)                        \
+  _(LLVMIntToFloatCast)                \
+  _(LLVMFloatToIntCast)                \
+  _(LLVMLetTest01)                     \
+  _(LLVMLetTest02)                     \
+  _(LLVMBuffer)                        \
+  _(LLVMBlock)                         \
+  _(LLVMLoadStore)                     \
+  _(LLVMVecLoadStore)                  \
+  _(LLVMMemcpy)                        \
+  _(LLVMBzero)                         \
+  _(LLVMElemwiseAdd)                   \
+  _(LLVMElemwiseAddFloat)              \
+  _(LLVMElemwiseMaxInt)                \
+  _(LLVMElemwiseMinInt)                \
+  _(LLVMElemwiseMaxNumFloat)           \
+  _(LLVMElemwiseMaxNumNaNFloat)        \
+  _(LLVMElemwiseMinNumFloat)           \
+  _(LLVMElemwiseMinNumNaNFloat)        \
+  _(LLVMElemwiseMaximumFloat)          \
+  _(LLVMElemwiseMaximumNaNFloat)       \
+  _(LLVMElemwiseMinimumFloat)          \
+  _(LLVMElemwiseMinimumNaNFloat)       \
+  _(LLVMCompareSelectIntEQ)            \
+  _(LLVMCompareSelectFloatEQ)          \
+  _(LLVMStoreFloat)                    \
+  _(LLVMSimpleMath01)                  \
+  _(LLVMComputeMul)                    \
+  _(LLVMBroadcastAdd)                  \
 
 
 

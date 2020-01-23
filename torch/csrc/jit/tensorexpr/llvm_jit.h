@@ -1,6 +1,7 @@
 #pragma once
 
 #ifdef ENABLE_LLVM
+#include <torch/csrc/WindowsTorchApiMacro.h>
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -15,7 +16,7 @@ namespace orc {
 
 class PytorchLLVMJITImpl;
 
-class PytorchLLVMJIT {
+class TORCH_API PytorchLLVMJIT {
  public:
   PytorchLLVMJIT();
   ~PytorchLLVMJIT();
