@@ -238,7 +238,40 @@ struct TensorExprKernel {
   std::vector<Buffer> buffer_args;
   Tensor* tensor_output;
   std::unordered_map<int64_t, Tensor> tensors;
+  std::unordered_map<int64_t, Expr> constants;
   Stmt stmt;
+
+  Expr constant(torch::jit::Value* v) {
+    if (v->node()->kind() == prim::Constant) {
+      const auto val = toIValue(v).value();
+      if (val.isDouble()) {
+        return FloatImm::make(val.toDouble());
+      } else if (val.isInt()) {
+        return IntImm::make(val.toInt());
+      } else {
+        LOG(FATAL) << "Unhandled constant datatype";
+      }
+    }
+
+    LOG(FATAL) << "Not a constant!";
+  }
+
+  template <typename T>
+  Expr constantOrTensor(torch::jit::Value* v,
+                        T&& alternative) {
+    if (v->node()->kind() == prim::Constant) {
+      const auto val = toIValue(v).value();
+      if (val.isDouble()) {
+        return FloatImm::make(val.toDouble());
+      } else if (val.isInt()) {
+        return IntImm::make(val.toInt());
+      } else {
+        LOG(FATAL) << "Unhandled constant datatype";
+      }
+    }
+
+    return alternative(tensors.at(v->unique()));
+  }
 
   explicit TensorExprKernel(const Node* node) {
     auto subgraph = node->g(attr::Subgraph);
@@ -260,37 +293,42 @@ struct TensorExprKernel {
     }
 
     // Bind nodes to tensor compute expressions.
-    std::unordered_map<int64_t, Expr> constants;
     for (auto const& n : subgraph->nodes()) {
       switch (n->kind()) {
-      case prim::Constant: {
-        if (n->kind() == prim::Constant) {
-          const auto val = toIValue(n->output()).value();
-          if (val.isDouble()) {
-            constants[n->output()->unique()] = FloatImm::make(val.toDouble());
-          } else if (val.isInt()) {
-            constants[n->output()->unique()] = IntImm::make(val.toInt());
-          } else {
-            LOG(FATAL) << "Unhandled constant datatype";
-          }
-        }
-      } break;
-
+      case prim::Constant: continue;
       case aten::add: {
-        auto const& lhs = tensors.at(n->inputs()[0]->unique());
-        auto const& rhs = tensors.at(n->inputs()[1]->unique());
         tensors.emplace(
             n->output()->unique(),
             Compute(
                 "aten_add",
                 texprDims(n->output()),
-                [&lhs, &rhs](const std::vector<Var>& axes) {
-                  return lhs.call(computeIndicesToBroadcast(
-                             axes, bufferSizes(lhs))) +
-                      rhs.call(
-                          computeIndicesToBroadcast(axes, bufferSizes(rhs)));
-                }));
+                [&n, this](const std::vector<Var>& axes) {
+                  size_t alpha = n->inputs()[1]->unique();
 
+                  Expr lhs_expr = constantOrTensor(n->inputs()[0],
+                    [&](const Tensor& t) {
+                      return t.call(computeIndicesToBroadcast(
+                        axes, bufferSizes(t)));
+                    }
+                  );
+
+                  Expr rhs_expr = constantOrTensor(n->inputs()[1],
+                    [&](const Tensor& t) {
+                      return t.call(computeIndicesToBroadcast(
+                        axes, bufferSizes(t)));
+                    }
+                  );
+
+                  Expr alpha_expr = constant(n->inputs()[2]);
+
+                  // Promote integer alpha to float if needed.
+                  if (alpha_expr.dtype() == kInt32 &&
+                      rhs_expr.dtype() == kFloat32) {
+                    alpha_expr = cast<float>(alpha_expr);
+                  }
+
+                  return lhs_expr + (alpha_expr * rhs_expr);
+                }));
       } break;
 
       default: {
