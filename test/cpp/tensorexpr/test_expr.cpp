@@ -12,7 +12,7 @@ namespace jit {
 
 using namespace compiler;
 
-void testBasicValue() {
+void testExprBasicValue() {
   Expr a = IntImm::make(2), b = IntImm::make(3);
   Expr c = Add::make(a, b);
   SimpleIREvaluator eval(c);
@@ -20,7 +20,7 @@ void testBasicValue() {
   EXPECT_EQ(eval.value().as<int>(), 5);
 }
 
-void testBasicValue02() {
+void testExprBasicValue02() {
   Expr a(2.0f);
   Expr b(3.0f);
   Expr c(4.0f);
@@ -31,7 +31,7 @@ void testBasicValue02() {
   EXPECT_EQ(eval.value().as<float>(), -4.0f);
 }
 
-void testLet01() {
+void testExprLet01() {
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
@@ -41,7 +41,7 @@ void testLet01() {
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4));
 }
 
-void testDISABLED_Let02() {
+void testDISABLED_ExprLet02() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
@@ -53,7 +53,7 @@ void testDISABLED_Let02() {
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4 * 6));
 }
 
-void testTensor01() {
+void testExprTensor01() {
   Tensor tensor =
       Compute("f", {{3, "x"}, {4, "y"}}, [](const Var& x, const Var& y) {
         return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
@@ -70,7 +70,7 @@ void testTensor01() {
   }
 }
 
-void testVectorAdd01() {
+void testExprVectorAdd01() {
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
@@ -122,7 +122,7 @@ void testVectorAdd01() {
   ExpectAllNear(c_v, c_ref, 1e-5);
 }
 
-void testCompareSelectEQ() {
+void testExprCompareSelectEQ() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -159,7 +159,7 @@ void testCompareSelectEQ() {
   assertAllEqual(c_buffer, 1);
 }
 
-void testSubstitute01() {
+void testExprSubstitute01() {
   {
     Expr x = Variable::make("x", kFloat32);
     Expr y = Variable::make("y", kFloat32);
@@ -181,7 +181,7 @@ void testSubstitute01() {
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true);
 }
 
-void testMath01() {
+void testExprMath01() {
   Expr v = sin(Expr(1.0f));
 
   std::ostringstream oss;
@@ -195,7 +195,7 @@ void testMath01() {
   ASSERT_NEAR(res, v_ref, 1e-6);
 }
 
-void testUnaryMath01() {
+void testExprUnaryMath01() {
   struct TestConfig {
     std::function<Expr(const Expr&)> func;
     std::function<float(float)> ref_func;
@@ -256,7 +256,7 @@ void testUnaryMath01() {
   }
 }
 
-void testBinaryMath01() {
+void testExprBinaryMath01() {
   struct TestConfig {
     std::function<Expr(const Expr&, const Expr&)> func;
     std::function<float(float, float)> ref_func;

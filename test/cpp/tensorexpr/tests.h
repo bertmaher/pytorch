@@ -9,17 +9,17 @@
 namespace torch {
 namespace jit {
 #define TH_FORALL_TESTS(_)             \
-  _(BasicValue)                        \
-  _(BasicValue02)                      \
-  _(Let01)                             \
-  _(DISABLED_Let02)                    \
-  _(Tensor01)                          \
-  _(VectorAdd01)                       \
-  _(CompareSelectEQ)                   \
-  _(Substitute01)                      \
-  _(Math01)                            \
-  _(UnaryMath01)                       \
-  _(BinaryMath01)                      \
+  _(ExprBasicValue)                    \
+  _(ExprBasicValue02)                  \
+  _(ExprLet01)                         \
+  _(DISABLED_ExprLet02)                \
+  _(ExprTensor01)                      \
+  _(ExprVectorAdd01)                   \
+  _(ExprCompareSelectEQ)               \
+  _(ExprSubstitute01)                  \
+  _(ExprMath01)                        \
+  _(ExprUnaryMath01)                   \
+  _(ExprBinaryMath01)                  \
   _(IRPrinterBasicValueTest)           \
   _(IRPrinterBasicValueTest02)         \
   _(IRPrinterLetTest01)                \
