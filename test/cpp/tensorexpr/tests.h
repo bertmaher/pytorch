@@ -25,6 +25,12 @@ namespace jit {
   _(IRPrinterLetTest01)                \
   _(IRPrinterLetTest02)                \
   _(IRPrinterCastTest)                 \
+  _(ExprSimple01)                      \
+  _(ExprLower01)                       \
+  _(ExprSimple02)                      \
+  _(ScheduleBroadcastAddBuffer)        \
+  _(ScheduleFunctionCall01)            \
+  _(TypeTest01)                        \
 
 #define TH_FORALL_TESTS_CUDA(_) \
 
