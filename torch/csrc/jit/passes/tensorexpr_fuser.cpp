@@ -212,15 +212,16 @@ std::vector<int64_t> bufferSizes(const T& t) {
 }
 
 template <typename T>
-std::vector<Expr> broadcastArgs(
-    const std::vector<T>& axes,
-    const std::vector<int64_t>& sizes) {
+std::vector<Expr> computeIndicesToBroadcast(
+    const std::vector<T>& output_axes,
+    const std::vector<int64_t>& input_sizes) {
   TORCH_CHECK(
-      axes.size() >= sizes.size(), "Cannot broadcast to a lower rank tensor");
+      output_axes.size() >= input_sizes.size(),
+      "Cannot broadcast to a lower rank tensor");
   std::vector<Expr> bcast;
-  auto axis_it = axes.rbegin();
-  auto size_it = sizes.rbegin();
-  while (size_it != sizes.rend()) {
+  auto axis_it = output_axes.rbegin();
+  auto size_it = input_sizes.rbegin();
+  while (size_it != input_sizes.rend()) {
     if (*size_it == 1) {
       bcast.push_back(0);
     } else {
@@ -253,7 +254,7 @@ struct TensorExprKernel {
               texprDims(input),
               [in_buffer](const std::vector<Var>& axes) {
                 return in_buffer.call(
-                    broadcastArgs(axes, bufferSizes(in_buffer)));
+                    computeIndicesToBroadcast(axes, bufferSizes(in_buffer)));
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
@@ -282,8 +283,10 @@ struct TensorExprKernel {
                 "aten_add",
                 texprDims(n->output()),
                 [&lhs, &rhs](const std::vector<Var>& axes) {
-                  return lhs.call(broadcastArgs(axes, bufferSizes(lhs))) +
-                      rhs.call(broadcastArgs(axes, bufferSizes(rhs)));
+                  return lhs.call(computeIndicesToBroadcast(
+                             axes, bufferSizes(lhs))) +
+                      rhs.call(
+                          computeIndicesToBroadcast(axes, bufferSizes(rhs)));
                 }));
         continue;
       }
