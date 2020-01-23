@@ -31,6 +31,13 @@ namespace jit {
   _(ScheduleBroadcastAddBuffer)        \
   _(ScheduleFunctionCall01)            \
   _(TypeTest01)                        \
+  _(AsmjitIntImmTest)                  \
+  _(AsmjitIntAddTest)                  \
+  _(AsmjitIntSubTest)                  \
+  _(AsmjitIntMulTest)                  \
+  _(AsmjitIntDivTest)                  \
+
+
 
 #define TH_FORALL_TESTS_CUDA(_) \
 
