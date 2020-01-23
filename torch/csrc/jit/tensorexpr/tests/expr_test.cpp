@@ -113,6 +113,39 @@ TEST(ExprTest, FuserStyle) {
   }
 }
 
+TEST(ExprTest, FuserThreeArg) {
+  const int kVectorSize = 8;
+  const int kVectorCount = 128;
+  const int kTotalSize = kVectorSize * kVectorCount;
+
+  Buffer a(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer c(Var("C", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer d(Var("D", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Tensor e = Compute("e", {{kTotalSize, "i"}},
+                     [&](const Var& i) { return a(i) + b(i); });
+  Tensor f = Compute("f", {{kTotalSize, "i"}},
+                     [&](const Var& i) { return e(i) + c(i); });
+  Tensor g = Compute("g", {{kTotalSize, "i"}},
+                     [&](const Var& i) { return f(i) + d(i); });
+
+  torch::jit::compiler::schedule::Schedule sch({g});
+  f.ComputeInline();
+  Stmt s = sch.Lower();
+
+  std::vector<float> a_data(kTotalSize, 1.0f);
+  std::vector<float> b_data(kTotalSize, 2.0f);
+  std::vector<float> c_data(kTotalSize, 3.0f);
+  std::vector<float> d_data(kTotalSize, 4.0f);
+  std::vector<float> g_data(kTotalSize, 0.0f);
+  SimpleIREvaluator(s, a, b, c, d, g)(a_data, b_data, c_data, d_data, g_data);
+
+  for (int i = 0; i < kTotalSize; i++) {
+    ASSERT_EQ(g_data[i], 10.0f);
+  }
+}
+
 TEST(ExprTest, VectorAdd01) {
   const int kVectorSize = 8;
   const int kVectorCount = 128;

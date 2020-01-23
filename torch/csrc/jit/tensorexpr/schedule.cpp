@@ -353,7 +353,7 @@ class FunctionInliner : public IRMutator {
       }
       return result;
     } else {
-      return Expr(v);
+      return IRMutator::mutate(v);
     }
   }
 

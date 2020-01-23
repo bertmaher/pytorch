@@ -167,7 +167,7 @@ Expr IRMutator::mutate(const BaseCallNode* v) {
     }
     params[i] = std::move(value_new);
   }
-  if (any_change) {
+  if (!any_change) {
     return Expr(v);
   }
   return v->DefaultMutator(params);
