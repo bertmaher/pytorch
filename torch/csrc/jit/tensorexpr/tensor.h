@@ -18,7 +18,7 @@ class ScheduleNode;
 using schedule::TensorExprNode;
 
 class TensorOperation;
-class TensorOperationNode : public RefCounted {
+class TORCH_API TensorOperationNode : public RefCounted {
  public:
   void SplitWithTail(
       const Var& loop_var,
@@ -80,7 +80,7 @@ class TensorNode : public TensorOperationNode {
   int output_index_;
 };
 
-class TensorOperation : public RefHandle<TensorOperationNode> {
+class TORCH_API TensorOperation : public RefHandle<TensorOperationNode> {
  public:
   using BaseClass = RefHandle<TensorOperationNode>;
   TensorOperation() : BaseClass(nullptr) {}
