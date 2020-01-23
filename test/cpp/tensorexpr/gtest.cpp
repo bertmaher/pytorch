@@ -10,14 +10,14 @@ namespace jit {
     test##name();       \
   }
 TH_FORALL_TESTS(TENSOREXPR_GTEST)
-#undef TENSOREXPR_TEST
+#undef TENSOREXPR_GTEST
 
 #define TENSOREXPR_GTEST_CUDA(name)   \
   TEST(TensorExprTest, name##_CUDA) { \
     test##name();              \
   }
 TH_FORALL_TESTS_CUDA(TENSOREXPR_GTEST_CUDA)
-#undef TENSOREXPR_TEST_CUDA
+#undef TENSOREXPR_GTEST_CUDA
 
 } // namespace jit
 } // namespace torch

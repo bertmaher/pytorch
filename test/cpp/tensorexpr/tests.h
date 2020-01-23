@@ -20,6 +20,11 @@ namespace jit {
   _(Math01)                            \
   _(UnaryMath01)                       \
   _(BinaryMath01)                      \
+  _(IRPrinterBasicValueTest)           \
+  _(IRPrinterBasicValueTest02)         \
+  _(IRPrinterLetTest01)                \
+  _(IRPrinterLetTest02)                \
+  _(IRPrinterCastTest)                 \
 
 #define TH_FORALL_TESTS_CUDA(_) \
 
