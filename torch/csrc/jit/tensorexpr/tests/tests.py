@@ -1,0 +1,121 @@
+import torch
+import numpy as np
+
+def test_easy():
+    def easy(x, y):
+        aaa = torch.add(x, y)
+        return aaa
+
+    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024)))
+
+    a = torch.rand(1024)
+    b = torch.rand(1024)
+    x = traced(a, b)
+    np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
+
+def test_three_arg():
+    def easy(x, y, z):
+        aaa = torch.add(x, y)
+        bbb = torch.add(aaa, z)
+        return bbb
+
+    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024)))
+
+    a = torch.rand(1024)
+    b = torch.rand(1024)
+    c = torch.rand(1024)
+    x = traced(a, b, c)
+    npr = a.numpy() + b.numpy() + c.numpy()
+    np.testing.assert_allclose(npr, x.numpy())
+
+def test_all_combos():
+    def easy(x, y, z):
+        a = torch.add(x, y)
+        b = torch.add(a, z)
+        c = torch.add(x, b)
+        d = torch.add(c, a)
+        return d
+
+    def np_easy(x, y, z):
+        a = x + y
+        b = a + z
+        c = x + b
+        d = c + a
+        return d
+
+    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024)))
+
+    a = torch.rand(1024)
+    b = torch.rand(1024)
+    c = torch.rand(1024)
+    x = traced(a, b, c)
+    npr = np_easy(a.numpy(), b.numpy(), c.numpy())
+    np.testing.assert_allclose(npr, x.numpy())
+
+def test_rank_two():
+    def easy(x, y, z):
+        a = torch.add(x, y)
+        b = torch.add(a, z)
+        c = torch.add(x, b)
+        d = torch.add(c, a)
+        return d
+
+    def np_easy(x, y, z):
+        a = x + y
+        b = a + z
+        c = x + b
+        d = c + a
+        return d
+
+    shape = 32, 32
+    traced = torch.jit.trace(easy, (torch.rand(shape), torch.rand(shape), torch.rand(shape)))
+
+    a = torch.rand(shape)
+    b = torch.rand(shape)
+    c = torch.rand(shape)
+    x = traced(a, b, c)
+    npr = np_easy(a.numpy(), b.numpy(), c.numpy())
+    np.testing.assert_allclose(npr, x.numpy())
+
+def test_broadcast():
+    def easy(x, y, z):
+        a = torch.add(x, y)
+        b = torch.add(a, z)
+        return b
+
+    def np_easy(x, y, z):
+        a = x + y
+        b = a + z
+        return b
+
+    N = 32
+    traced = torch.jit.trace(easy, (torch.rand(N, N), torch.rand(N), torch.rand(N, N)))
+
+    a = torch.rand(N, N)
+    b = torch.rand(N)
+    c = torch.rand(N, N)
+    x = traced(a, b, c)
+    npr = np_easy(a.numpy(), b.numpy(), c.numpy())
+    np.testing.assert_allclose(npr, x.numpy())
+
+def test_broadcast_2():
+    zero = torch.tensor([0.0], dtype=torch.float)
+
+    def foo(x, y, z):
+        aaa = torch.add(x, y)
+        bbb = torch.add(zero, aaa)
+        return torch.add(bbb, z)
+
+    def foo_np(x, y, z):
+        a = x + y
+        b = zero.numpy() + a
+        return b + z
+
+    x = torch.rand(3, 4)
+    y = torch.ones(3, 1)
+    z = torch.rand(4)
+    traced = torch.jit.trace(foo, (x, y, z))
+
+    r = traced(x, y, z)
+    rnp = foo_np(x.numpy(), y.numpy(), z.numpy())
+    np.testing.assert_allclose(r, rnp)
