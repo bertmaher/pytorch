@@ -156,3 +156,15 @@ def test_add_sub():
     c = torch.rand(1024)
     x = traced(a, b, c)
     np.testing.assert_allclose(a.numpy() + b.numpy() - c.numpy(), x.numpy())
+
+def test_promotion():
+    def easy(x, y):
+        aaa = torch.add(x, y)
+        return aaa
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024, dtype=torch.int32), torch.rand(1024, dtype=torch.float32)))
+
+    a = torch.zeros(1024, dtype=torch.int32)
+    b = torch.rand(1024, dtype=torch.float32)
+    x = traced(a, b)
+    np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())

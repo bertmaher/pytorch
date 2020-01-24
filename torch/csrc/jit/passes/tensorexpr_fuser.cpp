@@ -12,8 +12,6 @@
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
-#define TX_DEBUG 1
-
 using namespace torch::jit;
 using namespace torch::jit::compiler;
 
@@ -274,21 +272,36 @@ struct TensorExprKernel {
     return Expr();
   }
 
+  const Tensor& tensor(torch::jit::Value* v) {
+    return tensors.at(v->unique());
+  }
+
   template <typename T>
-  Expr constantOrTensor(torch::jit::Value* v,
-                        T&& alternative) {
-    if (v->node()->kind() == prim::Constant) {
-      const auto val = toIValue(v).value();
-      if (val.isDouble()) {
-        return FloatImm::make(val.toDouble());
-      } else if (val.isInt()) {
-        return IntImm::make(val.toInt());
-      } else {
-        LOG(FATAL) << "Unhandled constant datatype";
+  Expr broadcast(const T& t, const std::vector<Var>& axes) {
+    return t.call(computeIndicesToBroadcast(axes, bufferSizes(t)));
+  }
+
+  void promoteInputs(std::vector<Expr>& inputs) {
+    bool any_float = std::any_of(inputs.begin(), inputs.end(),
+      [](const Expr& e) { return e.dtype() == kFloat32; }
+    );
+
+    if (!any_float) return;
+
+    for (Expr& e : inputs) {
+      if (e.dtype() == kInt32) {
+        e = cast<float>(e); 
       }
     }
+  }
 
-    return alternative(tensors.at(v->unique()));
+  Expr demoteOutput(const Expr& e, torch::jit::Value* v) {
+    auto tt = v->type()->cast<TensorType>()->scalarType();
+    if (e.dtype() == kFloat32 && tt == at::ScalarType::Int) {
+      return cast<int>(e);
+    }
+
+    return e;
   }
 
   explicit TensorExprKernel(const Node* node) {
@@ -303,9 +316,8 @@ struct TensorExprKernel {
           Compute(
               "input",
               texprDims(input),
-              [in_buffer](const std::vector<Var>& axes) {
-                return in_buffer.call(
-                    computeIndicesToBroadcast(axes, bufferSizes(in_buffer)));
+              [this, in_buffer](const std::vector<Var>& axes) {
+                return broadcast(in_buffer, axes);
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
@@ -320,36 +332,25 @@ struct TensorExprKernel {
         tensors.emplace(
             n->output()->unique(),
             Compute(
-                "aten_add_sub",
+                n->kind() == aten::add ? "aten_add" : "aten_sub",
                 texprDims(n->output()),
                 [&n, this](const std::vector<Var>& axes) {
-                  Expr lhs_expr = constantOrTensor(n->inputs()[0],
-                    [&](const Tensor& t) {
-                      return t.call(computeIndicesToBroadcast(
-                        axes, bufferSizes(t)));
-                    }
-                  );
+                  std::vector<Expr> inputs = {
+                    broadcast(tensor(n->inputs()[0]), axes),
+                    broadcast(tensor(n->inputs()[1]), axes),
+                    constant(n->inputs()[2]),
+                  };
 
-                  Expr rhs_expr = constantOrTensor(n->inputs()[1],
-                    [&](const Tensor& t) {
-                      return t.call(computeIndicesToBroadcast(
-                        axes, bufferSizes(t)));
-                    }
-                  );
+                  promoteInputs(inputs);
 
-                  Expr alpha_expr = constant(n->inputs()[2]);
-
-                  // Promote integer alpha to float if needed.
-                  if (alpha_expr.dtype() == kInt32 &&
-                      rhs_expr.dtype() == kFloat32) {
-                    alpha_expr = cast<float>(alpha_expr);
-                  }
-
+                  Expr compute;
                   if (n->kind() == aten::add) {
-                    return lhs_expr + (alpha_expr * rhs_expr);
+                    compute = inputs[0] + (inputs[2] * inputs[1]);
                   } else {
-                    return lhs_expr - (alpha_expr * rhs_expr);
+                    compute = inputs[0] - (inputs[2] * inputs[1]);
                   }
+
+                  return demoteOutput(compute, n->output());
                 }));
       } break;
 
