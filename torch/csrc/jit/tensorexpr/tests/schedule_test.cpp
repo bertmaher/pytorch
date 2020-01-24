@@ -225,7 +225,7 @@ static std::string remove_space(const std::string& str) {
   return str_new;
 }
 
-TEST(ScheduleTest, InlineFunc01) {
+void InlineFunc01Helper(const std::vector<std::string>& inline_order) {
   const int M = 4;
   const int N = 5;
   const int K = 6;
@@ -236,26 +236,33 @@ TEST(ScheduleTest, InlineFunc01) {
 
   Tensor x = Compute(
       "x",
-      {{M, "m"}, {N, "n"}, {K, "k"}},
+      {{M, "m1"}, {N, "n1"}, {K, "k1"}},
       [&](const Var& m, const Var& n, const Var& k) {
         return a_buf(m, n) * b_buf(n, k);
       });
   Tensor y = Compute(
       "y",
-      {{M, "m"}, {N, "n"}, {K, "k"}},
+      {{M, "m2"}, {N, "n2"}, {K, "k2"}},
       [&](const Var& m, const Var& n, const Var& k) {
-        return c_buf(m, n) * d_buf(m, k);
+        return c_buf(m, n) * d_buf(m, k) + x(m, n, k);
       });
   Tensor z = Compute(
       "z",
-      {{M, "m"}, {N, "n"}, {K, "k"}},
+      {{M, "m3"}, {N, "n3"}, {K, "k3"}},
       [&](const Var& m, const Var& n, const Var& k) {
         return x(m, n, k) + y(m, n, k);
       });
 
   Schedule sch({z});
-  x.ComputeInline();
-  y.ComputeInline();
+  for (const std::string& order : inline_order) {
+    if (order == "x") {
+      x.ComputeInline();
+    } else if (order == "y") {
+      y.ComputeInline();
+    } else {
+      throw std::runtime_error("Invalid order: " + order);
+    }
+  }
   Stmt stmt = sch.Lower();
 
   std::ostringstream oss;
@@ -294,7 +301,7 @@ TEST(ScheduleTest, InlineFunc01) {
     for (int m = 0; m < M; m++) {
       for (int n = 0; n < N; n++) {
         for (int k = 0; k < K; k++) {
-          z_ref(m, n, k) = a_v(m, n) * b_v(n, k) + c_v(m, n) * d_v(m, k);
+          z_ref(m, n, k) = a_v(m, n) * b_v(n, k) * 2 + c_v(m, n) * d_v(m, k);
         }
       }
     }
@@ -304,12 +311,13 @@ TEST(ScheduleTest, InlineFunc01) {
     ExpectAllNear(z_v, z_ref, 1e-5);
   }
 
-  {
+  if (inline_order.size() == 2) {
     Tensor z2 = Compute(
         "z",
-        {{M, "m"}, {N, "n"}, {K, "k"}},
+        {{M, "m3"}, {N, "n3"}, {K, "k3"}},
         [&](const Var& m, const Var& n, const Var& k) {
-          return a_buf(m, n) * b_buf(n, k) + c_buf(m, n) * d_buf(m, k);
+          return a_buf(m, n) * b_buf(n, k) +
+              (c_buf(m, n) * d_buf(m, k) + a_buf(m, n) * b_buf(n, k));
         });
     Schedule sch2({z2});
     Stmt stmt2 = sch2.Lower();
@@ -321,4 +329,12 @@ TEST(ScheduleTest, InlineFunc01) {
     ASSERT_EQ(str1, str2);
     ASSERT_GT(str1.size(), 100);
   }
+}
+
+TEST(ScheduleTest, InlineFunc01) {
+  InlineFunc01Helper({"x", "y"});
+  InlineFunc01Helper({"y", "x"});
+  InlineFunc01Helper({"x"});
+  InlineFunc01Helper({"y"});
+  InlineFunc01Helper({});
 }

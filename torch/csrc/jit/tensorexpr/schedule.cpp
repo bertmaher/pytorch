@@ -317,14 +317,18 @@ class Flattener : public IRMutator {
 
 class FunctionInliner : public IRMutator {
  public:
-  FunctionInliner(const Function& func) : func_(func) {}
+  FunctionInliner(const std::vector<Function>& funcs) : funcs_(funcs) {
+    for (const auto& func : funcs) {
+      func_var_set_.insert(func.func_var().node());
+    }
+  }
 
  private:
   // For the target function, insert the caller/callee pair into the replacement
   // mapping.
   Expr mutate(const FunctionCall* v) override {
     const Function& func = v->tensor().function();
-    if (func.node() == func_.node()) {
+    if (func_var_set_.count(func.func_var().node()) > 0) {
       // Insert the caller/callee pair into the mapping.
       for (int i = 0; i < func.ndim(); i++) {
         const Variable* func_callee_arg = func.arg(i).AsNode<Variable>();
@@ -361,15 +365,17 @@ class FunctionInliner : public IRMutator {
   Expr mutate(const Variable* v) {
     auto iter = inline_mapping_.find(v);
     if (iter == inline_mapping_.end()) {
-      return Expr(v);
+      return IRMutator::mutate(v);
     } else {
-      return iter->second;
+      Expr expr = iter->second;
+      // Continue to transform the value from the lookup table.
+      return expr.accept_mutator(this);
     }
   }
 
   // Remove the buffer write the inlined function.
   Stmt mutate(const Store* v) override {
-    if (v->base_handle().node() == func_.func_var().node()) {
+    if (func_var_set_.count(v->base_handle().node()) > 0) {
       return Stmt();
     } else {
       return IRMutator::mutate(v);
@@ -377,24 +383,17 @@ class FunctionInliner : public IRMutator {
   }
 
   std::unordered_map<const Variable*, Expr> inline_mapping_;
-  Function func_;
+  std::vector<Function> funcs_;
+  std::unordered_set<const Variable*> func_var_set_;
 };
-
-static Stmt InjectInlines(const Stmt& stmt, const Function& func) {
-  FunctionInliner inliner(func);
-  Stmt stmt_old = stmt;
-  Stmt stmt_new = stmt_old.accept_mutator(&inliner);
-  return stmt_new;
-}
 
 static Stmt InjectInlines(
     const Stmt& stmt,
     const std::vector<Function>& inlined_funcs) {
-  Stmt current_stmt = stmt;
-  for (int i = 0; i < inlined_funcs.size(); i++) {
-    current_stmt = InjectInlines(current_stmt, inlined_funcs[i]);
-  }
-  return current_stmt;
+  FunctionInliner inliner(inlined_funcs);
+  Stmt stmt_old = stmt;
+  Stmt stmt_new = stmt_old.accept_mutator(&inliner);
+  return stmt_new;
 }
 
 ScheduleObject* ScheduleNode::LookUpCloneScheduleObject(

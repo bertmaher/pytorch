@@ -393,7 +393,8 @@ class SimpleIREvaluator : public IRVisitor {
   void visit(const Load* v) override {
     const Variable* base_node = v->base_handle().node();
     auto iter = buffer_mapping_.find(base_node);
-    CHECK(iter != buffer_mapping_.end());
+    CHECK(iter != buffer_mapping_.end())
+        << "missing buffer binding: " << base_node->name_hint();
     void* ptr = iter->second;
 
     v->index().accept(this);
