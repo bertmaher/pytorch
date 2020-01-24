@@ -103,13 +103,22 @@ c10::optional<Node*> tryMerge(
       consumer->kind() != getTensorExprSymbol()) {
     consumer =
         SubgraphUtils::createSingletonSubgraph(consumer, getTensorExprSymbol());
+
+    // createSingletonSubgraph pre-emptively folds constants into the subgraph,
+    // so there's nothing more for us to do.
+    if (producer->kind() == prim::Constant) {
+      return consumer;
+    }
   }
+
   if (producer->kind() == prim::Constant) {
     auto& subgraph = consumer->g(attr::Subgraph);
     Node* in_const = subgraph->createClone(
         producer, [](torch::jit::Value*) -> torch::jit::Value* {
           throw std::runtime_error("unexpected input");
         });
+
+    subgraph->setInsertPoint(producer);
     subgraph->insertNode(in_const);
   } else {
     SubgraphUtils::mergeNodeIntoSubgraph(producer, consumer);
