@@ -904,3 +904,153 @@ TEST(ATenTest, cosFloat) {
     EXPECT_EQ(b_v(i), std::cos(a_v(i))) << "index: " << i;
   }
 }
+
+TEST(ATenTest, eqInt) {
+  constexpr int N = 128;
+  Buffer a(Var("A", kHandle), kInt32, {N});
+  Buffer b(Var("B", kHandle), kInt32, {N});
+  Buffer c(Var("C", kHandle), kInt32, {N});
+  std::vector<int> a_buffer(N, 1);
+  std::vector<int> b_buffer(N, 1);
+  std::vector<int> c_buffer(N, 0);
+
+  auto mask = IntImm::make(1);
+  Var i("i", kInt32);
+  auto memcpy_expr = For::make(
+      i,
+      0,
+      N,
+      Store::make(
+          c,
+          i,
+          CompareSelect::make(
+              Load::make(a, i, mask),
+              Load::make(b, i, mask),
+              CompareSelectOperation::kEQ),
+          mask));
+
+  SimpleIREvaluator ir_eval(memcpy_expr, a, b, c);
+  ir_eval(a_buffer, b_buffer, c_buffer);
+
+  assertAllEqual(c_buffer, 1);
+}
+
+TEST(ATenTest, geInt) {
+  constexpr int N = 128;
+  Buffer a(Var("A", kHandle), kInt32, {N});
+  Buffer b(Var("B", kHandle), kInt32, {N});
+  Buffer c(Var("C", kHandle), kInt32, {N});
+  std::vector<int> a_buffer(N, 5);
+  std::vector<int> b_buffer(N, 5);
+  std::vector<int> c_buffer(N, 0);
+
+  auto mask = IntImm::make(1);
+  Var i("i", kInt32);
+  auto memcpy_expr = For::make(
+      i,
+      0,
+      N,
+      Store::make(
+          c,
+          i,
+          CompareSelect::make(
+              Load::make(a, i, mask),
+              Load::make(b, i, mask),
+              CompareSelectOperation::kGE),
+          mask));
+
+  SimpleIREvaluator ir_eval(memcpy_expr, a, b, c);
+  ir_eval(a_buffer, b_buffer, c_buffer);
+
+  assertAllEqual(c_buffer, 1);
+}
+
+TEST(ATenTest, gtInt) {
+  constexpr int N = 128;
+  Buffer a(Var("A", kHandle), kInt32, {N});
+  Buffer b(Var("B", kHandle), kInt32, {N});
+  Buffer c(Var("C", kHandle), kInt32, {N});
+  std::vector<int> a_buffer(N, 6);
+  std::vector<int> b_buffer(N, 3);
+  std::vector<int> c_buffer(N, 0);
+
+  auto mask = IntImm::make(1);
+  Var i("i", kInt32);
+  auto memcpy_expr = For::make(
+      i,
+      0,
+      N,
+      Store::make(
+          c,
+          i,
+          CompareSelect::make(
+              Load::make(a, i, mask),
+              Load::make(b, i, mask),
+              CompareSelectOperation::kGT),
+          mask));
+
+  SimpleIREvaluator ir_eval(memcpy_expr, a, b, c);
+  ir_eval(a_buffer, b_buffer, c_buffer);
+
+  assertAllEqual(c_buffer, 1);
+}
+
+TEST(ATenTest, leInt) {
+  constexpr int N = 128;
+  Buffer a(Var("A", kHandle), kInt32, {N});
+  Buffer b(Var("B", kHandle), kInt32, {N});
+  Buffer c(Var("C", kHandle), kInt32, {N});
+  std::vector<int> a_buffer(N, 5);
+  std::vector<int> b_buffer(N, 5);
+  std::vector<int> c_buffer(N, 0);
+
+  auto mask = IntImm::make(1);
+  Var i("i", kInt32);
+  auto memcpy_expr = For::make(
+      i,
+      0,
+      N,
+      Store::make(
+          c,
+          i,
+          CompareSelect::make(
+              Load::make(a, i, mask),
+              Load::make(b, i, mask),
+              CompareSelectOperation::kLE),
+          mask));
+
+  SimpleIREvaluator ir_eval(memcpy_expr, a, b, c);
+  ir_eval(a_buffer, b_buffer, c_buffer);
+
+  assertAllEqual(c_buffer, 1);
+}
+
+TEST(ATenTest, ltInt) {
+  constexpr int N = 128;
+  Buffer a(Var("A", kHandle), kInt32, {N});
+  Buffer b(Var("B", kHandle), kInt32, {N});
+  Buffer c(Var("C", kHandle), kInt32, {N});
+  std::vector<int> a_buffer(N, 5);
+  std::vector<int> b_buffer(N, 5);
+  std::vector<int> c_buffer(N, 1);
+
+  auto mask = IntImm::make(1);
+  Var i("i", kInt32);
+  auto memcpy_expr = For::make(
+      i,
+      0,
+      N,
+      Store::make(
+          c,
+          i,
+          CompareSelect::make(
+              Load::make(a, i, mask),
+              Load::make(b, i, mask),
+              CompareSelectOperation::kLT),
+          mask));
+
+  SimpleIREvaluator ir_eval(memcpy_expr, a, b, c);
+  ir_eval(a_buffer, b_buffer, c_buffer);
+
+  assertAllEqual(c_buffer, 0);
+}
