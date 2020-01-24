@@ -12,8 +12,6 @@
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
-#define TX_DEBUG 1
-
 using namespace torch::jit;
 using namespace torch::jit::compiler;
 
@@ -274,28 +272,176 @@ struct TensorExprKernel {
     return Expr();
   }
 
+  const Tensor& tensor(torch::jit::Value* v) {
+    return tensors.at(v->unique());
+  }
+
   template <typename T>
-  Expr constantOrTensor(torch::jit::Value* v,
-                        T&& alternative) {
-    if (v->node()->kind() == prim::Constant) {
-      const auto val = toIValue(v).value();
-      if (val.isDouble()) {
-        return FloatImm::make(val.toDouble());
-      } else if (val.isInt()) {
-        return IntImm::make(val.toInt());
-      } else {
-        LOG(FATAL) << "Unhandled constant datatype";
+  Expr broadcast(const T& t, const std::vector<Var>& axes) {
+    return t.call(computeIndicesToBroadcast(axes, bufferSizes(t)));
+  }
+
+  void promoteInputs(std::vector<Expr>& inputs) {
+    bool any_float = std::any_of(inputs.begin(), inputs.end(),
+      [](const Expr& e) { return e.dtype() == kFloat32; }
+    );
+
+    if (!any_float) return;
+
+    for (Expr& e : inputs) {
+      if (e.dtype() == kInt32) {
+        e = cast<float>(e); 
       }
     }
+  }
 
-    return alternative(tensors.at(v->unique()));
+  Expr demoteOutput(const Expr& e, torch::jit::Value* v) {
+    auto tt = v->type()->cast<TensorType>()->scalarType();
+    if (e.dtype() == kFloat32 && tt == at::ScalarType::Int) {
+      return cast<int>(e);
+    }
+
+    return e;
+  }
+
+  Tensor ComputeOneOperand(const std::string& name, Node* n,
+                           std::function<Expr(const Expr&)> inner_expr) {
+    return Compute(
+      name,
+      texprDims(n->output()),
+      [this, n, inner_expr](const std::vector<Var>& axes) {
+        std::vector<Expr> inputs = {
+          broadcast(tensor(n->inputs()[0]), axes)
+        };
+
+        promoteInputs(inputs);
+        Expr compute = inner_expr(inputs[0]);
+        return demoteOutput(compute, n->output());
+      }
+    );
+  }
+
+  Tensor ComputeTwoOperand(const std::string& name, Node* n,
+                           std::function<Expr(const Expr&, const Expr&)> inner_expr) {
+    return Compute(
+      name,
+      texprDims(n->output()),
+      [this, n, inner_expr](const std::vector<Var>& axes) {
+        std::vector<Expr> inputs = {
+          broadcast(tensor(n->inputs()[0]), axes),
+          broadcast(tensor(n->inputs()[1]), axes),
+        };
+
+        promoteInputs(inputs);
+        Expr compute = inner_expr(inputs[0], inputs[1]);
+        return demoteOutput(compute, n->output());
+      }
+    );
+  }
+
+  Tensor ComputeTwoOperandWithAlpha(const std::string& name, Node* n,
+                                    std::function<Expr(const Expr&, const Expr&)> inner_expr) {
+    return Compute(
+      name,
+      texprDims(n->output()),
+      [this, n, inner_expr](const std::vector<Var>& axes) {
+        std::vector<Expr> inputs = {
+          broadcast(tensor(n->inputs()[0]), axes),
+          broadcast(tensor(n->inputs()[1]), axes),
+          constant(n->inputs()[2]),
+        };
+
+        promoteInputs(inputs);
+        Expr compute = inner_expr(inputs[0], inputs[2] * inputs[1]);
+        return demoteOutput(compute, n->output());
+      }
+    );
+  }
+
+  Tensor ComputeNode(Node* n) {
+    switch (n->kind()) {
+      case aten::add: {
+        return ComputeTwoOperandWithAlpha("aten_add", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs + rhs; }
+        );
+      } break;
+
+      case aten::sub: {
+        return ComputeTwoOperandWithAlpha("aten_sub", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs - rhs; }
+        );
+      } break;
+
+      case aten::mul: {
+        return ComputeTwoOperand("aten_mul", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs * rhs; }
+        );
+      } break;
+
+      case aten::div: {
+        return ComputeTwoOperand("aten_div", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs / rhs; }
+        );
+      } break;
+
+      case aten::log: {
+        return ComputeOneOperand("aten_log", n,
+          [](const Expr& a) { return log(a); }
+        );
+      } break;
+
+      case aten::log10: {
+        return ComputeOneOperand("aten_log10", n,
+          [](const Expr& a) { return log10(a); }
+        );
+      } break;
+
+      case aten::log2: {
+        return ComputeOneOperand("aten_log2", n,
+          [](const Expr& a) { return log2(a); }
+        );
+      } break;
+
+      case aten::exp: {
+        return ComputeOneOperand("aten_exp", n,
+          [](const Expr& a) { return exp(a); }
+        );
+      } break;
+
+      case aten::erf: {
+        return ComputeOneOperand("aten_erf", n,
+          [](const Expr& a) { return erf(a); }
+        );
+      } break;
+
+      case aten::cos: {
+        return ComputeOneOperand("aten_cos", n,
+          [](const Expr& a) { return cos(a); }
+        );
+      } break;
+
+      case aten::sin: {
+        return ComputeOneOperand("aten_sin", n,
+          [](const Expr& a) { return sin(a); }
+        );
+      } break;
+
+      case aten::tan: {
+        return ComputeOneOperand("aten_tan", n,
+          [](const Expr& a) { return tan(a); }
+        );
+      } break;
+
+      default: {
+        LOG(FATAL) << "Unhandled node kind";
+      }
+    }
   }
 
   explicit TensorExprKernel(const Node* node) {
     auto subgraph = node->g(attr::Subgraph);
 
     // Bind inputs to buffers.
-    auto inputs = subgraph->inputs();
     for (auto const& input : subgraph->inputs()) {
       Buffer in_buffer = texprBuffer(input);
       tensors.emplace(
@@ -303,60 +449,22 @@ struct TensorExprKernel {
           Compute(
               "input",
               texprDims(input),
-              [in_buffer](const std::vector<Var>& axes) {
-                return in_buffer.call(
-                    computeIndicesToBroadcast(axes, bufferSizes(in_buffer)));
+              [this, in_buffer](const std::vector<Var>& axes) {
+                return broadcast(in_buffer, axes);
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
 
     // Bind nodes to tensor compute expressions.
     for (auto const& n : subgraph->nodes()) {
-      switch (n->kind()) {
-      case prim::Constant: continue;
-
-      case aten::add:
-      case aten::sub: {
-        tensors.emplace(
-            n->output()->unique(),
-            Compute(
-                "aten_add_sub",
-                texprDims(n->output()),
-                [&n, this](const std::vector<Var>& axes) {
-                  Expr lhs_expr = constantOrTensor(n->inputs()[0],
-                    [&](const Tensor& t) {
-                      return t.call(computeIndicesToBroadcast(
-                        axes, bufferSizes(t)));
-                    }
-                  );
-
-                  Expr rhs_expr = constantOrTensor(n->inputs()[1],
-                    [&](const Tensor& t) {
-                      return t.call(computeIndicesToBroadcast(
-                        axes, bufferSizes(t)));
-                    }
-                  );
-
-                  Expr alpha_expr = constant(n->inputs()[2]);
-
-                  // Promote integer alpha to float if needed.
-                  if (alpha_expr.dtype() == kInt32 &&
-                      rhs_expr.dtype() == kFloat32) {
-                    alpha_expr = cast<float>(alpha_expr);
-                  }
-
-                  if (n->kind() == aten::add) {
-                    return lhs_expr + (alpha_expr * rhs_expr);
-                  } else {
-                    return lhs_expr - (alpha_expr * rhs_expr);
-                  }
-                }));
-      } break;
-
-      default: {
-        LOG(FATAL) << "Unhandled node kind";
+      if (n->kind() == prim::Constant) {
+        continue;
       }
-      }
+
+      tensors.emplace(
+        n->output()->unique(),
+        ComputeNode(n)
+      );
     }
 
     CHECK(subgraph->outputs().size() == 1ULL)
