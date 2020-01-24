@@ -143,3 +143,16 @@ def test_constant():
     x = traced(a)
     np.testing.assert_allclose(a.numpy() + 1.0, x.numpy())
 
+def test_add_sub():
+    def easy(x, y, z):
+        aaa = torch.add(x, y)
+        bbb = torch.sub(aaa, z)
+        return bbb
+
+    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024)))
+
+    a = torch.rand(1024)
+    b = torch.rand(1024)
+    c = torch.rand(1024)
+    x = traced(a, b, c)
+    np.testing.assert_allclose(a.numpy() + b.numpy() - c.numpy(), x.numpy())

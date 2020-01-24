@@ -12,6 +12,8 @@
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
+#define TX_DEBUG 1
+
 using namespace torch::jit;
 using namespace torch::jit::compiler;
 
@@ -43,7 +45,13 @@ value_list sortReverseTopological(
 
 bool isSupported(Node* node) {
   // TODO:
-  return node->kind() == Symbol::fromQualString("aten::add");
+  switch (node->kind()) {
+  case aten::add:
+  case aten::sub:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool canHandle(Node* node, AliasDb& aliasDb) {
@@ -305,15 +313,15 @@ struct TensorExprKernel {
     for (auto const& n : subgraph->nodes()) {
       switch (n->kind()) {
       case prim::Constant: continue;
-      case aten::add: {
+
+      case aten::add:
+      case aten::sub: {
         tensors.emplace(
             n->output()->unique(),
             Compute(
-                "aten_add",
+                "aten_add_sub",
                 texprDims(n->output()),
                 [&n, this](const std::vector<Var>& axes) {
-                  size_t alpha = n->inputs()[1]->unique();
-
                   Expr lhs_expr = constantOrTensor(n->inputs()[0],
                     [&](const Tensor& t) {
                       return t.call(computeIndicesToBroadcast(
@@ -336,7 +344,11 @@ struct TensorExprKernel {
                     alpha_expr = cast<float>(alpha_expr);
                   }
 
-                  return lhs_expr + (alpha_expr * rhs_expr);
+                  if (n->kind() == aten::add) {
+                    return lhs_expr + (alpha_expr * rhs_expr);
+                  } else {
+                    return lhs_expr - (alpha_expr * rhs_expr);
+                  }
                 }));
       } break;
 
