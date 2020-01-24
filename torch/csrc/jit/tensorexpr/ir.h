@@ -293,7 +293,7 @@ class Block : public StmtNode<Block> {
  public:
   static Stmt make(const std::vector<Stmt>& stmts) {
     std::vector<Stmt> valid_stmts;
-    for (int i = 0; i < stmts.size(); i++) {
+    for (size_t i = 0; i < stmts.size(); i++) {
       if (stmts[i].empty()) {
         continue;
       }
@@ -615,7 +615,7 @@ class Intrinsics : public CallNode<Intrinsics> {
   Intrinsics(IntrinsicsOp op_type, const std::vector<Expr>& params)
       : BaseClass(IntrinsicsDtype(op_type, params), kIntrinsics, params),
         op_type_(op_type) {
-    CHECK_EQ(OpArgCount(op_type), params.size());
+    CHECK_EQ(OpArgCount(op_type), nparams());
   }
 
   Expr DefaultMutator(const std::vector<Expr>& new_params) const override {

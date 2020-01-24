@@ -232,7 +232,7 @@ Stmt IRMutator::mutate(const Allocate* v) {
 
   std::vector<Expr> dims_old = v->dims();
   std::vector<Expr> dims_new(dims_old.size());
-  for (int i = 0; i < dims_old.size(); i++) {
+  for (size_t i = 0; i < dims_old.size(); i++) {
     dims_new[i] = dims_old[i].accept_mutator(this);
     any_change |= same_node(dims_new[i], dims_old[i]);
   }

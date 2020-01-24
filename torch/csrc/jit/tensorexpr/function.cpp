@@ -15,7 +15,7 @@ static void unpack_dim_args(
     std::vector<Var>* vars) {
   dims->clear();
   vars->clear();
-  for (int i = 0; i < dim_args.size(); i++) {
+  for (size_t i = 0; i < dim_args.size(); i++) {
     dims->push_back(dim_args[i].dim());
     vars->push_back(Var(dim_args[i].name_hint(), kInt32));
   }
@@ -40,7 +40,7 @@ Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&)> body_func) {
-  CHECK_EQ(dim_args.size(), 1);
+  CHECK_EQ(dim_args.size(), 1ULL);
   std::vector<Expr> dims;
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
@@ -54,7 +54,7 @@ Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&)> body_func) {
-  CHECK_EQ(dim_args.size(), 2);
+  CHECK_EQ(dim_args.size(), 2ULL);
   std::vector<Expr> dims;
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
@@ -68,7 +68,7 @@ Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&)> body_func) {
-  CHECK_EQ(dim_args.size(), 3);
+  CHECK_EQ(dim_args.size(), 3ULL);
   std::vector<Expr> dims;
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
@@ -83,7 +83,7 @@ Tensor Compute(
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&, const Var&)>
         body_func) {
-  CHECK_EQ(dim_args.size(), 4);
+  CHECK_EQ(dim_args.size(), 4ULL);
   std::vector<Expr> dims;
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
@@ -95,20 +95,20 @@ Tensor Compute(
 
 Stmt FunctionNode::ElementStmt() {
   std::vector<Expr> strides(dims_.size());
-  for (int i = 0; i < strides.size(); i++) {
+  for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
       strides[i] = Expr(1);
       continue;
     }
     Expr stride = dims_[i + 1];
-    for (int j = i + 2; j < dims_.size(); j++) {
+    for (size_t j = i + 2; j < dims_.size(); j++) {
       stride = stride * dims_[j];
     }
     strides[i] = stride;
   }
 
   Expr total_index;
-  for (int i = 0; i < dims_.size(); i++) {
+  for (size_t i = 0; i < dims_.size(); i++) {
     Expr index = this->args_[i] * strides[i];
     if (i == 0) {
       total_index = index;

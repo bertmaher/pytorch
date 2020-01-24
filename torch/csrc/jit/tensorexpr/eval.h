@@ -95,7 +95,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     std::vector<CallArg> args({CallArg(ts)...});
     CHECK_EQ(args.size(), buffer_args().size());
     BufferMapping buffer_mapping;
-    for (int i = 0; i < args.size(); i++) {
+    for (size_t i = 0; i < args.size(); i++) {
       buffer_mapping[buffer_args()[i].var().node()] = args[i].data();
     }
     this->SetBufferMapping(buffer_mapping);
@@ -134,7 +134,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     std::vector<T> lhs_v = lhs.as_vec<T>();
     std::vector<T> rhs_v = rhs.as_vec<T>();
     std::vector<T> result_v(lhs_v.size());
-    for (int i = 0; i < lhs_v.size(); i++) {
+    for (size_t i = 0; i < lhs_v.size(); i++) {
       switch (op_type) {
         case IRNodeType::kAdd:
           result_v[i] = lhs_v[i] + rhs_v[i];
@@ -186,7 +186,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     std::vector<T> lhs_v = lhs.as_vec<T>();
     std::vector<T> rhs_v = rhs.as_vec<T>();
     std::vector<int> result_v(lhs_v.size());
-    for (int i = 0; i < lhs_v.size(); i++) {
+    for (size_t i = 0; i < lhs_v.size(); i++) {
       switch (cmp_op) {
         case CompareSelectOperation::kEQ:
           result_v[i] = (lhs_v[i] == rhs_v[i]) ? 1 : 0;
@@ -365,7 +365,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     if (v_sdtype == kFloat32) {
       float* ptr_f = static_cast<float*>(ptr);
       std::vector<float> v(index.size());
-      for (int i = 0; i < index.size(); i++) {
+      for (size_t i = 0; i < index.size(); i++) {
         if (mask[i]) {
           v[i] = ptr_f[index[i]];
         }
@@ -374,7 +374,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     } else if (v_sdtype == kInt32) {
       int* ptr_i = static_cast<int*>(ptr);
       std::vector<int> v(index.size());
-      for (int i = 0; i < index.size(); i++) {
+      for (size_t i = 0; i < index.size(); i++) {
         if (mask[i]) {
           v[i] = ptr_i[index[i]];
         }
@@ -402,7 +402,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
       std::vector<float> value = this->value().as_vec<float>();
       CHECK_EQ(index.size(), value.size());
       float* ptr_f = static_cast<float*>(ptr);
-      for (int i = 0; i < index.size(); i++) {
+      for (size_t i = 0; i < index.size(); i++) {
         if (mask[i]) {
           ptr_f[index[i]] = value[i];
         }
@@ -412,7 +412,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
       std::vector<int> value = this->value().as_vec<int>();
       CHECK_EQ(index.size(), value.size());
       int* ptr_i = static_cast<int*>(ptr);
-      for (int i = 0; i < index.size(); i++) {
+      for (size_t i = 0; i < index.size(); i++) {
         if (mask[i]) {
           ptr_i[index[i]] = value[i];
         }
@@ -433,23 +433,23 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
       values[i] = this->value();
     }
     std::vector<float> v1;
-    if (values.size() >= 1) {
+    if (values.size() >= 1ULL) {
       v1 = values[0].as_vec<float>();
     }
     std::vector<float> v2;
-    if (values.size() >= 2) {
+    if (values.size() >= 2ULL) {
       v2 = values[1].as_vec<float>();
       CHECK_EQ(v1.size(), v2.size()) << "mismatch vectorize sizes";
     }
-    CHECK_LE(values.size(), 2)
+    CHECK_LE(values.size(), 2ULL)
         << "no support for intrinsics for more than two operand yet";
     std::vector<float> result(v1.size(), -1);
-    if (values.size() == 1) {
-      for (int i = 0; i < v1.size(); i++) {
+    if (values.size() == 1ULL) {
+      for (size_t i = 0; i < v1.size(); i++) {
         result[i] = compute_intrinsics(v->op_type(), v1[i]);
       }
     } else {
-      for (int i = 0; i < v1.size(); i++) {
+      for (size_t i = 0; i < v1.size(); i++) {
         result[i] = compute_intrinsics(v->op_type(), v1[i], v2[i]);
       }
     }
@@ -460,7 +460,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     const Variable* buffer_var = v->buffer_var().AsNode<Variable>();
     std::vector<Expr> dims = v->dims();
     int total_byte_size = v->dtype().byte_size();
-    for (int i = 0; i < dims.size(); i++) {
+    for (size_t i = 0; i < dims.size(); i++) {
       dims[i].accept(this);
       total_byte_size *= value_.as<int>();
     }

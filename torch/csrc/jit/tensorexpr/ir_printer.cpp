@@ -162,7 +162,7 @@ void IRPrinter::visit(const Allocate* v) {
   os << "Allocate(" << v->buffer_var() << ", " << v->dtype();
   os << ", {";
   const std::vector<Expr>& dims = v->dims();
-  for (int i = 0; i < dims.size(); i++) {
+  for (size_t i = 0; i < dims.size(); i++) {
     if (i != 0) {
       os << ", ";
     }

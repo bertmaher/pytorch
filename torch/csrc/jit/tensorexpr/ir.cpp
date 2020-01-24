@@ -55,7 +55,7 @@ Dtype Intrinsics::IntrinsicsDtype(
     IntrinsicsOp op_type,
     const std::vector<Expr>& params) {
   // TODO: check the op_type an dmake a real decision
-  CHECK_GE(params.size(), 1);
+  CHECK_GE(params.size(), 1ULL);
   return params[0].dtype();
 }
 

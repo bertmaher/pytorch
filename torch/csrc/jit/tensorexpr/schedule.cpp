@@ -38,7 +38,7 @@ class ScheduleNode::DependencyTracker : public IRVisitor {
  public:
   virtual ~DependencyTracker() = default;
   DependencyTracker(const std::vector<Tensor>& output_tensors) {
-    for (int i = 0; i < output_tensors.size(); i++) {
+    for (size_t i = 0; i < output_tensors.size(); i++) {
       const TensorNode* node = output_tensors[i].node();
       to_process_.push(node);
       encountered_.insert(node);
@@ -443,21 +443,21 @@ Stmt ScheduleNode::Lower() {
 
   // Add allocs and frees for intermediate buffers at the global level.
   // TODO: move allocs and frees to the imemediate areas to reuse buffers.
-  if (internal_tensors_.size() == 0) {
+  if (internal_tensors_.size() == 0ULL) {
     return core_stmt;
   }
 
   std::unordered_set<const FunctionNode*> inlined_func_set;
-  for (int i = 0; i < inlined_functions_.size(); i++) {
+  for (size_t i = 0; i < inlined_functions_.size(); i++) {
     inlined_func_set.insert(inlined_functions_[i].node());
   }
   std::unordered_set<const TensorNode*> output_tensors_set;
-  for (int i = 0; i < output_tensors_.size(); i++) {
+  for (size_t i = 0; i < output_tensors_.size(); i++) {
     output_tensors_set.insert(output_tensors_[i].node());
   }
   std::vector<Stmt> allocs;
   std::vector<Stmt> frees;
-  for (int i = 0; i < internal_tensors_.size(); i++) {
+  for (size_t i = 0; i < internal_tensors_.size(); i++) {
     const Tensor& tensor = internal_tensors_[i];
     if (inlined_func_set.count(tensor.function().node()) > 0) {
       // No need to allocation memory for intermediate tensors.
@@ -522,14 +522,14 @@ void LoopAxisTransform::CloneFrom(const LoopAxisTransform* other) {
   inputs_.resize(other->inputs_.size());
   outputs_.resize(other->outputs_.size());
 
-  for (int i = 0; i < inputs_.size(); i++) {
+  for (size_t i = 0; i < inputs_.size(); i++) {
     inputs_[i] = CloneObject(other->inputs_[i]);
   }
-  for (int i = 0; i < outputs_.size(); i++) {
+  for (size_t i = 0; i < outputs_.size(); i++) {
     std::vector<LoopAxis*>& output = outputs_[i];
     const std::vector<LoopAxis*>& other_output = other->outputs_[i];
     output.resize(other_output.size());
-    for (int j = 0; j < other_output.size(); j++) {
+    for (size_t j = 0; j < other_output.size(); j++) {
       output[j] = CloneObject(other_output[j]);
     }
   }

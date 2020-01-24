@@ -192,7 +192,7 @@ Dtype texprType(const c10::optional<at::ScalarType>& st) {
 
 std::vector<Expr> texprSizes(const c10::VaryingShape& shape) {
   std::vector<Expr> dims;
-  for (auto i = 0; i < *shape.size(); i++) {
+  for (size_t i = 0; i < *shape.size(); i++) {
     dims.push_back(IntImm::make(*shape[i]));
   }
   return dims;
@@ -359,7 +359,7 @@ struct TensorExprKernel {
       }
     }
 
-    CHECK(subgraph->outputs().size() == 1)
+    CHECK(subgraph->outputs().size() == 1ULL)
         << "Only handle single output subgraphs";
     auto const& output = subgraph->outputs()[0];
     CHECK(tensors.count(output->unique())) << "Output must be a tensor";
@@ -379,7 +379,7 @@ struct TensorExprKernel {
     std::vector<std::vector<float>> backing;
 
     auto inputs = last(stack, buffer_args.size());
-    for (int i = 0; i < buffer_args.size(); i++) {
+    for (size_t i = 0; i < buffer_args.size(); i++) {
       eval.bindBuffer(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
 

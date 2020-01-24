@@ -161,13 +161,13 @@ class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
     return outputs_.size();
   }
   int output_group_size(int group_index) const {
-    CHECK(group_index >= 0 && group_index < outputs_.size());
+    CHECK(group_index >= 0 && group_index < (int)outputs_.size());
     return outputs_[group_index].size();
   }
   LoopAxis* output(int group_index, int index) {
-    CHECK(group_index >= 0 && group_index < outputs_.size());
+    CHECK(group_index >= 0 && group_index < (int)outputs_.size());
     std::vector<LoopAxis*>& output_group = outputs_[group_index];
-    CHECK(index >= 0 && index < output_group.size());
+    CHECK(index >= 0 && index < (int)output_group.size());
     return output_group[index];
   }
 
@@ -176,7 +176,7 @@ class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
   }
 
   LoopAxis* input(int index) {
-    CHECK(index >= 0 && index < inputs_.size());
+    CHECK(index >= 0 && index < (int)inputs_.size());
     return inputs_[index];
   }
 
@@ -187,7 +187,7 @@ class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
   explicit LoopAxisTransform(const std::vector<LoopAxis*>& inputs)
       : inputs_(inputs) {
     // TODO: find a better way to set schedule.
-    if (inputs.size() > 0) {
+    if (inputs.size() > 0ULL) {
       this->set_schedule(inputs_[0]->schedule());
     }
   }
@@ -199,7 +199,7 @@ class LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
   void set_output_group(
       int group_index,
       const std::vector<LoopAxis*>& outputs) {
-    CHECK(group_index >= 0 && group_index < outputs_.size());
+    CHECK(group_index >= 0 && group_index < (int)outputs_.size());
     outputs_[group_index] = outputs;
     for (LoopAxis* output : outputs) {
       output->set_output_group_index(group_index);
