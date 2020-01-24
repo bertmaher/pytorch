@@ -1,5 +1,6 @@
 #pragma once
 
+#define ENABLE_LLVM 1
 #ifdef ENABLE_LLVM
 
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -13,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-#define DEBUG_PRINT 0
+#define DEBUG_PRINT 1
 
 #if DEBUG_PRINT
 #include <llvm/IR/LegacyPassManager.h>

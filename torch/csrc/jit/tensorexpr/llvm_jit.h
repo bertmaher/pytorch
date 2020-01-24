@@ -1,5 +1,6 @@
 #pragma once
 
+#define ENABLE_LLVM 1
 #ifdef ENABLE_LLVM
 
 #include "llvm/ExecutionEngine/JITSymbol.h"

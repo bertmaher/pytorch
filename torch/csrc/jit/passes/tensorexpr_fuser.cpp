@@ -9,6 +9,7 @@
 #include <torch/csrc/jit/passes/utils/subgraph_utils.h>
 #include <torch/csrc/jit/tensorexpr/buffer.h>
 #include <torch/csrc/jit/tensorexpr/eval.h>
+#include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
@@ -363,6 +364,7 @@ struct TensorExprKernel {
   }
 
   void run(Stack& stack) {
+#if 0
     SimpleIREvaluator eval(stmt);
     std::vector<std::vector<float>> backing;
 
@@ -378,6 +380,20 @@ struct TensorExprKernel {
     eval.eval();
     drop(stack, buffer_args.size());
     stack.insert(stack.end(), std::move(output));
+#else
+    LLVMCodeGen codegen(buffer_args);
+    auto inputs = last(stack, buffer_args.size());
+    std::vector<void*> args;
+    for (int i = 0; i < buffer_args.size(); i++) {
+      args.push_back(inputs[i].toTensor().data_ptr());
+    }
+    at::Tensor output =
+        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
+    args.push_back(output.data_ptr());
+    codegen.value<int32_t>(args);
+    drop(stack, buffer_args.size());
+    stack.insert(stack.end(), std::move(output));
+#endif
   }
 };
 
