@@ -9,7 +9,7 @@ namespace torch {
 namespace jit {
 namespace compiler {
 
-class ASMJITCodeGen : public IRVisitor {
+class TORCH_API ASMJITCodeGen : public IRVisitor {
  private:
   std::unique_ptr<asmjit::JitRuntime> jit_;
   std::unique_ptr<asmjit::CodeHolder> code_;
