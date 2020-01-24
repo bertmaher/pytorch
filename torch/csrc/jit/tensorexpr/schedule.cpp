@@ -21,8 +21,8 @@ namespace {
 // Evaluates a constant expression and returns its value.
 template <typename T>
 static T EvalConstExpr(const Expr& expr) {
-  SimpleIREvaluator eval;
-  expr.accept(&eval);
+  SimpleIREvaluator eval(expr);
+  eval();
   return eval.value().as<T>();
 }
 

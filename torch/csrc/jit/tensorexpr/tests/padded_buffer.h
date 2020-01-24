@@ -128,7 +128,7 @@ class PaddedBuffer : public PaddedBufferBase {
 };
 
 template <typename T>
-inline SimpleIREvaluator::CallArg::CallArg(const PaddedBuffer<T>& buffer)
+inline CodeGen::CallArg::CallArg(const PaddedBuffer<T>& buffer)
     : ptr_(const_cast<T*>(buffer.data())) {}
 
 } // namespace compiler

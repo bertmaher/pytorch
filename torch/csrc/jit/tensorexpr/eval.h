@@ -6,6 +6,7 @@
 
 #include <c10/util/Logging.h>
 #include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/codegen.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
@@ -76,50 +77,9 @@ inline const std::vector<int>& Value::as_vec<int>() const {
 template <typename T>
 class PaddedBuffer;
 
-class SimpleIREvaluator : public IRVisitor {
+class SimpleIREvaluator : public CodeGen, public IRVisitor {
  public:
-  class BufferArg {
-   public:
-    BufferArg(const Buffer& buffer) : var_(buffer.data()) {}
-    BufferArg(const Tensor& tensor) : var_(tensor.function().func_var()) {}
-    BufferArg(const Function& func) : var_(func.func_var()) {}
-    const Var& var() const {
-      return var_;
-    }
-    Var& var() {
-      return var_;
-    }
-
-   private:
-    Var var_;
-  };
-
-  class CallArg {
-   public:
-    template <typename T>
-    CallArg(const PaddedBuffer<T>& buffer);
-
-    template <typename T>
-    CallArg(const std::vector<T>& buffer)
-        : ptr_(const_cast<T*>(buffer.data())) {}
-
-    void* data() {
-      return ptr_;
-    }
-
-   private:
-    void* ptr_ = nullptr;
-  };
-
-  SimpleIREvaluator() {}
-
-  template <typename... Ts>
-  SimpleIREvaluator(const Stmt& stmt, Ts... ts)
-      : ir_node_(stmt.node()), buffer_args_({BufferArg(ts)...}) {}
-
-  template <typename... Ts>
-  SimpleIREvaluator(const Expr& expr, Ts... ts)
-      : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
+  using CodeGen::CodeGen;
 
   template <typename Buf>
   void bindBuffer(Buf b, void* d) {
@@ -127,19 +87,19 @@ class SimpleIREvaluator : public IRVisitor {
   }
 
   void eval() {
-    ir_node_.node()->accept(this);
+    ir_node().node()->accept(this);
   }
 
   template <typename... Ts>
   void operator()(const Ts&... ts) {
     std::vector<CallArg> args({CallArg(ts)...});
-    CHECK_EQ(args.size(), buffer_args_.size());
+    CHECK_EQ(args.size(), buffer_args().size());
     BufferMapping buffer_mapping;
     for (int i = 0; i < args.size(); i++) {
-      buffer_mapping[buffer_args_[i].var().node()] = args[i].data();
+      buffer_mapping[buffer_args()[i].var().node()] = args[i].data();
     }
     this->SetBufferMapping(buffer_mapping);
-    ir_node_.node()->accept(this);
+    ir_node().node()->accept(this);
   }
 
   void visit(const Add* v) override {
@@ -600,9 +560,6 @@ class SimpleIREvaluator : public IRVisitor {
       buffer_mapping_[entry.first.node()] = entry.second;
     }
   }
-
-  RefHandle<IRNode> ir_node_;
-  std::vector<BufferArg> buffer_args_;
 
   Value value_;
   std::unordered_map<const BaseExprNode*, Value> eval_context_;
