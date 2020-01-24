@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <torch/csrc/WindowsTorchApiMacro.h>
 
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
@@ -17,7 +18,7 @@ class ScheduleNode;
 using schedule::TensorExprNode;
 
 class TensorOperation;
-class TensorOperationNode : public RefCounted {
+class TORCH_API TensorOperationNode : public RefCounted {
  public:
   void SplitWithTail(
       const Var& loop_var,
@@ -79,7 +80,7 @@ class TensorNode : public TensorOperationNode {
   int output_index_;
 };
 
-class TensorOperation : public RefHandle<TensorOperationNode> {
+class TORCH_API TensorOperation : public RefHandle<TensorOperationNode> {
  public:
   using BaseClass = RefHandle<TensorOperationNode>;
   TensorOperation() : BaseClass(nullptr) {}
@@ -191,24 +192,24 @@ class DimArg {
   std::string name_hint_;
 };
 
-Tensor Compute(
+TORCH_API Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&)> body_func);
-Tensor Compute(
+TORCH_API Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&)> body_func);
-Tensor Compute(
+TORCH_API Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&)> body_func);
-Tensor Compute(
+TORCH_API Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&, const Var&)>
         body_func);
-Tensor Compute(
+TORCH_API Tensor Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const std::vector<Var>&)> body_func);

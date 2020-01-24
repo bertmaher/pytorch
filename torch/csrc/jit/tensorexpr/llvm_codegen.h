@@ -2,6 +2,7 @@
 
 #define ENABLE_LLVM 1
 #ifdef ENABLE_LLVM
+#include <torch/csrc/WindowsTorchApiMacro.h>
 
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
@@ -24,7 +25,7 @@ namespace torch {
 namespace jit {
 namespace compiler {
 
-class LLVMCodeGen : public IRVisitor {
+class TORCH_API LLVMCodeGen : public IRVisitor {
  private:
   llvm::orc::ThreadSafeContext context_;
   llvm::IRBuilder<> irb_;
