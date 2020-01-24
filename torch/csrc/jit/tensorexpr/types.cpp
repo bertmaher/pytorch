@@ -74,6 +74,16 @@ int Dtype::byte_size() const {
   return scalar_size * lanes();
 }
 
+std::string Dtype::ToCppString() const {
+  if (scalar_type_ == kScalarInt32) {
+    return "int";
+  } else if (scalar_type_ == kScalarFloat32) {
+    return "float";
+  } else {
+    throw std::runtime_error("Invalid dtype: " + std::to_string(scalar_type_));
+  }
+}
+
 } // namespace compiler
 } // namespace jit
 } // namespace torch

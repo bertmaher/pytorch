@@ -34,6 +34,7 @@ class Dtype {
     return !(*this == other);
   }
   int byte_size() const;
+  std::string ToCppString() const;
 
  private:
   friend std::ostream& operator<<(std::ostream& stream, const Dtype& dtype);
