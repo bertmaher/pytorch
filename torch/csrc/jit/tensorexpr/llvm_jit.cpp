@@ -13,7 +13,7 @@ namespace orc {
 
 // Lightly modified implementation from LLVM's Kaleidoscope JIT tutorial:
 // https://llvm.org/docs/tutorial/BuildingAJIT1.html
-class PytorchLLVMJITImpl {
+class TORCH_API PytorchLLVMJITImpl {
  private:
   std::unique_ptr<LLJIT> LLJ;
 
