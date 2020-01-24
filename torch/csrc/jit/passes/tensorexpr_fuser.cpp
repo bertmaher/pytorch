@@ -263,6 +263,7 @@ struct TensorExprKernel {
     }
 
     LOG(FATAL) << "Not a constant!";
+    return Expr();
   }
 
   template <typename T>
@@ -352,6 +353,12 @@ struct TensorExprKernel {
     CHECK(tensors.count(output->unique())) << "Output must be a tensor";
     tensor_output = &tensors.at(output->unique());
     torch::jit::compiler::schedule::Schedule sch({*tensor_output});
+    for (auto& p : tensors) {
+      auto& t = p.second;
+      if (&t != tensor_output) {
+        t.ComputeInline();
+      }
+    }
     stmt = sch.Lower();
   }
 
