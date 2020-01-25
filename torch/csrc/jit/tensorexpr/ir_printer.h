@@ -1,9 +1,9 @@
 #pragma once
 
+#include <iostream>
+
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_visitor.h"
-
-#include <ostream>
 
 namespace torch {
 namespace jit {
@@ -11,7 +11,8 @@ namespace compiler {
 
 class IRPrinter : public IRVisitor {
  public:
-  IRPrinter(std::ostream&);
+  explicit IRPrinter(std::ostream& os) : printer_os_(this, os) {}
+
   void print(Expr);
   void print(Stmt);
   void visit(const Add* v) override;
@@ -36,8 +37,29 @@ class IRPrinter : public IRVisitor {
   void visit(const Allocate* v) override;
   void visit(const Free* v) override;
 
+  std::ostream& os() {
+    return printer_os_;
+  }
+
+  class PrinterStream : public std::ostream {
+   public:
+    PrinterStream(IRPrinter* printer, std::ostream& os)
+        : std::ostream(os.rdbuf()), printer_(printer) {}
+
+    IRPrinter* printer() {
+      return printer_;
+    }
+
+   private:
+    IRPrinter* printer_ = nullptr;
+  };
+
  private:
-  std::ostream& os;
+  std::ostream& raw_os() {
+    return printer_os_;
+  }
+
+  PrinterStream printer_os_;
 };
 
 std::ostream& operator<<(std::ostream& stream, const Expr&);

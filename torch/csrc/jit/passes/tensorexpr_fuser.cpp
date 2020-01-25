@@ -9,6 +9,7 @@
 #include <torch/csrc/jit/passes/utils/subgraph_utils.h>
 #include <torch/csrc/jit/tensorexpr/buffer.h>
 #include <torch/csrc/jit/tensorexpr/eval.h>
+#include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
@@ -290,7 +291,7 @@ struct TensorExprKernel {
 
     for (Expr& e : inputs) {
       if (e.dtype() == kInt32) {
-        e = cast<float>(e); 
+        e = cast<float>(e);
       }
     }
   }
@@ -518,6 +519,39 @@ struct TensorExprKernel {
   }
 
   void run(Stack& stack) {
+#ifdef ENABLE_LLVM
+    // Set up formal params (inputs, then outputs) for kernel.
+    std::vector<Buffer*> params;
+    for (auto& b : buffer_args) {
+      params.push_back(&b);
+    }
+    Buffer outbuf(
+        tensor_output->function().func_var(),
+        tensor_output->dtype(),
+        tensor_output->dims());
+    params.push_back(&outbuf);
+
+    // Generate code.
+    LLVMCodeGen codegen(params);
+    stmt.accept(&codegen);
+
+    // Set up arguments (inputs, then outputs) for kernel call.
+    auto inputs = last(stack, buffer_args.size());
+    std::vector<void*> args;
+    for (int i = 0; i < buffer_args.size(); i++) {
+      args.push_back(inputs[i].toTensor().data_ptr());
+    }
+    at::Tensor output =
+        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
+    args.push_back(output.data_ptr());
+
+    // Call the kernel.
+    codegen.value<int32_t>(args);
+
+    // Update the stack.
+    drop(stack, buffer_args.size());
+    stack.insert(stack.end(), std::move(output));
+#else
     SimpleIREvaluator eval(stmt);
     std::vector<std::vector<float>> backing;
 
@@ -533,6 +567,7 @@ struct TensorExprKernel {
     eval.eval();
     drop(stack, buffer_args.size());
     stack.insert(stack.end(), std::move(output));
+#endif
   }
 };
 

@@ -67,7 +67,7 @@ TEST(TensorExpr, Simple02) {
   std::ostringstream oss;
   oss << stmt;
   ASSERT_GT(oss.str().size(), 200);
-  ASSERT_LT(oss.str().size(), 500);
+  ASSERT_LT(oss.str().size(), 600);
 
   {
     // Compare to a reference loop structure structure.
@@ -381,12 +381,12 @@ TEST(ScheduleTest, FuserThreeArg) {
   Buffer c(Var("C", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer d(Var("D", kHandle), kFloat32, {Expr(kTotalSize)});
 
-  Tensor e = Compute("e", {{kTotalSize, "i"}},
-                     [&](const Var& i) { return a(i) + b(i); });
-  Tensor f = Compute("f", {{kTotalSize, "i"}},
-                     [&](const Var& i) { return e(i) + c(i); });
-  Tensor g = Compute("g", {{kTotalSize, "i"}},
-                     [&](const Var& i) { return f(i) + d(i); });
+  Tensor e = Compute(
+      "e", {{kTotalSize, "i"}}, [&](const Var& i) { return a(i) + b(i); });
+  Tensor f = Compute(
+      "f", {{kTotalSize, "i"}}, [&](const Var& i) { return e(i) + c(i); });
+  Tensor g = Compute(
+      "g", {{kTotalSize, "i"}}, [&](const Var& i) { return f(i) + d(i); });
 
   Schedule sch({g});
   e.ComputeInline();

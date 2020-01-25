@@ -47,18 +47,26 @@ class CodeGen {
 
 class CodeGen::BufferArg {
  public:
-  BufferArg(const Buffer& buffer) : var_(buffer.data()) {}
-  BufferArg(const Tensor& tensor) : var_(tensor.function().func_var()) {}
-  BufferArg(const Function& func) : var_(func.func_var()) {}
+  BufferArg(const Buffer& buffer)
+      : var_(buffer.data()), dtype_(buffer.dtype()) {}
+  BufferArg(const Tensor& tensor)
+      : var_(tensor.function().func_var()),
+        dtype_(tensor.function().body().dtype()) {}
+  BufferArg(const Function& func)
+      : var_(func.func_var()), dtype_(func.body().dtype()) {}
   const Var& var() const {
     return var_;
   }
   Var& var() {
     return var_;
   }
+  Dtype dtype() const {
+    return dtype_;
+  }
 
  private:
   Var var_;
+  Dtype dtype_;
 };
 
 class CodeGen::CallArg {

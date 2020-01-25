@@ -64,6 +64,7 @@ if (BUILD_TX_TESTS)
     tests/ir_printer_test.cpp
     tests/schedule_test.cpp
     tests/aten_test.cpp
+    tests/cuda_test.cpp
     )
 
   add_library(test_lib

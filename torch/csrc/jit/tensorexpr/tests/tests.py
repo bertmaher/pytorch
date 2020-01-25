@@ -120,6 +120,28 @@ def test_broadcast_2():
     rnp = foo_np(x.numpy(), y.numpy(), z.numpy())
     np.testing.assert_allclose(r, rnp)
 
+def test_broadcast_big2():
+    zero = torch.tensor([0.0], dtype=torch.float)
+
+    def foo(x, y, z):
+        aaa = torch.add(x, y)
+        bbb = torch.add(zero, aaa)
+        return torch.add(bbb, z)
+
+    def foo_np(x, y, z):
+        a = x + y
+        b = zero.numpy() + a
+        return b + z
+
+    x = torch.rand(32, 1024)
+    y = torch.ones(32, 1)
+    z = torch.rand(1024)
+    traced = torch.jit.trace(foo, (x, y, z))
+
+    r = traced(x, y, z)
+    rnp = foo_np(x.numpy(), y.numpy(), z.numpy())
+    np.testing.assert_allclose(r, rnp)
+
 def test_alpha():
     def alpha(x):
         aaa = torch.add(x, x, alpha=2.0)
