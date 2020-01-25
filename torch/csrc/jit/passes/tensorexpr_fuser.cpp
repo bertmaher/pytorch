@@ -384,6 +384,12 @@ struct TensorExprKernel {
         );
       } break;
 
+      case aten::eq: {
+        return ComputeTwoOperand("aten_eq", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs == rhs; }
+        );
+      } break;
+
       case aten::log: {
         return ComputeOneOperand("aten_log", n,
           [](const Expr& a) { return log(a); }

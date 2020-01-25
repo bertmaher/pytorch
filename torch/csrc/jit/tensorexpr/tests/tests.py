@@ -168,3 +168,14 @@ def test_promotion():
     b = torch.rand(1024, dtype=torch.float32)
     x = traced(a, b)
     np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
+
+def test_eq():
+    def easy(x, y):
+        c = torch.eq(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    a = torch.zeros(1024, dtype=torch.int32)
+    b = torch.zeros(1024, dtype=torch.int32)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
