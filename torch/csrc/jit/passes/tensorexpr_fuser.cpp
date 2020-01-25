@@ -390,6 +390,35 @@ struct TensorExprKernel {
         );
       } break;
 
+      case aten::ne: {
+        return ComputeTwoOperand("aten_ne", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs != rhs; }
+        );
+      } break;
+      case aten::ge: {
+        return ComputeTwoOperand("aten_ge", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs >= rhs; }
+        );
+      } break;
+
+      case aten::gt: {
+        return ComputeTwoOperand("aten_gt", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs > rhs; }
+        );
+      } break;
+
+      case aten::le: {
+        return ComputeTwoOperand("aten_le", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs <= rhs; }
+        );
+      } break;
+
+      case aten::lt: {
+        return ComputeTwoOperand("aten_lt", n,
+          [](const Expr& lhs, const Expr& rhs) { return lhs < rhs; }
+        );
+      } break;
+
       case aten::log: {
         return ComputeOneOperand("aten_log", n,
           [](const Expr& a) { return log(a); }

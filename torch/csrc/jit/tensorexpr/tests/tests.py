@@ -179,3 +179,62 @@ def test_eq():
     b = torch.zeros(1024, dtype=torch.int32)
     x= traced(a, b)
     np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_ne():
+    def easy(x, y):
+        c = torch.ne(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    a = torch.zeros(1024, dtype=torch.int32)
+    b = torch.ones(1024, dtype=torch.int32)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_ge():
+    def easy(x, y):
+        c = torch.ge(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    aa = np.array(1024, dtype=int)
+    aa.fill(5)
+    a = torch.from_numpy(aa)
+    b = torch.zeros(1024, dtype=torch.int32)
+    x= traced(a,b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_gt():
+    def easy(x, y):
+        c = torch.gt(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    a = torch.ones(1024, dtype=torch.int32)
+    b = torch.zeros(1024, dtype=torch.int32)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_le():
+    def easy(x, y):
+        c = torch.le(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    aa = np.array(1024, dtype=int)
+    aa.fill(5)
+    a = torch.from_numpy(aa)
+    b = torch.zeros(1024, dtype=torch.int32)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.zeros(1024), x.numpy())
+
+def test_lt():
+    def easy(x, y):
+        c = torch.lt(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    a = torch.ones(1024, dtype=torch.int32)
+    b = torch.zeros(1024, dtype=torch.int32)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.zeros(1024), x.numpy())
