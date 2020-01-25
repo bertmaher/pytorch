@@ -539,6 +539,26 @@ void LLVMCodeGen::visit(const Broadcast* v) {
   value_ = irb_.CreateVectorSplat(lanes, value_);
 }
 
+void LLVMCodeGen::visit(const BaseCallNode* v) {
+  LOG(FATAL) << "Unimplemented: BaseCall";
+}
+
+void LLVMCodeGen::visit(const Intrinsics* v) {
+  LOG(FATAL) << "Unimplemented: Intrinsics";
+}
+
+void LLVMCodeGen::visit(const FunctionCall* v) {
+  LOG(FATAL) << "Unimplemented: FunctionCall";
+}
+
+void LLVMCodeGen::visit(const Allocate* v) {
+  LOG(FATAL) << "Unimplemented: Allocate";
+}
+
+void LLVMCodeGen::visit(const Free* v) {
+  LOG(FATAL) << "Unimplemented: Free";
+}
+
 void LLVMCodeGen::optimize(llvm::Module& M) {
   llvm::legacy::FunctionPassManager FPM(&M);
   llvm::legacy::PassManager PM;

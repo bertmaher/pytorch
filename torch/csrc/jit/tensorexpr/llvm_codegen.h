@@ -62,6 +62,11 @@ class LLVMCodeGen : public IRVisitor {
   void visit(const Block* v) override;
   void visit(const Store* v) override;
   void visit(const Broadcast* v) override;
+  virtual void visit(const BaseCallNode* v);
+  virtual void visit(const Intrinsics* v);
+  virtual void visit(const FunctionCall* v);
+  virtual void visit(const Allocate* v);
+  virtual void visit(const Free* v);
 
   llvm::Value* emitMaskedLoad(
       llvm::Value* addr,
