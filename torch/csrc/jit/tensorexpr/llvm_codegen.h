@@ -84,7 +84,13 @@ class TORCH_API LLVMCodeGen : public IRVisitor {
   }
 
   template <typename T>
+  llvm::Value* getConstant(T t);
+
+  template <typename T>
   T value(std::vector<void*>& args) {
+    if (!value_) {
+      value_ = getConstant(static_cast<T>(0));
+    }
     irb_.CreateRet(value_);
 #if DEBUG_PRINT
     llvm::errs() << *module_;
@@ -117,6 +123,17 @@ class TORCH_API LLVMCodeGen : public IRVisitor {
     return rv;
   }
 };
+
+  template<>
+  inline llvm::Value* LLVMCodeGen::getConstant<float>(float t) {
+    return llvm::ConstantFP::get(floatTy_, t);
+  }
+
+  template<>
+  inline llvm::Value* LLVMCodeGen::getConstant<int32_t>(int32_t t) {
+    return llvm::ConstantInt::getSigned(int32Ty_, t);
+  }
+
 
 } // namespace compiler
 } // namespace jit

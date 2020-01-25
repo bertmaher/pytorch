@@ -84,7 +84,7 @@ LLVMCodeGen::LLVMCodeGen(const std::vector<Buffer*>& args, Dtype dtype)
   }
 
   // Emit wrapper to unpack argument vector.
-  auto voidPP = llvm::Type::getVoidTy(*context_.getContext())
+  auto voidPP = llvm::Type::getInt8PtrTy(*context_.getContext())
                     ->getPointerTo()
                     ->getPointerTo();
   auto wrapper = llvm::Function::Create(
@@ -99,7 +99,7 @@ LLVMCodeGen::LLVMCodeGen(const std::vector<Buffer*>& args, Dtype dtype)
   for (size_t i = 0; i < args.size(); i++) {
     auto argp = irb_.CreateGEP(
         wrapper->arg_begin(), llvm::ConstantInt::getSigned(int32Ty_, i));
-    auto arg = irb_.CreateLoad(argp);
+    auto arg = irb_.CreatePointerCast(irb_.CreateLoad(argp), params[i]);
     wrappedArgs.push_back(arg);
   }
   auto cc = irb_.CreateCall(fn_, wrappedArgs);
@@ -393,7 +393,7 @@ llvm::Value* LLVMCodeGen::emitMaskedLoad(
       llvm::BasicBlock::Create(*context_.getContext(), "tail", fn_);
 
   // Test the mask
-  auto cond = irb_.CreateICmpEQ(mask, llvm::ConstantInt::getTrue(int32Ty_));
+  auto cond = irb_.CreateICmpEQ(mask, llvm::ConstantInt::get(int32Ty_, 1));
   irb_.CreateCondBr(cond, condblock, tailblock);
 
   // Do the load
@@ -495,7 +495,7 @@ void LLVMCodeGen::emitMaskedStore(
       llvm::BasicBlock::Create(*context_.getContext(), "tail", fn_);
 
   // Test the mask
-  auto cond = irb_.CreateICmpEQ(mask, llvm::ConstantInt::getTrue(int32Ty_));
+  auto cond = irb_.CreateICmpEQ(mask, llvm::ConstantInt::get(int32Ty_, 1));
   irb_.CreateCondBr(cond, condblock, tailblock);
 
   // Do the store

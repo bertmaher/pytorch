@@ -9,7 +9,12 @@
 #include <torch/csrc/jit/passes/utils/subgraph_utils.h>
 #include <torch/csrc/jit/tensorexpr/buffer.h>
 #include <torch/csrc/jit/tensorexpr/eval.h>
+
+#define FUSE_WITH_LLVM 1
+#if FUSE_WITH_LLVM
 #include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
+#endif
+
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
@@ -354,17 +359,37 @@ struct TensorExprKernel {
     CHECK(tensors.count(output->unique())) << "Output must be a tensor";
     tensor_output = &tensors.at(output->unique());
     torch::jit::compiler::schedule::Schedule sch({*tensor_output});
+#if TX_INLINING
     for (auto& p : tensors) {
       auto& t = p.second;
       if (&t != tensor_output) {
         t.ComputeInline();
       }
     }
+#endif
     stmt = sch.Lower();
+    std::cerr << "Lowered statement:\n" << stmt << "\n";
   }
 
   void run(Stack& stack) {
-#if 0
+#if FUSE_WITH_LLVM
+    std::vector<Buffer*> params;
+    for (auto& b : buffer_args) {
+      params.push_back(&b);
+    }
+    LLVMCodeGen codegen(params);
+    auto inputs = last(stack, buffer_args.size());
+    std::vector<void*> args;
+    for (int i = 0; i < buffer_args.size(); i++) {
+      args.push_back(inputs[i].toTensor().data_ptr());
+    }
+    at::Tensor output =
+        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
+    args.push_back(output.data_ptr());
+    codegen.value<int32_t>(args);
+    drop(stack, buffer_args.size());
+    stack.insert(stack.end(), std::move(output));
+#else
     SimpleIREvaluator eval(stmt);
     std::vector<std::vector<float>> backing;
 
@@ -378,19 +403,6 @@ struct TensorExprKernel {
     eval.bindBuffer(*tensor_output, output.data_ptr());
 
     eval.eval();
-    drop(stack, buffer_args.size());
-    stack.insert(stack.end(), std::move(output));
-#else
-    LLVMCodeGen codegen(buffer_args);
-    auto inputs = last(stack, buffer_args.size());
-    std::vector<void*> args;
-    for (int i = 0; i < buffer_args.size(); i++) {
-      args.push_back(inputs[i].toTensor().data_ptr());
-    }
-    at::Tensor output =
-        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
-    args.push_back(output.data_ptr());
-    codegen.value<int32_t>(args);
     drop(stack, buffer_args.size());
     stack.insert(stack.end(), std::move(output));
 #endif
