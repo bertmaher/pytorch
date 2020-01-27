@@ -548,8 +548,7 @@ struct TensorExprKernel {
     params.push_back(&outbuf);
 
     // Generate code.
-    LLVMCodeGen codegen(params);
-    stmt.accept(&codegen);
+    LLVMCodeGen codegen(stmt, params);
 
     // Set up arguments (inputs, then outputs) for kernel call.
     auto inputs = last(stack, buffer_args.size());
@@ -588,9 +587,9 @@ struct TensorExprKernel {
 };
 
 Operation createTensorExprOp(const Node* node) {
-  return [node](Stack& stack) {
+  auto kernel = std::make_shared<TensorExprKernel>(node);
+  return [kernel](Stack& stack) {
     RECORD_FUNCTION("TensorExpr", std::vector<c10::IValue>());
-    auto kernel = std::make_shared<TensorExprKernel>(node);
     kernel->run(stack);
     return 0;
   };

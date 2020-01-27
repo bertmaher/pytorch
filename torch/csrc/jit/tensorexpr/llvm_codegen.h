@@ -33,6 +33,7 @@ class LLVMCodeGen : public IRVisitor {
   llvm::Function* fn_;
   llvm::BasicBlock* bb_;
   llvm::Value* value_;
+  llvm::JITTargetAddress kernelAddress_;
 
   llvm::Type* int32Ty_;
   llvm::Type* floatTy_;
@@ -40,9 +41,23 @@ class LLVMCodeGen : public IRVisitor {
   std::unordered_map<const BaseExprNode*, int> varToArg_;
   std::unordered_map<const Variable*, llvm::Value*> varToVal_;
 
+ private:
+  explicit LLVMCodeGen(
+      const IRNode* node,
+      const std::vector<Buffer*>& args,
+      Dtype dtype = kInt32);
+
  public:
-  explicit LLVMCodeGen(const std::vector<Buffer*>& args, Dtype dtype = kInt32);
-  LLVMCodeGen();
+  explicit LLVMCodeGen(
+      const Stmt& stmt,
+      const std::vector<Buffer*>& args,
+      Dtype dtype = kInt32);
+  explicit LLVMCodeGen(const Stmt& stmt);
+  explicit LLVMCodeGen(
+      const Expr& expr,
+      const std::vector<Buffer*>& args,
+      Dtype dtype = kInt32);
+  explicit LLVMCodeGen(const Expr& expr);
 
   void visit(const Add* v) override;
   void visit(const Sub* v) override;
@@ -88,34 +103,7 @@ class LLVMCodeGen : public IRVisitor {
 
   template <typename T>
   T value(std::vector<void*>& args) {
-    irb_.CreateRet(value_);
-#if DEBUG_PRINT
-    llvm::errs() << *module_;
-#endif
-    CHECK(!llvm::verifyFunction(*fn_, &llvm::outs()))
-        << "Function verification failed";
-    optimize(*module_);
-
-#if DEBUG_PRINT
-    llvm::errs() << *module_;
-    llvm::SmallVector<char, 0> asmBuffer;
-    llvm::raw_svector_ostream asmStream(asmBuffer);
-    llvm::legacy::PassManager PM;
-    TM->addPassesToEmitFile(
-        PM,
-        asmStream,
-        nullptr,
-        llvm::TargetMachine::CodeGenFileType::CGFT_AssemblyFile);
-    PM.run(*module_);
-    llvm::errs() << asmStream.str();
-#endif
-
-    cantFail(jit_->addModule(
-        llvm::orc::ThreadSafeModule(std::move(module_), context_)));
-    auto sym = jit_->findSymbol("wrapper");
-    auto addr = sym.getAddress();
-    assert(addr);
-    T (*fp)(void**) = (T(*)(void**))addr.get();
+    T (*fp)(void**) = (T(*)(void**))kernelAddress_;
     T rv = fp(args.data());
     return rv;
   }

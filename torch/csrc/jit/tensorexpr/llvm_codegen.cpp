@@ -18,9 +18,23 @@
 
 using namespace torch::jit::compiler;
 
-LLVMCodeGen::LLVMCodeGen() : LLVMCodeGen(std::vector<Buffer*>()) {}
+LLVMCodeGen::LLVMCodeGen(const Stmt& stmt, const std::vector<Buffer*>& args, Dtype dtype) :
+    LLVMCodeGen(stmt.node(), args, dtype)
+{}
 
-LLVMCodeGen::LLVMCodeGen(const std::vector<Buffer*>& args, Dtype dtype)
+LLVMCodeGen::LLVMCodeGen(const Stmt& stmt)
+    : LLVMCodeGen(stmt, std::vector<Buffer*>())
+{}
+
+LLVMCodeGen::LLVMCodeGen(const Expr& expr, const std::vector<Buffer*>& args, Dtype dtype) :
+    LLVMCodeGen(expr.node(), args, dtype)
+{}
+
+LLVMCodeGen::LLVMCodeGen(const Expr& expr)
+    : LLVMCodeGen(expr, std::vector<Buffer*>())
+{}
+
+LLVMCodeGen::LLVMCodeGen(const IRNode* node, const std::vector<Buffer*>& args, Dtype dtype)
     : context_(std::make_unique<llvm::LLVMContext>()),
       irb_(*context_.getContext()) {
   llvm::InitializeNativeTarget();
@@ -107,6 +121,36 @@ LLVMCodeGen::LLVMCodeGen(const std::vector<Buffer*>& args, Dtype dtype)
   // Set insert point to the real function.
   bb_ = llvm::BasicBlock::Create(*context_.getContext(), "entry", fn_);
   irb_.SetInsertPoint(bb_);
+
+  // Compile the kernel.
+  node->accept(this);
+  irb_.CreateRet(value_);
+
+#if DEBUG_PRINT
+    llvm::errs() << *module_;
+#endif
+    CHECK(!llvm::verifyFunction(*fn_, &llvm::outs()))
+        << "Function verification failed";
+    optimize(*module_);
+
+#if DEBUG_PRINT
+    llvm::errs() << *module_;
+    llvm::SmallVector<char, 0> asmBuffer;
+    llvm::raw_svector_ostream asmStream(asmBuffer);
+    llvm::legacy::PassManager PM;
+    TM->addPassesToEmitFile(
+        PM,
+        asmStream,
+        nullptr,
+        llvm::TargetMachine::CodeGenFileType::CGFT_AssemblyFile);
+    PM.run(*module_);
+    llvm::errs() << asmStream.str();
+#endif
+
+    cantFail(jit_->addModule(
+        llvm::orc::ThreadSafeModule(std::move(module_), context_)));
+    auto sym = jit_->findSymbol("wrapper");
+    kernelAddress_ = cantFail(sym.getAddress());
 }
 
 // TODO: The binary ops are copypasta.
