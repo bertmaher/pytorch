@@ -47,6 +47,22 @@ bool isSupported(Node* node) {
   switch (node->kind()) {
   case aten::add:
   case aten::sub:
+  case aten::mul:
+  case aten::div:
+  case aten::eq:
+  case aten::ne:
+  case aten::ge:
+  case aten::gt:
+  case aten::le:
+  case aten::lt:
+  case aten::log:
+  case aten::log10:
+  case aten::log2:
+  case aten::exp:
+  case aten::erf:
+  case aten::cos:
+  case aten::sin:
+  case aten::tan:
     return true;
   default:
     return false;
