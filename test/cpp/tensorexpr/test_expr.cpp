@@ -7,13 +7,13 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <stdexcept>
 
 namespace torch {
 namespace jit {
+using namespace torch::jit::compiler;
 
-using namespace compiler;
-
-void testExprBasicValue() {
+void testExprBasicValueTest() {
   Expr a = IntImm::make(2), b = IntImm::make(3);
   Expr c = Add::make(a, b);
   SimpleIREvaluator eval(c);
@@ -21,7 +21,7 @@ void testExprBasicValue() {
   EXPECT_EQ(eval.value().as<int>(), 5);
 }
 
-void testExprBasicValue02() {
+void testExprBasicValueTest02() {
   Expr a(2.0f);
   Expr b(3.0f);
   Expr c(4.0f);
@@ -32,7 +32,7 @@ void testExprBasicValue02() {
   EXPECT_EQ(eval.value().as<float>(), -4.0f);
 }
 
-void testExprLet01() {
+void testExprLetTest01() {
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
@@ -42,14 +42,14 @@ void testExprLet01() {
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4));
 }
 
-void testDISABLED_ExprLet02() {
+void testExprLetTest02() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
   Expr e1 = Let::make(x, Expr(3.f), body);
   Expr e2 = Let::make(y, Expr(6.f), e1);
-  SimpleIREvaluator eval(2);
+  SimpleIREvaluator eval(e2);
   eval();
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4 * 6));
 }
@@ -82,38 +82,6 @@ void testExprNoLeakTest01() {
     r = test_01(r);
   }
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
-}
-
-void testExprFuserStyle() {
-  const int kVectorSize = 8;
-  const int kVectorCount = 128;
-  const int kTotalSize = kVectorSize * kVectorCount;
-
-  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
-  Var a = a_buf.data();
-
-  Tensor b =
-      Compute("f", {{kTotalSize, "i"}}, [&](const std::vector<Var>& axes) {
-        return a_buf(axes[0]) + 11.0f;
-      });
-
-  Tensor c =
-      Compute("g", {{kTotalSize, "i"}}, [&](const std::vector<Var>& axes) {
-        return b(axes[0]) + 1.0f;
-      });
-
-  torch::jit::compiler::schedule::Schedule sch({b, c});
-  Stmt s = sch.Lower();
-
-  std::vector<float> a_data(kTotalSize, 7.0f);
-  std::vector<float> b_data(kTotalSize, 0.0f);
-  std::vector<float> c_data(kTotalSize, 0.0f);
-  SimpleIREvaluator(s, a_buf, b, c)(a_data, b_data, c_data);
-
-  for (int i = 0; i < kTotalSize; i++) {
-    ASSERT_EQ(b_data[i], 18.0f);
-    ASSERT_EQ(c_data[i], 19.0f);
-  }
 }
 
 void testExprVectorAdd01() {
@@ -206,11 +174,7 @@ void testExprCompareSelectEQ() {
 }
 
 void testExprSubstitute01() {
-  // XXX: This check currently fails, not sure if it stays relevant if we
-  // switch from RefCount to c10::intrusive_ptr
-#if 0
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
-#endif
   {
     Expr x = Variable::make("x", kFloat32);
     Expr y = Variable::make("y", kFloat32);
@@ -228,13 +192,8 @@ void testExprSubstitute01() {
     std::string e2_ref_str = oss.str();
     ASSERT_EQ(e2_str, e2_ref_str);
   }
-
-  // XXX: This check currently fails, not sure if it stays relevant if we
-  // switch from RefCount to c10::intrusive_ptr
-#if 0
   // TODO: move this to a test fixture and enable for all tests.
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
-#endif
 }
 
 void testExprMath01() {

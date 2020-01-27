@@ -9,19 +9,18 @@
 namespace torch {
 namespace jit {
 #define TH_FORALL_TESTS(_)             \
-  _(ExprBasicValue)                    \
-  _(ExprBasicValue02)                  \
-  _(ExprLet01)                         \
-  _(DISABLED_ExprLet02)                \
-  _(ExprTensor01)                      \
-  _(ExprNoLeakTest01)                  \
-  _(ExprFuserStyle)                    \
-  _(ExprVectorAdd01)                   \
-  _(ExprCompareSelectEQ)               \
-  _(ExprSubstitute01)                  \
-  _(ExprMath01)                        \
-  _(ExprUnaryMath01)                   \
-  _(ExprBinaryMath01)                  \
+  _(ExprBasicValueTest) \
+  _(ExprBasicValueTest02) \
+  _(ExprLetTest01) \
+  _(ExprLetTest02) \
+  _(ExprTensor01) \
+  _(ExprNoLeakTest01) \
+  _(ExprVectorAdd01) \
+  _(ExprCompareSelectEQ) \
+  _(ExprSubstitute01) \
+  _(ExprMath01) \
+  _(ExprUnaryMath01) \
+  _(ExprBinaryMath01) \
   _(IRPrinterBasicValueTest)           \
   _(IRPrinterBasicValueTest02)         \
   _(IRPrinterLetTest01)                \
@@ -32,46 +31,84 @@ namespace jit {
   _(ExprSimple02)                      \
   _(ScheduleBroadcastAddBuffer)        \
   _(ScheduleFunctionCall01)            \
+  _(ScheduleInlineFunc01) \
+  _(ScheduleFuserStyle) \
+  _(ScheduleFuserThreeArg) \
   _(TypeTest01)                        \
   _(AsmjitIntImmTest)                  \
   _(AsmjitIntAddTest)                  \
   _(AsmjitIntSubTest)                  \
   _(AsmjitIntMulTest)                  \
   _(AsmjitIntDivTest)                  \
-  _(LLVMIntImm)                        \
-  _(LLVMFloatImm)                      \
-  _(LLVMIntAdd)                        \
-  _(LLVMIntSub)                        \
-  _(LLVMIntMul)                        \
-  _(LLVMIntDiv)                        \
-  _(LLVMIntToFloatCast)                \
-  _(LLVMFloatToIntCast)                \
-  _(LLVMLetTest01)                     \
-  _(LLVMLetTest02)                     \
-  _(LLVMBuffer)                        \
-  _(LLVMBlock)                         \
-  _(LLVMLoadStore)                     \
-  _(LLVMVecLoadStore)                  \
-  _(LLVMMemcpy)                        \
-  _(LLVMBzero)                         \
-  _(LLVMElemwiseAdd)                   \
-  _(LLVMElemwiseAddFloat)              \
-  _(LLVMElemwiseMaxInt)                \
-  _(LLVMElemwiseMinInt)                \
-  _(LLVMElemwiseMaxNumFloat)           \
-  _(LLVMElemwiseMaxNumNaNFloat)        \
-  _(LLVMElemwiseMinNumFloat)           \
-  _(LLVMElemwiseMinNumNaNFloat)        \
-  _(LLVMElemwiseMaximumFloat)          \
-  _(LLVMElemwiseMaximumNaNFloat)       \
-  _(LLVMElemwiseMinimumFloat)          \
-  _(LLVMElemwiseMinimumNaNFloat)       \
-  _(LLVMCompareSelectIntEQ)            \
-  _(LLVMCompareSelectFloatEQ)          \
-  _(LLVMStoreFloat)                    \
-  _(LLVMSimpleMath01)                  \
-  _(LLVMComputeMul)                    \
-  _(LLVMBroadcastAdd)                  \
+  _(LLVMIntImmTest) \
+  _(LLVMFloatImmTest) \
+  _(LLVMIntAddTest) \
+  _(LLVMIntSubTest) \
+  _(LLVMIntMulTest) \
+  _(LLVMIntDivTest) \
+  _(LLVMIntToFloatCastTest) \
+  _(LLVMFloatToIntCastTest) \
+  _(LLVMLetTest01) \
+  _(LLVMLetTest02) \
+  _(LLVMBufferTest) \
+  _(LLVMBlockTest) \
+  _(LLVMLoadStoreTest) \
+  _(LLVMVecLoadStoreTest) \
+  _(LLVMMemcpyTest) \
+  _(LLVMBzeroTest) \
+  _(LLVMElemwiseAdd) \
+  _(LLVMElemwiseAddFloat) \
+  _(LLVMElemwiseMaxInt) \
+  _(LLVMElemwiseMinInt) \
+  _(LLVMElemwiseMaxNumFloat) \
+  _(LLVMElemwiseMaxNumNaNFloat) \
+  _(LLVMElemwiseMinNumFloat) \
+  _(LLVMElemwiseMinNumNaNFloat) \
+  _(LLVMElemwiseMaximumFloat) \
+  _(LLVMElemwiseMaximumNaNFloat) \
+  _(LLVMElemwiseMinimumFloat) \
+  _(LLVMElemwiseMinimumNaNFloat) \
+  _(LLVMCompareSelectIntEQ) \
+  _(LLVMCompareSelectFloatEQ) \
+  _(LLVMStoreFloat) \
+  _(LLVMSimpleMath01) \
+  _(LLVMComputeMul) \
+  _(LLVMBroadcastAdd) \
+  _(CudaTestVectorAdd01) \
+  _(ATen_cast_Float) \
+  _(ATennegInt) \
+  _(ATennegFloat) \
+  _(ATenaddInt) \
+  _(ATenaddFloat) \
+  _(ATensubInt) \
+  _(ATensubFloat) \
+  _(ATenlerp) \
+  _(ATenaddcmulInt) \
+  _(ATenaddcmulFloat) \
+  _(ATenmulInt) \
+  _(ATenmulFloat) \
+  _(ATendivInt) \
+  _(ATendivFloat) \
+  _(ATenmaxInt) \
+  _(ATenmaxFloat) \
+  _(ATenminInt) \
+  _(ATenminFloat) \
+  _(ATen_sigmoid_backward) \
+  _(ATen_tanh_backward) \
+  _(ATenreciprocal) \
+  _(ATenreluInt) \
+  _(ATenreluFloat) \
+  _(ATenlogFloat) \
+  _(ATenlog10Float) \
+  _(ATenlog2Float) \
+  _(ATenexpFloat) \
+  _(ATenerfFloat) \
+  _(ATencosFloat) \
+  _(ATeneqInt) \
+  _(ATengeInt) \
+  _(ATengtInt) \
+  _(ATenleInt) \
+  _(ATenltInt) \
 
 
 

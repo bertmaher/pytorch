@@ -69,7 +69,7 @@ void testExprSimple02() {
   std::ostringstream oss;
   oss << stmt;
   ASSERT_GT(oss.str().size(), 200);
-  ASSERT_LT(oss.str().size(), 500);
+  ASSERT_LT(oss.str().size(), 600);
 
   {
     // Compare to a reference loop structure structure.
@@ -218,6 +218,193 @@ void testScheduleFunctionCall01() {
   eval(a_v, b_v, d_v);
 
   ExpectAllNear(d_v, d_ref, 1e-5);
+}
+
+static std::string remove_space(const std::string& str) {
+  std::string str_new = str;
+  str_new.erase(
+      remove_if(str_new.begin(), str_new.end(), isspace), str_new.end());
+  return str_new;
+}
+
+void InlineFunc01Helper(const std::vector<std::string>& inline_order) {
+  const int M = 4;
+  const int N = 5;
+  const int K = 6;
+  Buffer a_buf("a", kFloat32, {M, N});
+  Buffer b_buf("b", kFloat32, {N, K});
+  Buffer c_buf("c", kFloat32, {M, N});
+  Buffer d_buf("d", kFloat32, {M, K});
+
+  Tensor x = Compute(
+      "x",
+      {{M, "m1"}, {N, "n1"}, {K, "k1"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return a_buf(m, n) * b_buf(n, k);
+      });
+  Tensor y = Compute(
+      "y",
+      {{M, "m2"}, {N, "n2"}, {K, "k2"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return c_buf(m, n) * d_buf(m, k) + x(m, n, k);
+      });
+  Tensor z = Compute(
+      "z",
+      {{M, "m3"}, {N, "n3"}, {K, "k3"}},
+      [&](const Var& m, const Var& n, const Var& k) {
+        return x(m, n, k) + y(m, n, k);
+      });
+
+  Schedule sch({z});
+  for (const std::string& order : inline_order) {
+    if (order == "x") {
+      x.ComputeInline();
+    } else if (order == "y") {
+      y.ComputeInline();
+    } else {
+      throw std::runtime_error("Invalid order: " + order);
+    }
+  }
+  Stmt stmt = sch.Lower();
+
+  std::ostringstream oss;
+  oss << stmt;
+  std::string str1 = remove_space(oss.str());
+
+  {
+    PaddedBuffer<float> a_v(M, N);
+    PaddedBuffer<float> b_v(N, K);
+    PaddedBuffer<float> c_v(M, N);
+    PaddedBuffer<float> d_v(M, K);
+
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < N; j++) {
+        a_v(i, j) = i * i;
+      }
+    }
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < K; j++) {
+        a_v(i, j) = j * j;
+      }
+    }
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < N; j++) {
+        c_v(i, j) = i + j;
+      }
+    }
+    for (int i = 0; i < M; i++) {
+      for (int j = 0; j < K; j++) {
+        d_v(i, j) = i * j;
+      }
+    }
+
+    PaddedBuffer<float> z_v(M, N, K);
+    PaddedBuffer<float> z_ref(M, N, K);
+    for (int m = 0; m < M; m++) {
+      for (int n = 0; n < N; n++) {
+        for (int k = 0; k < K; k++) {
+          z_ref(m, n, k) = a_v(m, n) * b_v(n, k) * 2 + c_v(m, n) * d_v(m, k);
+        }
+      }
+    }
+
+    SimpleIREvaluator eval(stmt, a_buf, b_buf, c_buf, d_buf, z);
+    eval(a_v, b_v, c_v, d_v, z_v);
+    ExpectAllNear(z_v, z_ref, 1e-5);
+  }
+
+  if (inline_order.size() == 2) {
+    Tensor z2 = Compute(
+        "z",
+        {{M, "m3"}, {N, "n3"}, {K, "k3"}},
+        [&](const Var& m, const Var& n, const Var& k) {
+          return a_buf(m, n) * b_buf(n, k) +
+              (c_buf(m, n) * d_buf(m, k) + a_buf(m, n) * b_buf(n, k));
+        });
+    Schedule sch2({z2});
+    Stmt stmt2 = sch2.Lower();
+
+    std::ostringstream oss2;
+    oss2 << stmt2;
+    std::string str2 = remove_space(oss2.str());
+
+    ASSERT_EQ(str1, str2);
+    ASSERT_GT(str1.size(), 100);
+  }
+}
+
+void testScheduleInlineFunc01() {
+  InlineFunc01Helper({"x", "y"});
+  InlineFunc01Helper({"y", "x"});
+  InlineFunc01Helper({"x"});
+  InlineFunc01Helper({"y"});
+  InlineFunc01Helper({});
+}
+
+void testScheduleFuserStyle() {
+  const int kVectorSize = 8;
+  const int kVectorCount = 128;
+  const int kTotalSize = kVectorSize * kVectorCount;
+
+  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Var a = a_buf.data();
+
+  Tensor b =
+      Compute("f", {{kTotalSize, "i"}}, [&](const std::vector<Var>& axes) {
+        return a_buf(axes[0]) + 11.0f;
+      });
+
+  Tensor c =
+      Compute("g", {{kTotalSize, "i"}}, [&](const std::vector<Var>& axes) {
+        return b(axes[0]) + 1.0f;
+      });
+
+  Schedule sch({b, c});
+  Stmt s = sch.Lower();
+
+  std::vector<float> a_data(kTotalSize, 7.0f);
+  std::vector<float> b_data(kTotalSize, 0.0f);
+  std::vector<float> c_data(kTotalSize, 0.0f);
+  SimpleIREvaluator(s, a_buf, b, c)(a_data, b_data, c_data);
+
+  for (int i = 0; i < kTotalSize; i++) {
+    ASSERT_EQ(b_data[i], 18.0f);
+    ASSERT_EQ(c_data[i], 19.0f);
+  }
+}
+
+void testScheduleFuserThreeArg() {
+  const int kVectorSize = 8;
+  const int kVectorCount = 128;
+  const int kTotalSize = kVectorSize * kVectorCount;
+
+  Buffer a(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer b(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer c(Var("C", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer d(Var("D", kHandle), kFloat32, {Expr(kTotalSize)});
+
+  Tensor e = Compute(
+      "e", {{kTotalSize, "i"}}, [&](const Var& i) { return a(i) + b(i); });
+  Tensor f = Compute(
+      "f", {{kTotalSize, "i"}}, [&](const Var& i) { return e(i) + c(i); });
+  Tensor g = Compute(
+      "g", {{kTotalSize, "i"}}, [&](const Var& i) { return f(i) + d(i); });
+
+  Schedule sch({g});
+  e.ComputeInline();
+  f.ComputeInline();
+  Stmt s = sch.Lower();
+
+  std::vector<float> a_data(kTotalSize, 1.0f);
+  std::vector<float> b_data(kTotalSize, 2.0f);
+  std::vector<float> c_data(kTotalSize, 3.0f);
+  std::vector<float> d_data(kTotalSize, 4.0f);
+  std::vector<float> g_data(kTotalSize, 0.0f);
+  SimpleIREvaluator(s, a, b, c, d, g)(a_data, b_data, c_data, d_data, g_data);
+
+  for (int i = 0; i < kTotalSize; i++) {
+    ASSERT_EQ(g_data[i], 10.0f);
+  }
 }
 } // namespace jit
 } // namespace torch
