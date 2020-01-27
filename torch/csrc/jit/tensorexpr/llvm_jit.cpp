@@ -18,7 +18,17 @@ class TORCH_API PytorchLLVMJITImpl {
   std::unique_ptr<LLJIT> LLJ;
 
  public:
-  PytorchLLVMJITImpl() : LLJ(cantFail(LLJITBuilder().create())) {}
+  PytorchLLVMJITImpl() : LLJ(cantFail(LLJITBuilder().create())) {
+    // Handle type-overloaded std:: functions
+    using ffptr = float (*)(float);
+
+    // Handle platform-specific symbol mangling
+    MangleAndInterner Mangle(LLJ->getExecutionSession(), LLJ->getDataLayout());
+
+    // Register implementations of intrinsics
+    cantFail(LLJ->defineAbsolute(*Mangle("log10_float"),
+      { llvm::pointerToJITTargetAddress(ffptr(&std::log10)), {} } ));
+  }
 
   Error addModule(ThreadSafeModule M) {
     if (auto Err = LLJ->addIRModule(std::move(M))) {

@@ -588,7 +588,41 @@ void LLVMCodeGen::visit(const BaseCallNode* v) {
 }
 
 void LLVMCodeGen::visit(const Intrinsics* v) {
-  LOG(FATAL) << "Unimplemented: Intrinsics";
+  llvm::FunctionType* call_ty = nullptr;
+  llvm::Value* call_fn = nullptr;
+  switch (v->op_type()) {
+    case kLog10: {
+      auto callee = module_->getOrInsertFunction("log10_float",
+        llvm::FunctionType::get(floatTy_, { floatTy_ }, false), {});
+      call_ty = callee.getFunctionType();
+      call_fn = callee.getCallee();
+    } break;
+    default: {
+      LOG(FATAL) << "Unimplemented: Intrinsics";
+    } break;
+  }
+
+  std::vector<llvm::Value*> params;
+  for (auto& p : v->params()) {
+    p.accept(this);
+    params.push_back(value_);
+  }
+
+  if (v->dtype().lanes() == 1) {
+    value_ = irb_.CreateCall(call_ty, call_fn, params);
+  } else {
+    llvm::Type* vecType = llvm::VectorType::get(floatTy_, v->dtype().lanes());
+    value_ = llvm::UndefValue::get(vecType);
+    for (int i = 0; i < v->dtype().lanes(); ++i) {
+      std::vector<llvm::Value*> call_operands;
+      for (auto p : params) {
+        call_operands.push_back(irb_.CreateExtractElement(p, i));
+      }
+
+      llvm::Value* val = irb_.CreateCall(call_ty, call_fn, call_operands);
+      value_ = irb_.CreateInsertElement(value_, val, i);
+    }
+  }
 }
 
 void LLVMCodeGen::visit(const FunctionCall* v) {

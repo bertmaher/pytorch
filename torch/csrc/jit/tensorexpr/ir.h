@@ -590,12 +590,65 @@ class Intrinsics : public CallNode<Intrinsics> {
     return op_type_;
   }
 
-  std::string func_name() const override;
+  std::string func_name() const override {
+    switch (op_type()) {
+      case kSin:
+        return "sin";
+      case kCos:
+        return "cos";
+      case kTan:
+        return "tan";
+      case kAsin:
+        return "asin";
+      case kAcos:
+        return "acos";
+      case kAtan:
+        return "atan";
+      case kSinh:
+        return "sinh";
+      case kCosh:
+        return "cosh";
+      case kTanh:
+        return "tanh";
+      case kExp:
+        return "exp";
+      case kFabs:
+        return "fabs";
+      case kLog:
+        return "log";
+      case kLog2:
+        return "log2";
+      case kLog10:
+        return "log10";
+      case kErf:
+        return "erf";
+      case kSqrt:
+        return "sqrt";
+      case kRsqrt:
+        return "rsqrt";
+      case kPow:
+        return "pow";
+      case kCeil:
+        return "ceil";
+      case kFloor:
+        return "floor";
+      case kRound:
+        return "round";
+      case kTrunc:
+        return "trunc";
+      case kRand:
+        return "rand";
+      case kFmod:
+        return "fmod";
+      default:
+        throw std::runtime_error("invalid op_type: " + std::to_string(op_type()));
+    }
+  }
 
  private:
   using BaseClass = CallNode<Intrinsics>;
 
-  static int OpArgCount(IntrinsicsOp op_type);
+  TORCH_API static int OpArgCount(IntrinsicsOp op_type);
 
   Intrinsics(IntrinsicsOp op_type, const Expr& v1)
       : BaseClass(IntrinsicsDtype(op_type, v1.dtype()), kIntrinsics, {v1}),
@@ -622,9 +675,9 @@ class Intrinsics : public CallNode<Intrinsics> {
     return Intrinsics::make(this->op_type(), new_params);
   }
 
-  static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1);
-  static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1, Dtype dt2);
-  static Dtype IntrinsicsDtype(
+  TORCH_API static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1);
+  TORCH_API static Dtype IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1, Dtype dt2);
+  TORCH_API static Dtype IntrinsicsDtype(
       IntrinsicsOp op_type,
       const std::vector<Expr>& params);
 

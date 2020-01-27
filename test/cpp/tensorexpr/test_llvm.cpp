@@ -267,6 +267,32 @@ void testLLVMElemwiseAddFloat() {
   assertAllEqual(c_buffer, 42.0f);
 }
 
+void testLLVMElemwiseLog10Float() {
+  constexpr int N = 1024;
+  Buffer a(Var("A", kHandle), kFloat32, {N});
+  Buffer b(Var("B", kHandle), kFloat32, {N});
+  std::vector<float> a_buffer(N, 10.0f);
+  std::vector<float> b_buffer(N, 2.0f);
+
+  auto mask = Broadcast::make(IntImm::make(1), 4);
+  Var i("i", kInt32);
+  auto expr = For::make(
+      i,
+      0,
+      N/4,
+      Store::make(b, Ramp::make(i * 4, 1, 4), log10(Load::make(a, Ramp::make(i * 4, 1, 4), mask)), mask));
+
+  LLVMCodeGen cg(expr, {&a, &b});
+
+  std::vector<void*> args({a_buffer.data(), b_buffer.data()});
+  ASSERT_EQ(cg.value<int>(args), 0);
+
+  ASSERT_EQ(a_buffer.size(), N);
+  ASSERT_EQ(b_buffer.size(), N);
+  assertAllEqual(a_buffer, 10.0f);
+  assertAllEqual(b_buffer, 1.0f);
+}
+
 void testLLVMElemwiseMaxInt() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});

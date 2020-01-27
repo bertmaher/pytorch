@@ -58,6 +58,7 @@ namespace jit {
   _(LLVMBzeroTest) \
   _(LLVMElemwiseAdd) \
   _(LLVMElemwiseAddFloat) \
+  _(LLVMElemwiseLog10Float) \
   _(LLVMElemwiseMaxInt) \
   _(LLVMElemwiseMinInt) \
   _(LLVMElemwiseMaxNumFloat) \
