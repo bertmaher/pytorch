@@ -37,9 +37,9 @@ LLVMCodeGen::LLVMCodeGen(const Expr& expr)
 LLVMCodeGen::LLVMCodeGen(const IRNode* node, const std::vector<Buffer*>& args, Dtype dtype)
     : context_(std::make_unique<llvm::LLVMContext>()),
       irb_(*context_.getContext()) {
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
 
 #if 0
   // FIXME: Switch to using detectHost() rather than setting up the JTMB manually
@@ -424,6 +424,13 @@ void LLVMCodeGen::visit(const Ramp* v) {
   }
 }
 
+llvm::Value* LLVMCodeGen::emitUnmaskedLoad(
+    llvm::Value* base,
+    llvm::Value* idx) {
+  auto addr = irb_.CreateGEP(base, idx);
+  return irb_.CreateLoad(addr);
+}
+
 llvm::Value* LLVMCodeGen::emitMaskedLoad(
     llvm::Value* base,
     llvm::Value* idx,
@@ -463,7 +470,12 @@ void LLVMCodeGen::visit(const Load* v) {
   auto mask = this->value_;
 
   if (v->dtype().lanes() == 1) {
-    value_ = emitMaskedLoad(base, idx, mask);
+    auto* maskimm = v->mask().AsNode<IntImm>();
+    if (maskimm && maskimm->value() == 1) {
+      value_ = emitUnmaskedLoad(base, idx);
+    } else {
+      value_ = emitMaskedLoad(base, idx, mask);
+    }
     return;
   }
 
@@ -474,11 +486,40 @@ void LLVMCodeGen::visit(const Load* v) {
     loadType = llvm::VectorType::get(floatTy_, v->dtype().lanes());
   }
 
+  // Detect whether the vector mask is all true
+  bool unmasked_load = false;
+  auto* mask_broadcast = v->mask().AsNode<Broadcast>();
+  if (mask_broadcast) {
+    auto* broadcast_imm = mask_broadcast->value().AsNode<IntImm>();
+    if (broadcast_imm && broadcast_imm->value() == 1) {
+      unmasked_load = true;
+    }
+  }
+
+  // Handle the case where the load is contiguous and unmasked efficiently
+  auto* idx_ramp = v->index().AsNode<Ramp>();
+  if (unmasked_load && idx_ramp) {
+    auto* stride_imm = idx_ramp->stride().AsNode<IntImm>();
+    if (stride_imm && stride_imm->value() == 1) {
+      auto first_idx = irb_.CreateExtractElement(idx, 0ULL);
+      auto addr = irb_.CreateGEP(base, first_idx);
+      auto vaddr = irb_.CreateBitOrPointerCast(addr, llvm::PointerType::get(loadType, 0));
+      value_ = irb_.CreateAlignedLoad(loadType, vaddr, 4);
+      return;
+    }
+  }
+
+  // Fallback to a scalar implementation
   llvm::Value* load = llvm::UndefValue::get(loadType);
   for (int i = 0; i < v->dtype().lanes(); ++i) {
     auto sub_idx = irb_.CreateExtractElement(idx, i);
-    auto sub_mask = irb_.CreateExtractElement(mask, i);
-    auto sub_load = emitMaskedLoad(base, sub_idx, sub_mask);
+    llvm::Value* sub_load = nullptr;
+    if (unmasked_load) {
+      sub_load = emitUnmaskedLoad(base, sub_idx);
+    } else {
+      auto sub_mask = irb_.CreateExtractElement(mask, i);
+      sub_load = emitMaskedLoad(base, sub_idx, sub_mask);
+    }
     load = irb_.CreateInsertElement(load, sub_load, i);
   }
 
@@ -525,6 +566,14 @@ void LLVMCodeGen::visit(const Block* v) {
   }
 }
 
+void LLVMCodeGen::emitUnmaskedStore(
+    llvm::Value* base,
+    llvm::Value* idx,
+    llvm::Value* val) {
+  auto addr = irb_.CreateGEP(base, idx);
+  irb_.CreateStore(val, addr);
+}
+
 void LLVMCodeGen::emitMaskedStore(
     llvm::Value* base,
     llvm::Value* idx,
@@ -564,21 +613,53 @@ void LLVMCodeGen::visit(const Store* v) {
   value_ = llvm::ConstantInt::get(int32Ty_, 0);
 
   if (v->value().dtype().lanes() == 1) {
-    emitMaskedStore(base, idx, mask, val);
+    auto* maskimm = v->mask().AsNode<IntImm>();
+    if (maskimm && maskimm->value() == 1) {
+      emitUnmaskedStore(base, idx, val);
+    } else {
+      emitMaskedStore(base, idx, mask, val);
+    }
     return;
   }
 
+  // Detect whether the vector mask is all true
+  bool unmasked_store = false;
+  auto* mask_broadcast = v->mask().AsNode<Broadcast>();
+  if (mask_broadcast) {
+    auto* broadcast_imm = mask_broadcast->value().AsNode<IntImm>();
+    if (broadcast_imm && broadcast_imm->value() == 1) {
+      unmasked_store = true;
+    }
+  }
+
+  // Handle the case where the store is contiguous and unmasked efficiently
+  auto* idx_ramp = v->index().AsNode<Ramp>();
+  if (unmasked_store && idx_ramp) {
+    auto* stride_imm = idx_ramp->stride().AsNode<IntImm>();
+    if (stride_imm && stride_imm->value() == 1) {
+      auto first_idx = irb_.CreateExtractElement(idx, 0ULL);
+      auto addr = irb_.CreateGEP(base, first_idx);
+      auto vaddr = irb_.CreateBitOrPointerCast(addr, llvm::PointerType::get(val->getType(), 0));
+      irb_.CreateAlignedStore(val, vaddr, 4);
+      return;
+    }
+  }
+
+  // Fallback to a scalar implementation
   for (int i = 0; i < v->value().dtype().lanes(); ++i) {
     auto sub_idx = irb_.CreateExtractElement(idx, i);
-    auto sub_mask = irb_.CreateExtractElement(mask, i);
     auto sub_val = irb_.CreateExtractElement(val, i);
-    emitMaskedStore(base, sub_idx, sub_mask, sub_val);
+    if (unmasked_store) {
+      emitUnmaskedStore(base, sub_idx, sub_val);
+    } else {
+      auto sub_mask = irb_.CreateExtractElement(mask, i);
+      emitMaskedStore(base, sub_idx, sub_mask, sub_val);
+    }
   }
 }
 
 void LLVMCodeGen::visit(const Broadcast* v) {
   v->value().accept(this);
-  Dtype dtype = v->value().dtype();
   int lanes = v->lanes();
   value_ = irb_.CreateVectorSplat(lanes, value_);
 }
@@ -596,6 +677,11 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
         llvm::FunctionType::get(floatTy_, { floatTy_ }, false), {});
       call_ty = callee.getFunctionType();
       call_fn = callee.getCallee();
+      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::ReadNone);
+      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::NoFree);
+      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::NoUnwind);
+      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::Speculatable);
+      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::WillReturn);
     } break;
     default: {
       LOG(FATAL) << "Unimplemented: Intrinsics";

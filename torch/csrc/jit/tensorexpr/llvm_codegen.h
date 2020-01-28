@@ -84,10 +84,18 @@ class TORCH_API LLVMCodeGen : public IRVisitor {
   virtual void visit(const Allocate* v);
   virtual void visit(const Free* v);
 
+
+  llvm::Value* emitUnmaskedLoad(
+      llvm::Value* addr,
+      llvm::Value* idx);
   llvm::Value* emitMaskedLoad(
       llvm::Value* addr,
       llvm::Value* idx,
       llvm::Value* mask);
+  void emitUnmaskedStore(
+      llvm::Value* base,
+      llvm::Value* idx,
+      llvm::Value* val);
   void emitMaskedStore(
       llvm::Value* base,
       llvm::Value* idx,
