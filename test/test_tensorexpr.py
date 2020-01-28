@@ -260,3 +260,82 @@ def test_lt():
     b = torch.zeros(1024, dtype=torch.int32)
     x= traced(a, b)
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
+
+def test_abs():
+    def easy(x, y):
+        temp = torch.add(x, y)
+        c = torch.abs(temp)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    aa = np.array(1024, dtype=float)
+    bb = np.array(1024, dtype=float)
+    aa.fill(-0.5)
+    bb.fill(-0.5)
+    a = torch.from_numpy(aa)
+    b = torch.from_numpy(bb)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_unary_ops():
+    def easy_sin(x, y):
+        temp = torch.add(x, y)
+        c = torch.sin(temp)
+        return c
+
+    def easy_asin(x, y):
+        temp = torch.add(x, y)
+        c = torch.asin(temp)
+        return c
+
+    def easy_sinh(x, y):
+        temp = torch.add(x, y)
+        c = torch.sinh(temp)
+        return c
+
+    def easy_cos(x, y):
+        temp = torch.add(x, y)
+        c = torch.cos(temp)
+        return c
+
+    def easy_acos(x, y):
+        temp = torch.add(x, y)
+        c = torch.acos(temp)
+        return c
+
+    def easy_cosh(x, y):
+        temp = torch.add(x, y)
+        c = torch.cosh(temp)
+        return c
+
+    def easy_tan(x, y):
+        temp = torch.add(x, y)
+        c = torch.tan(temp)
+        return c
+
+    def easy_atan(x, y):
+        temp = torch.add(x, y)
+        c = torch.atan(temp)
+        return c
+
+    def easy_tanh(x, y):
+        temp = torch.add(x, y)
+        c = torch.tanh(temp)
+        return c
+
+    trig_fns = {easy_sin : np.sin, easy_asin : np.arcsin, easy_sinh : np.sinh, 
+                easy_cos : np.cos, easy_acos : np.arccos, easy_cosh : np.cosh, 
+                easy_tan : np.tan, easy_atan : np.arctan, easy_tanh : np.tanh }
+
+    for torch_fn, np_fn in trig_fns.items():
+        traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
+        aa = np.array(1024, dtype=float)
+        bb = np.array(1024, dtype=float)
+        aa.fill(0.0)
+        bb.fill(0.0)
+        a = torch.from_numpy(aa)
+        b = torch.from_numpy(bb)
+        x = traced(a, b)
+        cc = aa + bb
+        out =np_fn(cc)
+        np.testing.assert_allclose(out, x.numpy())

@@ -45,6 +45,7 @@ value_list sortReverseTopological(
 bool isSupported(Node* node) {
   // TODO:
   switch (node->kind()) {
+  case aten::abs:
   case aten::add:
   case aten::sub:
   case aten::mul:
@@ -436,6 +437,17 @@ struct TensorExprKernel {
         );
       } break;
 
+      case aten::pow: {
+        return ComputeTwoOperand("aten_pow", n,
+          [](const Expr& lhs, const Expr& rhs) { return pow(lhs,rhs); }
+        );
+      } break;
+
+      case aten::fmod: {
+        return ComputeTwoOperand("aten_fmod", n,
+          [](const Expr& lhs, const Expr& rhs) { return fmod(lhs,rhs); }
+        );
+      } break;
       case aten::log: {
         return ComputeOneOperand("aten_log", n,
           [](const Expr& a) { return log(a); }
@@ -478,9 +490,87 @@ struct TensorExprKernel {
         );
       } break;
 
+      case aten::acos: {
+        return ComputeOneOperand("aten_acos", n,
+          [](const Expr& a) { return acos(a); }
+        );
+      } break;
+
+      case aten::asin: {
+        return ComputeOneOperand("aten_asin", n,
+          [](const Expr& a) { return asin(a); }
+        );
+      } break;
+
+      case aten::cosh: {
+        return ComputeOneOperand("aten_cosh", n,
+          [](const Expr& a) { return cosh(a); }
+        );
+      } break;
+
+      case aten::sinh: {
+        return ComputeOneOperand("aten_sinh", n,
+          [](const Expr& a) { return sinh(a); }
+        );
+      } break;
+
       case aten::tan: {
         return ComputeOneOperand("aten_tan", n,
           [](const Expr& a) { return tan(a); }
+        );
+      } break;
+
+      case aten::atan: {
+        return ComputeOneOperand("aten_atan", n,
+          [](const Expr& a) { return atan(a); }
+        );
+      } break;
+
+      case aten::tanh: {
+        return ComputeOneOperand("aten_tanh", n,
+          [](const Expr& a) { return tanh(a); }
+        );
+      } break;
+
+      case aten::sqrt: {
+        return ComputeOneOperand("aten_sqrt", n,
+          [](const Expr& a) { return sqrt(a); }
+        );
+      } break;      
+      
+      case aten::rsqrt: {
+        return ComputeOneOperand("aten_rsqrt", n,
+          [](const Expr& a) { return rsqrt(a); }
+        );
+      } break;
+
+      case aten::abs: {
+        return ComputeOneOperand("aten_abs", n,
+          [](const Expr& a) { return fabs(a); }
+        );
+      } break;
+
+      case aten::ceil: {
+        return ComputeOneOperand("aten_ceil", n,
+          [](const Expr& a) { return ceil(a); }
+        );
+      } break;
+
+      case aten::floor: {
+        return ComputeOneOperand("aten_floor", n,
+          [](const Expr& a) { return floor(a); }
+        );
+      } break;
+
+      case aten::round: {
+        return ComputeOneOperand("aten_round", n,
+          [](const Expr& a) { return round(a); }
+        );
+      } break;
+
+      case aten::trunc: {
+        return ComputeOneOperand("aten_trunc", n,
+          [](const Expr& a) { return trunc(a); }
         );
       } break;
 
