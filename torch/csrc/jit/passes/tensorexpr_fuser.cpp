@@ -549,41 +549,25 @@ struct TensorExprKernel {
 
     // Generate code.
     LLVMCodeGen codegen(stmt, params);
+#else
+    SimpleIREvaluator codegen(stmt);
+#endif
 
     // Set up arguments (inputs, then outputs) for kernel call.
     auto inputs = last(stack, buffer_args.size());
-    std::vector<void*> args;
     for (int i = 0; i < buffer_args.size(); i++) {
-      args.push_back(inputs[i].toTensor().data_ptr());
+      codegen.bind(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
     at::Tensor output =
         at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
-    args.push_back(output.data_ptr());
+    codegen.bind(*tensor_output, output.data_ptr());
 
     // Call the kernel.
-    codegen.value<int32_t>(args);
+    codegen.run();
 
     // Update the stack.
     drop(stack, buffer_args.size());
     stack.insert(stack.end(), std::move(output));
-#else
-    SimpleIREvaluator eval(stmt);
-    std::vector<std::vector<float>> backing;
-
-    auto inputs = last(stack, buffer_args.size());
-    for (size_t i = 0; i < buffer_args.size(); i++) {
-      eval.bind(buffer_args[i], inputs[i].toTensor().data_ptr());
-    }
-
-    at::Tensor output =
-        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
-    eval.bind(*tensor_output, output.data_ptr());
-
-    eval.run();
-
-    drop(stack, buffer_args.size());
-    stack.insert(stack.end(), std::move(output));
-#endif
   }
 };
 

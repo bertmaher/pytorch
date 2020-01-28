@@ -4,6 +4,7 @@
 #include <torch/csrc/WindowsTorchApiMacro.h>
 
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "torch/csrc/jit/tensorexpr/codegen.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_visitor.h"
 #include "torch/csrc/jit/tensorexpr/llvm_jit.h"
@@ -24,7 +25,7 @@ namespace torch {
 namespace jit {
 namespace compiler {
 
-class TORCH_API LLVMCodeGen : public IRVisitor {
+class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
  private:
   llvm::orc::ThreadSafeContext context_;
   llvm::IRBuilder<> irb_;
@@ -41,6 +42,8 @@ class TORCH_API LLVMCodeGen : public IRVisitor {
 
   std::unordered_map<const BaseExprNode*, int> varToArg_;
   std::unordered_map<const Variable*, llvm::Value*> varToVal_;
+
+  std::vector<void*> args_;
 
  private:
   explicit LLVMCodeGen(
@@ -59,6 +62,10 @@ class TORCH_API LLVMCodeGen : public IRVisitor {
       const std::vector<Buffer*>& args,
       Dtype dtype = kInt32);
   explicit LLVMCodeGen(const Expr& expr);
+
+  void bind(const BufferArg& buf, const CallArg& data) override;
+
+  void run() override;
 
   void visit(const Add* v) override;
   void visit(const Sub* v) override;

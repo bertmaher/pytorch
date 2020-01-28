@@ -35,7 +35,8 @@ LLVMCodeGen::LLVMCodeGen(const Expr& expr)
 {}
 
 LLVMCodeGen::LLVMCodeGen(const IRNode* node, const std::vector<Buffer*>& args, Dtype dtype)
-    : context_(std::make_unique<llvm::LLVMContext>()),
+    : CodeGen(node),
+      context_(std::make_unique<llvm::LLVMContext>()),
       irb_(*context_.getContext()) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
@@ -151,6 +152,14 @@ LLVMCodeGen::LLVMCodeGen(const IRNode* node, const std::vector<Buffer*>& args, D
         llvm::orc::ThreadSafeModule(std::move(module_), context_)));
     auto sym = jit_->findSymbol("wrapper");
     kernelAddress_ = cantFail(sym.getAddress());
+}
+
+void LLVMCodeGen::bind(const BufferArg& buf, const CallArg& data) {
+  args_.push_back(data.data());
+}
+
+void LLVMCodeGen::run() {
+  value<float>(args_);
 }
 
 // TODO: The binary ops are copypasta.
