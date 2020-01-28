@@ -658,9 +658,8 @@ torch_compile_options(torch_cpu)  # see cmake/public/utils.cmake
 
 if (LLVM_FOUND)
   llvm_map_components_to_libnames(LLVM_LINK_LIBS
-  support core irreader analysis executionengine instcombine object orcJIT
-  runtimedyld scalaropts transformutils native ipo orcjit)
-
+    support core irreader analysis executionengine instcombine object orcJIT
+    runtimedyld scalaropts transformutils ipo orcjit ${LLVM_TARGETS_TO_BUILD})
   target_link_libraries(torch_cpu PRIVATE ${LLVM_LINK_LIBS})
 endif (LLVM_FOUND)
 
