@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <c10/util/Logging.h>
+#include <torch/csrc/WindowsTorchApiMacro.h>
 
 namespace torch {
 namespace jit {
@@ -11,10 +12,13 @@ namespace compiler {
 
 using int32 = std::int32_t;
 
+class Dtype;
+TORCH_API std::ostream& operator<<(std::ostream& stream, const Dtype& dtype);
+
 // Switch to PT/Aten dtypes
 
 // Data types for scalar and vector elements.
-class Dtype {
+class TORCH_API Dtype {
  public:
   explicit Dtype(int type) : scalar_type_(type), lanes_(1) {}
   Dtype(int scalar_type, int lanes)
@@ -26,7 +30,7 @@ class Dtype {
   int lanes() const {
     return lanes_;
   }
-  Dtype scalar_type() const;
+  TORCH_API Dtype scalar_type() const;
   bool operator==(const Dtype& other) const {
     return scalar_type_ == other.scalar_type_ && lanes_ == other.lanes_;
   }
@@ -42,10 +46,10 @@ class Dtype {
   int lanes_; // the width of the element for a vector time
 };
 
-extern Dtype kUninitialized;
-extern Dtype kInt32;
-extern Dtype kFloat32;
-extern Dtype kHandle;
+extern TORCH_API Dtype kUninitialized;
+extern TORCH_API Dtype kInt32;
+extern TORCH_API Dtype kFloat32;
+extern TORCH_API Dtype kHandle;
 
 template <typename T>
 Dtype ToDtype();

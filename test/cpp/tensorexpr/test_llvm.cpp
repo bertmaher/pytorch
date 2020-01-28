@@ -1,120 +1,112 @@
 #ifdef ENABLE_LLVM
+#include "test/cpp/tensorexpr/test_base.h"
 
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 #include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
 #include "torch/csrc/jit/tensorexpr/schedule.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
-
-#include <gtest/gtest.h>
+#include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/function.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 
 #include <numeric>
 
+namespace torch {
+namespace jit {
 using namespace torch::jit::compiler;
 using namespace torch::jit::compiler::schedule;
 
-TEST(LLVMTest, IntImmTest) {
+void testLLVMIntImmTest() {
   auto a = IntImm::make(2);
-  LLVMCodeGen cg;
-  a.accept(&cg);
+  LLVMCodeGen cg(a);
   EXPECT_EQ(cg.value<int>(), 2);
 }
 
-TEST(LLVMTest, FloatImmTest) {
+void testLLVMFloatImmTest() {
   auto a = FloatImm::make(1.0);
-  LLVMCodeGen cg({}, kFloat32);
-  a.accept(&cg);
+  LLVMCodeGen cg(a, {}, kFloat32);
   EXPECT_EQ(cg.value<float>(), 1.0);
 }
 
-TEST(LLVMTest, IntAddTest) {
+void testLLVMIntAddTest() {
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Add::make(a, b);
-  LLVMCodeGen cg;
-  c.accept(&cg);
+  LLVMCodeGen cg(c);
   EXPECT_EQ(cg.value<int>(), 5);
 }
 
-TEST(LLVMTest, IntSubTest) {
+void testLLVMIntSubTest() {
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Sub::make(a, b);
-  LLVMCodeGen cg;
-  c.accept(&cg);
+  LLVMCodeGen cg(c);
   EXPECT_EQ(cg.value<int>(), -1);
 }
 
-TEST(LLVMTest, IntMulTest) {
+void testLLVMIntMulTest() {
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Mul::make(a, b);
-  LLVMCodeGen cg;
-  c.accept(&cg);
+  LLVMCodeGen cg(c);
   EXPECT_EQ(cg.value<int>(), 6);
 }
 
-TEST(LLVMTest, IntDivTest) {
+void testLLVMIntDivTest() {
   auto a = IntImm::make(6);
   auto b = IntImm::make(3);
   auto c = Div::make(a, b);
-  LLVMCodeGen cg;
-  c.accept(&cg);
+  LLVMCodeGen cg(c);
   EXPECT_EQ(cg.value<int>(), 2);
 }
 
-TEST(LLVMTest, IntToFloatCastTest) {
+void testLLVMIntToFloatCastTest() {
   auto a = IntImm::make(2);
   auto b = Cast::make(kFloat32, a);
-  LLVMCodeGen cg({}, kFloat32);
-  b.accept(&cg);
+  LLVMCodeGen cg(b, {}, kFloat32);
   EXPECT_EQ(cg.value<float>(), 2.0);
 }
 
-TEST(LLVMTest, FloatToIntCastTest) {
+void testLLVMFloatToIntCastTest() {
   auto a = FloatImm::make(2.0);
   auto b = Cast::make(kInt32, a);
-  LLVMCodeGen cg;
-  b.accept(&cg);
+  LLVMCodeGen cg(b);
   EXPECT_EQ(cg.value<int>(), 2);
 }
 
-TEST(LLVMTest, LetTest01) {
+void testLLVMLetTest01() {
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
   Expr result = Let::make(x, Expr(3.f), body);
-  LLVMCodeGen cg({}, kFloat32);
-  result.accept(&cg);
+  LLVMCodeGen cg(result, {}, kFloat32);
   EXPECT_EQ(cg.value<float>(), 2.f + (3.f * 3.f + 4.f));
 }
 
-TEST(LLVMTest, LetTest02) {
+void testLLVMLetTest02() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
   Expr e1 = Let::make(x, Expr(3.f), body);
   Expr e2 = Let::make(y, Expr(6.f), e1);
-  LLVMCodeGen cg({}, kFloat32);
-  e2.accept(&cg);
+  LLVMCodeGen cg(e2, {}, kFloat32);
   EXPECT_EQ(cg.value<float>(), 2.f + (3.f * 3.f + 4.f * 6.f));
 }
 
-TEST(LLVMTest, BufferTest) {
+void testLLVMBufferTest() {
   Buffer a(Var("A", kHandle), kFloat32, {32});
-  LLVMCodeGen cg({&a});
   std::vector<int32_t> v(5);
   std::vector<void*> args({v.data()});
   auto rv = IntImm::make(0);
-  rv.accept(&cg);
+  LLVMCodeGen cg(rv, {&a});
   EXPECT_EQ(cg.value<int>(args), 0);
 }
 
-TEST(LLVMTest, BlockTest) {
+void testLLVMBlockTest() {
   Buffer a(Var("A", kHandle), kInt32, {32});
-  LLVMCodeGen cg({&a});
   std::vector<int32_t> v = {1, 2};
   std::vector<void*> args({v.data()});
 
@@ -124,44 +116,42 @@ TEST(LLVMTest, BlockTest) {
       Store::make(a, IntImm::make(0), IntImm::make(4), IntImm::make(1)),
   });
 
-  block.accept(&cg);
+  LLVMCodeGen cg(block, {&a});
   EXPECT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(v[0], 4);
   EXPECT_EQ(v[1], 4);
 }
 
-TEST(LLVMTest, LoadStoreTest) {
+void testLLVMLoadStoreTest() {
   Buffer a(Var("A", kHandle), kInt32, {1});
   Buffer b(Var("B", kHandle), kInt32, {1});
   std::vector<int32_t> a_buffer = {42};
   std::vector<int32_t> b_buffer = {-11};
 
-  LLVMCodeGen cg({&a, &b});
   auto store = Store::make(
       b,
       IntImm::make(0),
       Load::make(a, IntImm::make(0), IntImm::make(1)),
       IntImm::make(1));
-  store.accept(&cg);
+  LLVMCodeGen cg(store, {&a, &b});
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   EXPECT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(a_buffer[0], 42);
   EXPECT_EQ(b_buffer[0], 42);
 }
 
-TEST(LLVMTest, VecLoadStoreTest) {
+void testLLVMVecLoadStoreTest() {
   Buffer a(Var("A", kHandle), kInt32, {1});
   Buffer b(Var("B", kHandle), kInt32, {1});
   std::vector<int32_t> a_buffer = {1, 1, 1, 1};
   std::vector<int32_t> b_buffer = {2, 2, 2, 2};
 
-  LLVMCodeGen cg({&a, &b});
   auto store = Store::make(
       b,
       Ramp::make(0, 1, 4),
       Load::make(a, Ramp::make(0, 1, 4), Broadcast::make(IntImm::make(1), 4)),
       Broadcast::make(IntImm::make(1), 4));
-  store.accept(&cg);
+  LLVMCodeGen cg(store, {&a, &b});
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   EXPECT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(a_buffer[0], 1);
@@ -174,7 +164,7 @@ TEST(LLVMTest, VecLoadStoreTest) {
   EXPECT_EQ(b_buffer[3], 1);
 }
 
-TEST(LLVMTest, MemcpyTest) {
+void testLLVMMemcpyTest() {
   constexpr int N = 32;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -183,11 +173,10 @@ TEST(LLVMTest, MemcpyTest) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr =
+  auto expr =
       For::make(i, 0, N, Store::make(b, i, Load::make(a, i, mask), mask));
 
-  LLVMCodeGen cg({&a, &b});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -198,18 +187,17 @@ TEST(LLVMTest, MemcpyTest) {
   assertAllEqual(b_buffer, 42);
 }
 
-TEST(LLVMTest, BzeroTest) {
+void testLLVMBzeroTest() {
   constexpr int N = 32;
   Buffer b(Var("B", kHandle), kInt32, {N});
   std::vector<int32_t> b_buffer(N, 11);
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr =
+  auto expr =
       For::make(i, 0, N, Store::make(b, i, IntImm::make(0), mask));
 
-  LLVMCodeGen cg({&b});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&b});
 
   std::vector<void*> args({b_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -218,7 +206,7 @@ TEST(LLVMTest, BzeroTest) {
   assertAllEqual(b_buffer, 0);
 }
 
-TEST(LLVMTest, ElemwiseAdd) {
+void testLLVMElemwiseAdd() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -229,7 +217,7 @@ TEST(LLVMTest, ElemwiseAdd) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -239,8 +227,7 @@ TEST(LLVMTest, ElemwiseAdd) {
           Add::make(Load::make(a, i, mask), Load::make(b, i, mask)),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -253,7 +240,7 @@ TEST(LLVMTest, ElemwiseAdd) {
   assertAllEqual(c_buffer, 42);
 }
 
-TEST(LLVMTest, ElemwiseAddFloat) {
+void testLLVMElemwiseAddFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -264,14 +251,13 @@ TEST(LLVMTest, ElemwiseAddFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
       Store::make(c, i, Load::make(a, i, mask) + Load::make(b, i, mask), mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -284,7 +270,33 @@ TEST(LLVMTest, ElemwiseAddFloat) {
   assertAllEqual(c_buffer, 42.0f);
 }
 
-TEST(LLVMTest, ElemwiseMaxInt) {
+void testLLVMElemwiseLog10Float() {
+  constexpr int N = 1024;
+  Buffer a(Var("A", kHandle), kFloat32, {N});
+  Buffer b(Var("B", kHandle), kFloat32, {N});
+  std::vector<float> a_buffer(N, 10.0f);
+  std::vector<float> b_buffer(N, 2.0f);
+
+  auto mask = Broadcast::make(IntImm::make(1), 4);
+  Var i("i", kInt32);
+  auto expr = For::make(
+      i,
+      0,
+      N/4,
+      Store::make(b, Ramp::make(i * 4, 1, 4), log10(Load::make(a, Ramp::make(i * 4, 1, 4), mask)), mask));
+
+  LLVMCodeGen cg(expr, {&a, &b});
+
+  std::vector<void*> args({a_buffer.data(), b_buffer.data()});
+  ASSERT_EQ(cg.value<int>(args), 0);
+
+  ASSERT_EQ(a_buffer.size(), N);
+  ASSERT_EQ(b_buffer.size(), N);
+  assertAllEqual(a_buffer, 10.0f);
+  assertAllEqual(b_buffer, 1.0f);
+}
+
+void testLLVMElemwiseMaxInt() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -295,7 +307,7 @@ TEST(LLVMTest, ElemwiseMaxInt) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -305,8 +317,7 @@ TEST(LLVMTest, ElemwiseMaxInt) {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -319,7 +330,7 @@ TEST(LLVMTest, ElemwiseMaxInt) {
   assertAllEqual(c_buffer, 41);
 }
 
-TEST(LLVMTest, ElemwiseMinInt) {
+void testLLVMElemwiseMinInt() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -330,7 +341,7 @@ TEST(LLVMTest, ElemwiseMinInt) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -340,8 +351,7 @@ TEST(LLVMTest, ElemwiseMinInt) {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -354,7 +364,7 @@ TEST(LLVMTest, ElemwiseMinInt) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(LLVMTest, ElemwiseMaxNumFloat) {
+void testLLVMElemwiseMaxNumFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -365,7 +375,7 @@ TEST(LLVMTest, ElemwiseMaxNumFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -375,8 +385,7 @@ TEST(LLVMTest, ElemwiseMaxNumFloat) {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -389,7 +398,7 @@ TEST(LLVMTest, ElemwiseMaxNumFloat) {
   assertAllEqual(c_buffer, 41.0f);
 }
 
-TEST(LLVMTest, ElemwiseMaxNumNaNFloat) {
+void testLLVMElemwiseMaxNumNaNFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -400,7 +409,7 @@ TEST(LLVMTest, ElemwiseMaxNumNaNFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -410,8 +419,7 @@ TEST(LLVMTest, ElemwiseMaxNumNaNFloat) {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -423,7 +431,7 @@ TEST(LLVMTest, ElemwiseMaxNumNaNFloat) {
   assertAllEqual(c_buffer, 1.0f);
 }
 
-TEST(LLVMTest, ElemwiseMinNumFloat) {
+void testLLVMElemwiseMinNumFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -434,7 +442,7 @@ TEST(LLVMTest, ElemwiseMinNumFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -444,8 +452,7 @@ TEST(LLVMTest, ElemwiseMinNumFloat) {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -458,7 +465,7 @@ TEST(LLVMTest, ElemwiseMinNumFloat) {
   assertAllEqual(c_buffer, 1.0f);
 }
 
-TEST(LLVMTest, ElemwiseMinNumNaNFloat) {
+void testLLVMElemwiseMinNumNaNFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -469,7 +476,7 @@ TEST(LLVMTest, ElemwiseMinNumNaNFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -479,8 +486,7 @@ TEST(LLVMTest, ElemwiseMinNumNaNFloat) {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -493,7 +499,7 @@ TEST(LLVMTest, ElemwiseMinNumNaNFloat) {
 }
 
 #if 1 // LLVM doesn't currently have implementations for maximum/minimum on x86
-TEST(LLVMTest, ElemwiseMaximumFloat) {
+void testLLVMElemwiseMaximumFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -504,7 +510,7 @@ TEST(LLVMTest, ElemwiseMaximumFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -514,8 +520,7 @@ TEST(LLVMTest, ElemwiseMaximumFloat) {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -528,7 +533,7 @@ TEST(LLVMTest, ElemwiseMaximumFloat) {
   assertAllEqual(c_buffer, 41.0f);
 }
 
-TEST(LLVMTest, ElemwiseMaximumNaNFloat) {
+void testLLVMElemwiseMaximumNaNFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -539,7 +544,7 @@ TEST(LLVMTest, ElemwiseMaximumNaNFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -549,8 +554,7 @@ TEST(LLVMTest, ElemwiseMaximumNaNFloat) {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -564,7 +568,7 @@ TEST(LLVMTest, ElemwiseMaximumNaNFloat) {
   }
 }
 
-TEST(LLVMTest, ElemwiseMinimumFloat) {
+void testLLVMElemwiseMinimumFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -575,7 +579,7 @@ TEST(LLVMTest, ElemwiseMinimumFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -585,8 +589,7 @@ TEST(LLVMTest, ElemwiseMinimumFloat) {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -599,7 +602,7 @@ TEST(LLVMTest, ElemwiseMinimumFloat) {
   assertAllEqual(c_buffer, 1.0f);
 }
 
-TEST(LLVMTest, ElemwiseMinimumNaNFloat) {
+void testLLVMElemwiseMinimumNaNFloat() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -610,7 +613,7 @@ TEST(LLVMTest, ElemwiseMinimumNaNFloat) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -620,8 +623,7 @@ TEST(LLVMTest, ElemwiseMinimumNaNFloat) {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -636,7 +638,7 @@ TEST(LLVMTest, ElemwiseMinimumNaNFloat) {
 }
 #endif
 
-TEST(LLVMTest, CompareSelectIntEQ) {
+void testLLVMCompareSelectIntEQ() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -653,7 +655,7 @@ TEST(LLVMTest, CompareSelectIntEQ) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -666,8 +668,7 @@ TEST(LLVMTest, CompareSelectIntEQ) {
               CompareSelectOperation::kEQ),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -682,7 +683,7 @@ TEST(LLVMTest, CompareSelectIntEQ) {
   }
 }
 
-TEST(LLVMTest, CompareSelectFloatEQ) {
+void testLLVMCompareSelectFloatEQ() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kFloat32, {N});
   Buffer b(Var("B", kHandle), kFloat32, {N});
@@ -693,7 +694,7 @@ TEST(LLVMTest, CompareSelectFloatEQ) {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto memcpy_expr = For::make(
+  auto expr = For::make(
       i,
       0,
       N,
@@ -706,8 +707,7 @@ TEST(LLVMTest, CompareSelectFloatEQ) {
               CompareSelectOperation::kEQ),
           mask));
 
-  LLVMCodeGen cg({&a, &b, &c});
-  memcpy_expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&a, &b, &c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -721,27 +721,25 @@ TEST(LLVMTest, CompareSelectFloatEQ) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(LLVMTest, StoreFloat) {
+void testLLVMStoreFloat() {
   Buffer result(Var("result", kHandle), kFloat32, {1});
   std::vector<float> result_buffer = {0.0f};
   auto expr = Store::make(
       result, IntImm::make(0), FloatImm::make(3.14f), IntImm::make(1));
-  LLVMCodeGen cg({&result});
-  expr.accept(&cg);
+  LLVMCodeGen cg(expr, {&result});
   std::vector<void*> args({result_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(result_buffer[0], 3.14f);
 }
 
-TEST(LLVMTest, SimpleMath01) {
+void testLLVMSimpleMath01() {
   const int N = 1024;
   Tensor tensor = Compute(
       "f", {{N, "i"}}, [](const Var& i) { return cast<float>(i * i + 1); });
   Schedule sch = Schedule::make({tensor});
   Stmt stmt = sch.Lower();
   Buffer f_buf(tensor.function().func_var(), kFloat32, {N});
-  LLVMCodeGen cg({&f_buf});
-  stmt.accept(&cg);
+  LLVMCodeGen cg(stmt, {&f_buf});
 
   PaddedBuffer<float> f_v(N, "f_v");
   std::vector<void*> args({f_v.data()});
@@ -754,7 +752,7 @@ TEST(LLVMTest, SimpleMath01) {
   ExpectAllNear(f_v, f_ref, 1e-5);
 }
 
-TEST(LLVMTest, ComputeMul) {
+void testLLVMComputeMul() {
   const int N = 1024;
   Buffer a(Var("a", kHandle), kFloat32, {N});
   Buffer b(Var("b", kHandle), kFloat32, {N});
@@ -766,8 +764,7 @@ TEST(LLVMTest, ComputeMul) {
   Schedule sch = Schedule::make({c});
   Stmt s = sch.Lower();
 
-  LLVMCodeGen cg({&a, &b, &c_buf});
-  s.accept(&cg);
+  LLVMCodeGen cg(s, {&a, &b, &c_buf});
 
   std::vector<float> a_vec(N, 21.0f);
   std::vector<float> b_vec(N, 2.0f);
@@ -777,7 +774,7 @@ TEST(LLVMTest, ComputeMul) {
   assertAllEqual(c_vec, 42.0f);
 }
 
-TEST(LLVMTest, BroadcastAdd) {
+void testLLVMBroadcastAdd() {
   const int M = 32;
   const int N = 1024;
   Buffer a(Var("a", kHandle), kFloat32, {M, N});
@@ -792,8 +789,7 @@ TEST(LLVMTest, BroadcastAdd) {
   Schedule sch = Schedule::make({c});
   Stmt s = sch.Lower();
 
-  LLVMCodeGen cg({&a, &b, &c_buf});
-  s.accept(&cg);
+  LLVMCodeGen cg(s, {&a, &b, &c_buf});
 
   std::vector<float> av(M * N);
   std::iota(av.begin(), av.end(), 0);
@@ -809,5 +805,7 @@ TEST(LLVMTest, BroadcastAdd) {
     }
   }
 }
+} // namespace jit
+} // namespace torch
 
 #endif // ENABLE_LLVM

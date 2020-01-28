@@ -93,61 +93,6 @@ int Intrinsics::OpArgCount(IntrinsicsOp op_type) {
   }
 }
 
-std::string Intrinsics::func_name() const {
-  switch (op_type()) {
-    case kSin:
-      return "sin";
-    case kCos:
-      return "cos";
-    case kTan:
-      return "tan";
-    case kAsin:
-      return "asin";
-    case kAcos:
-      return "acos";
-    case kAtan:
-      return "atan";
-    case kSinh:
-      return "sinh";
-    case kCosh:
-      return "cosh";
-    case kTanh:
-      return "tanh";
-    case kExp:
-      return "exp";
-    case kFabs:
-      return "fabs";
-    case kLog:
-      return "log";
-    case kLog2:
-      return "log2";
-    case kLog10:
-      return "log10";
-    case kErf:
-      return "erf";
-    case kSqrt:
-      return "sqrt";
-    case kRsqrt:
-      return "rsqrt";
-    case kPow:
-      return "pow";
-    case kCeil:
-      return "ceil";
-    case kFloor:
-      return "floor";
-    case kRound:
-      return "round";
-    case kTrunc:
-      return "trunc";
-    case kRand:
-      return "rand";
-    case kFmod:
-      return "fmod";
-    default:
-      throw std::runtime_error("invalid op_type: " + std::to_string(op_type()));
-  }
-}
-
 } // namespace compiler
 } // namespace jit
 } // namespace torch

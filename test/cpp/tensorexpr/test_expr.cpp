@@ -1,15 +1,25 @@
-#include <sstream>
-#include <stdexcept>
-
-#include <gtest/gtest.h>
-#include <cmath>
+#include "test/cpp/tensorexpr/test_base.h"
 
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
+#include "torch/csrc/jit/tensorexpr/schedule.h"
+#include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/function.h"
+#include "torch/csrc/jit/tensorexpr/ir.h"
+#include "torch/csrc/jit/tensorexpr/tensor.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 
+#include <cmath>
+#include <sstream>
+#include <string>
+#include <stdexcept>
+#include <vector>
+
+namespace torch {
+namespace jit {
 using namespace torch::jit::compiler;
 
-TEST(ExprTest, BasicValueTest) {
+void testExprBasicValueTest() {
   Expr a = IntImm::make(2), b = IntImm::make(3);
   Expr c = Add::make(a, b);
   SimpleIREvaluator eval(c);
@@ -17,7 +27,7 @@ TEST(ExprTest, BasicValueTest) {
   EXPECT_EQ(eval.value().as<int>(), 5);
 }
 
-TEST(ExprTest, BasicValueTest02) {
+void testExprBasicValueTest02() {
   Expr a(2.0f);
   Expr b(3.0f);
   Expr c(4.0f);
@@ -28,7 +38,7 @@ TEST(ExprTest, BasicValueTest02) {
   EXPECT_EQ(eval.value().as<float>(), -4.0f);
 }
 
-TEST(ExprTest, LetTest01) {
+void testExprLetTest01() {
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
@@ -38,7 +48,7 @@ TEST(ExprTest, LetTest01) {
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4));
 }
 
-TEST(ExprTest, LetTest02) {
+void testExprLetTest02() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
@@ -50,28 +60,11 @@ TEST(ExprTest, LetTest02) {
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4 * 6));
 }
 
-TEST(ExprTest, Tensor01) {
-  Tensor tensor =
-      Compute("f", {{3, "x"}, {4, "y"}}, [](const Var& x, const Var& y) {
-        return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
-      });
-  std::vector<float> result;
-  SimpleTensorEvaluator<float> tensor_eval;
-  tensor_eval.evaluate(tensor, &result);
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 4; j++) {
-      float reference_v = 1 + i * i + j * j;
-      int index = i * 4 + j;
-      EXPECT_EQ(result[index], reference_v);
-    }
-  }
-}
-
 static Expr test_01(const Expr& expr) {
   return expr;
 }
 
-TEST(ExprTest, NoLeakTest01) {
+void testExprNoLeakTest01() {
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
   {
     Expr r = 1;
@@ -80,7 +73,7 @@ TEST(ExprTest, NoLeakTest01) {
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
 }
 
-TEST(ExprTest, VectorAdd01) {
+void testExprVectorAdd01() {
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
@@ -132,7 +125,7 @@ TEST(ExprTest, VectorAdd01) {
   ExpectAllNear(c_v, c_ref, 1e-5);
 }
 
-TEST(ExprTest, CompareSelectEQ) {
+void testExprCompareSelectEQ() {
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -169,7 +162,7 @@ TEST(ExprTest, CompareSelectEQ) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(ExprTest, Substitute01) {
+void testExprSubstitute01() {
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
   {
     Expr x = Variable::make("x", kFloat32);
@@ -192,7 +185,7 @@ TEST(ExprTest, Substitute01) {
   ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
 }
 
-TEST(ExprTest, Math01) {
+void testExprMath01() {
   Expr v = sin(Expr(1.0f));
 
   std::ostringstream oss;
@@ -206,7 +199,7 @@ TEST(ExprTest, Math01) {
   ASSERT_NEAR(res, v_ref, 1e-6);
 }
 
-TEST(ExprTest, UnaryMath01) {
+void testExprUnaryMath01() {
   struct TestConfig {
     std::function<Expr(const Expr&)> func;
     std::function<float(float)> ref_func;
@@ -267,7 +260,7 @@ TEST(ExprTest, UnaryMath01) {
   }
 }
 
-TEST(ExprTest, BinaryMath01) {
+void testExprBinaryMath01() {
   struct TestConfig {
     std::function<Expr(const Expr&, const Expr&)> func;
     std::function<float(float, float)> ref_func;
@@ -290,3 +283,5 @@ TEST(ExprTest, BinaryMath01) {
     EXPECT_NEAR(eval.value().as<float>(), v_ref, 1e-6) << "fail: " << v_expr;
   }
 }
+} // namespace jit
+} // namespace torch

@@ -9,7 +9,7 @@ namespace torch {
 namespace jit {
 namespace compiler {
 
-class IRPrinter : public IRVisitor {
+class TORCH_API IRPrinter : public IRVisitor {
  public:
   explicit IRPrinter(std::ostream& os) : printer_os_(this, os) {}
 
@@ -62,8 +62,8 @@ class IRPrinter : public IRVisitor {
   PrinterStream printer_os_;
 };
 
-std::ostream& operator<<(std::ostream& stream, const Expr&);
-std::ostream& operator<<(std::ostream& stream, const Stmt&);
+TORCH_API std::ostream& operator<<(std::ostream& stream, const Expr&);
+TORCH_API std::ostream& operator<<(std::ostream& stream, const Stmt&);
 
 } // namespace compiler
 } // namespace jit

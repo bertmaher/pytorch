@@ -1,10 +1,12 @@
-#include <gtest/gtest.h>
+#include "test/cpp/tensorexpr/test_base.h"
+#include "torch/csrc/jit/tensorexpr/ir.h"
+#include "torch/csrc/jit/tensorexpr/tensor.h"
 
-#include "test_utils.h"
-
+namespace torch {
+namespace jit {
 using namespace torch::jit::compiler;
 
-TEST(TypeTest, Test01) {
+void testTypeTest01() {
   {
     Dtype dt1 = kInt32;
     EXPECT_EQ(dt1, kInt32);
@@ -30,3 +32,5 @@ TEST(TypeTest, Test01) {
     EXPECT_EQ(float32x8, BinaryOpDtype(float32x8, float32x8));
   }
 }
+} // namespace jit
+} // namespace torch

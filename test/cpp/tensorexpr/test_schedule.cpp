@@ -1,19 +1,25 @@
+#include "test/cpp/tensorexpr/test_base.h"
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
 
-#include <gtest/gtest.h>
-
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 #include "torch/csrc/jit/tensorexpr/schedule.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
+#include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/function.h"
+#include "torch/csrc/jit/tensorexpr/ir.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
+
+namespace torch {
+namespace jit {
 
 using namespace torch::jit::compiler;
 using namespace torch::jit::compiler::schedule;
 
-TEST(TensorExpr, Simple01) {
+void testExprSimple01() {
   Tensor tensor =
       Compute("f", {{16, "X"}, {5, "y"}}, [](const Var& x, const Var& y) {
         return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
@@ -34,7 +40,7 @@ TEST(TensorExpr, Simple01) {
   tensor.SplitWithTail(x_outer, 2, true, &x_2, &x_1, &x_tail_2, &tail_op_2);
 }
 
-TEST(TensorExpr, Lower01) {
+void testExprLower01() {
   Tensor tensor =
       Compute("f", {{16, "x"}, {5, "y"}}, [](const Var& x, const Var& y) {
         return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
@@ -49,7 +55,7 @@ TEST(TensorExpr, Lower01) {
   ASSERT_LT(oss.str().size(), 200);
 }
 
-TEST(TensorExpr, Simple02) {
+void testExprSimple02() {
   auto func = [](const Expr& x, const Expr& y) {
     return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
   };
@@ -117,7 +123,7 @@ TEST(TensorExpr, Simple02) {
   }
 }
 
-TEST(TestSchedule, BroadcastAddBuffer) {
+void testScheduleBroadcastAddBuffer() {
   const int M = 4;
   const int N = 5;
   const int K = 6;
@@ -165,7 +171,7 @@ TEST(TestSchedule, BroadcastAddBuffer) {
   ExpectAllNear(c_v, c_ref, 1e-5);
 }
 
-TEST(TensorTest, FunctionCall01) {
+void testScheduleFunctionCall01() {
   const int M = 4;
   const int N = 5;
   const int K = 6;
@@ -331,7 +337,7 @@ void InlineFunc01Helper(const std::vector<std::string>& inline_order) {
   }
 }
 
-TEST(ScheduleTest, InlineFunc01) {
+void testScheduleInlineFunc01() {
   InlineFunc01Helper({"x", "y"});
   InlineFunc01Helper({"y", "x"});
   InlineFunc01Helper({"x"});
@@ -339,7 +345,7 @@ TEST(ScheduleTest, InlineFunc01) {
   InlineFunc01Helper({});
 }
 
-TEST(ScheduleTest, FuserStyle) {
+void testScheduleFuserStyle() {
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
@@ -371,7 +377,7 @@ TEST(ScheduleTest, FuserStyle) {
   }
 }
 
-TEST(ScheduleTest, FuserThreeArg) {
+void testScheduleFuserThreeArg() {
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
@@ -404,3 +410,5 @@ TEST(ScheduleTest, FuserThreeArg) {
     ASSERT_EQ(g_data[i], 10.0f);
   }
 }
+} // namespace jit
+} // namespace torch

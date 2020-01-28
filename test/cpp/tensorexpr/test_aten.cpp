@@ -1,15 +1,17 @@
+#include "test/cpp/tensorexpr/test_base.h"
 #include <algorithm>
 #include <sstream>
 #include <stdexcept>
 
-#include <gtest/gtest.h>
-
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
+
+namespace torch {
+namespace jit {
 
 using namespace torch::jit::compiler;
 
-TEST(ATenTest, _cast_Float) {
+void testATen_cast_Float() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -36,7 +38,7 @@ TEST(ATenTest, _cast_Float) {
   }
 }
 
-TEST(ATenTest, negInt) {
+void testATennegInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -63,7 +65,7 @@ TEST(ATenTest, negInt) {
   }
 }
 
-TEST(ATenTest, negFloat) {
+void testATennegFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -90,7 +92,7 @@ TEST(ATenTest, negFloat) {
   }
 }
 
-TEST(ATenTest, addInt) {
+void testATenaddInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -126,7 +128,7 @@ TEST(ATenTest, addInt) {
   }
 }
 
-TEST(ATenTest, addFloat) {
+void testATenaddFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -162,7 +164,7 @@ TEST(ATenTest, addFloat) {
   }
 }
 
-TEST(ATenTest, subInt) {
+void testATensubInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -198,7 +200,7 @@ TEST(ATenTest, subInt) {
   }
 }
 
-TEST(ATenTest, subFloat) {
+void testATensubFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -234,7 +236,7 @@ TEST(ATenTest, subFloat) {
   }
 }
 
-TEST(ATenTest, lerp) {
+void testATenlerp() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -271,7 +273,7 @@ TEST(ATenTest, lerp) {
   }
 }
 
-TEST(ATenTest, addcmulInt) {
+void testATenaddcmulInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -313,7 +315,7 @@ TEST(ATenTest, addcmulInt) {
   }
 }
 
-TEST(ATenTest, addcmulFloat) {
+void testATenaddcmulFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -355,7 +357,7 @@ TEST(ATenTest, addcmulFloat) {
   }
 }
 
-TEST(ATenTest, mulInt) {
+void testATenmulInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -386,7 +388,7 @@ TEST(ATenTest, mulInt) {
   }
 }
 
-TEST(ATenTest, mulFloat) {
+void testATenmulFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -417,7 +419,7 @@ TEST(ATenTest, mulFloat) {
   }
 }
 
-TEST(ATenTest, divInt) {
+void testATendivInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -448,7 +450,7 @@ TEST(ATenTest, divInt) {
   }
 }
 
-TEST(ATenTest, divFloat) {
+void testATendivFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -479,7 +481,7 @@ TEST(ATenTest, divFloat) {
   }
 }
 
-TEST(ATenTest, maxInt) {
+void testATenmaxInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -510,7 +512,7 @@ TEST(ATenTest, maxInt) {
   }
 }
 
-TEST(ATenTest, maxFloat) {
+void testATenmaxFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -541,7 +543,7 @@ TEST(ATenTest, maxFloat) {
   }
 }
 
-TEST(ATenTest, minInt) {
+void testATenminInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -572,7 +574,7 @@ TEST(ATenTest, minInt) {
   }
 }
 
-TEST(ATenTest, minFloat) {
+void testATenminFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -603,7 +605,7 @@ TEST(ATenTest, minFloat) {
   }
 }
 
-TEST(ATenTest, _sigmoid_backward) {
+void testATen_sigmoid_backward() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -635,7 +637,7 @@ TEST(ATenTest, _sigmoid_backward) {
   }
 }
 
-TEST(ATenTest, _tanh_backward) {
+void testATen_tanh_backward() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -667,7 +669,7 @@ TEST(ATenTest, _tanh_backward) {
   }
 }
 
-TEST(ATenTest, reciprocal) {
+void testATenreciprocal() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -693,7 +695,7 @@ TEST(ATenTest, reciprocal) {
   }
 }
 
-TEST(ATenTest, reluInt) {
+void testATenreluInt() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -719,7 +721,7 @@ TEST(ATenTest, reluInt) {
   }
 }
 
-TEST(ATenTest, reluFloat) {
+void testATenreluFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -749,7 +751,7 @@ TEST(ATenTest, reluFloat) {
   }
 }
 
-TEST(ATenTest, logFloat) {
+void testATenlogFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -775,7 +777,7 @@ TEST(ATenTest, logFloat) {
   }
 }
 
-TEST(ATenTest, log10Float) {
+void testATenlog10Float() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -801,7 +803,7 @@ TEST(ATenTest, log10Float) {
   }
 }
 
-TEST(ATenTest, log2Float) {
+void testATenlog2Float() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -827,7 +829,7 @@ TEST(ATenTest, log2Float) {
   }
 }
 
-TEST(ATenTest, expFloat) {
+void testATenexpFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -853,7 +855,7 @@ TEST(ATenTest, expFloat) {
   }
 }
 
-TEST(ATenTest, erfFloat) {
+void testATenerfFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -879,7 +881,7 @@ TEST(ATenTest, erfFloat) {
   }
 }
 
-TEST(ATenTest, cosFloat) {
+void testATencosFloat() {
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -905,7 +907,7 @@ TEST(ATenTest, cosFloat) {
   }
 }
 
-TEST(ATenTest, eqInt) {
+void testATeneqInt() {
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -935,7 +937,7 @@ TEST(ATenTest, eqInt) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(ATenTest, geInt) {
+void testATengeInt() {
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -965,7 +967,7 @@ TEST(ATenTest, geInt) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(ATenTest, gtInt) {
+void testATengtInt() {
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -995,7 +997,7 @@ TEST(ATenTest, gtInt) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(ATenTest, leInt) {
+void testATenleInt() {
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -1025,7 +1027,7 @@ TEST(ATenTest, leInt) {
   assertAllEqual(c_buffer, 1);
 }
 
-TEST(ATenTest, ltInt) {
+void testATenltInt() {
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -1054,3 +1056,6 @@ TEST(ATenTest, ltInt) {
 
   assertAllEqual(c_buffer, 0);
 }
+
+} // namespace jit
+} // namespace torch

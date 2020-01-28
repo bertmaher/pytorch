@@ -64,7 +64,7 @@ class StmtNode : public BaseStmtNode {
 
 // A refcounted pointer to the underlying ExprNode.
 // Also serves the primary way to build and operate on other expressions.
-class Expr : public RefHandle<BaseExprNode> {
+class TORCH_API Expr : public RefHandle<BaseExprNode> {
  public:
   using BaseHandle = RefHandle<BaseExprNode>;
   explicit Expr() : BaseHandle(nullptr) {}
@@ -167,29 +167,29 @@ inline bool same_node(const Stmt& stmt1, const Stmt& stmt2) {
   return stmt1.AsNode<BaseStmtNode>() == stmt2.AsNode<BaseStmtNode>();
 }
 
-Expr sin(const Expr& v);
-Expr cos(const Expr& v);
-Expr tan(const Expr& v);
-Expr asin(const Expr& v);
-Expr acos(const Expr& v);
-Expr atan(const Expr& v);
-Expr sinh(const Expr& v);
-Expr cosh(const Expr& v);
-Expr tanh(const Expr& v);
-Expr exp(const Expr& v);
-Expr fabs(const Expr& v);
-Expr log(const Expr& v);
-Expr log2(const Expr& v);
-Expr log10(const Expr& v);
-Expr erf(const Expr& v);
-Expr sqrt(const Expr& v);
-Expr rsqrt(const Expr& v);
-Expr ceil(const Expr& v);
-Expr floor(const Expr& v);
-Expr round(const Expr& v);
-Expr trunc(const Expr& v);
-Expr pow(const Expr& v1, const Expr& v2);
-Expr fmod(const Expr& v1, const Expr& v2);
+TORCH_API Expr sin(const Expr& v);
+TORCH_API Expr cos(const Expr& v);
+TORCH_API Expr tan(const Expr& v);
+TORCH_API Expr asin(const Expr& v);
+TORCH_API Expr acos(const Expr& v);
+TORCH_API Expr atan(const Expr& v);
+TORCH_API Expr sinh(const Expr& v);
+TORCH_API Expr cosh(const Expr& v);
+TORCH_API Expr tanh(const Expr& v);
+TORCH_API Expr exp(const Expr& v);
+TORCH_API Expr fabs(const Expr& v);
+TORCH_API Expr log(const Expr& v);
+TORCH_API Expr log2(const Expr& v);
+TORCH_API Expr log10(const Expr& v);
+TORCH_API Expr erf(const Expr& v);
+TORCH_API Expr sqrt(const Expr& v);
+TORCH_API Expr rsqrt(const Expr& v);
+TORCH_API Expr ceil(const Expr& v);
+TORCH_API Expr floor(const Expr& v);
+TORCH_API Expr round(const Expr& v);
+TORCH_API Expr trunc(const Expr& v);
+TORCH_API Expr pow(const Expr& v1, const Expr& v2);
+TORCH_API Expr fmod(const Expr& v1, const Expr& v2);
 
 } // namespace compiler
 } // namespace jit

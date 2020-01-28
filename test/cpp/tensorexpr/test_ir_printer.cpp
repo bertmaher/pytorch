@@ -1,17 +1,17 @@
+#include "test/cpp/tensorexpr/test_base.h"
 #include <stdexcept>
 
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 
-#include <gtest/gtest.h>
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
-
 #include <sstream>
+namespace torch {
+namespace jit {
 
 using namespace torch::jit::compiler;
 
-TEST(IRPrinterTest, BasicValueTest) {
+void testIRPrinterBasicValueTest() {
   Expr a = IntImm::make(2), b = IntImm::make(3);
   Expr c = Add::make(a, b);
 
@@ -20,7 +20,7 @@ TEST(IRPrinterTest, BasicValueTest) {
   EXPECT_EQ(ss.str(), "(2 + 3)");
 }
 
-TEST(IRPrinterTest, BasicValueTest02) {
+void testIRPrinterBasicValueTest02() {
   Expr a(2.0f);
   Expr b(3.0f);
   Expr c(4.0f);
@@ -32,7 +32,7 @@ TEST(IRPrinterTest, BasicValueTest02) {
   EXPECT_EQ(ss.str(), "((2 + 3) - (4 + 5))");
 }
 
-TEST(IRPrinterTest, LetTest01) {
+void testIRPrinterLetTest01() {
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
@@ -43,7 +43,7 @@ TEST(IRPrinterTest, LetTest01) {
   EXPECT_EQ(ss.str(), "(let x = 3 in (2 + ((x * 3) + 4)))");
 }
 
-TEST(IRPrinterTest, LetTest02) {
+void testIRPrinterLetTest02() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
@@ -57,7 +57,7 @@ TEST(IRPrinterTest, LetTest02) {
       ss.str(), "(let y = 6 in (let x = 3 in (2 + ((x * 3) + (4 * y)))))");
 }
 
-TEST(IRPrinterTest, CastTest) {
+void testIRPrinterCastTest() {
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
@@ -71,3 +71,5 @@ TEST(IRPrinterTest, CastTest) {
       ss.str(),
       "(let y = 6 in (let x = int32(3) in (2 + ((x * 3) + (4 * y)))))");
 }
+} // namespace jit
+} // namespace torch

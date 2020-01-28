@@ -1,4 +1,5 @@
 #pragma once
+#include <torch/csrc/WindowsTorchApiMacro.h>
 
 namespace torch {
 namespace jit {
@@ -30,7 +31,7 @@ class FunctionCall;
 class Allocate;
 class Free;
 
-class IRMutator {
+class TORCH_API IRMutator {
  public:
   virtual Expr mutate(const Add* v);
   virtual Expr mutate(const Sub* v);

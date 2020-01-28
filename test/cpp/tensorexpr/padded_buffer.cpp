@@ -1,4 +1,4 @@
-#include "torch/csrc/jit/tensorexpr/tests/padded_buffer.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 
 #include <sstream>
 
