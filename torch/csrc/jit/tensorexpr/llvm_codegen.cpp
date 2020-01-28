@@ -160,6 +160,7 @@ void LLVMCodeGen::bind(const BufferArg& buf, const CallArg& data) {
 
 void LLVMCodeGen::run() {
   value<float>(args_);
+  args_.clear();
 }
 
 // TODO: The binary ops are copypasta.

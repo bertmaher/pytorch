@@ -63,6 +63,8 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
       Dtype dtype = kInt32);
   explicit LLVMCodeGen(const Expr& expr);
 
+  ~LLVMCodeGen() override {}
+
   void bind(const BufferArg& buf, const CallArg& data) override;
 
   void run() override;

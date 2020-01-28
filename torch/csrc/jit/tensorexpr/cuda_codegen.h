@@ -93,6 +93,8 @@ class CudaCodeGen : public CodeGen {
     oss_ << "}";
   }
 
+  ~CudaCodeGen() override {}
+
   template <typename... Ts>
   void operator()(const Ts&... ts) {
     std::vector<CallArg> args({CallArg(ts)...});

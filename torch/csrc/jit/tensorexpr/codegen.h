@@ -27,6 +27,8 @@ class CodeGen {
   CodeGen(const IRNode* node)
       : ir_node_(node) {}
 
+  virtual ~CodeGen() {}
+
   RefHandle<IRNode>& ir_node() {
     return ir_node_;
   }
