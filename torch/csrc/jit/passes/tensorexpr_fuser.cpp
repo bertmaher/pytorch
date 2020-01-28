@@ -272,6 +272,7 @@ struct TensorExprKernel {
   std::unordered_map<int64_t, Tensor> tensors;
   std::unordered_map<int64_t, Expr> constants;
   Stmt stmt;
+  std::unique_ptr<CodeGen> codegen;
 
   Expr constant(torch::jit::Value* v) {
     if (v->node()->kind() == prim::Constant) {
@@ -532,9 +533,7 @@ struct TensorExprKernel {
       }
     }
     stmt = sch.Lower();
-  }
 
-  void run(Stack& stack) {
 #ifdef ENABLE_LLVM
     // Set up formal params (inputs, then outputs) for kernel.
     std::vector<Buffer*> params;
@@ -548,22 +547,24 @@ struct TensorExprKernel {
     params.push_back(&outbuf);
 
     // Generate code.
-    LLVMCodeGen codegen(stmt, params);
+    codegen = std::make_unique<LLVMCodeGen>(stmt, params);
 #else
-    SimpleIREvaluator codegen(stmt);
+    codegen = std::make_unique<SimpleIREvaluator>(stmt);
 #endif
+  }
 
+  void run(Stack& stack) {
     // Set up arguments (inputs, then outputs) for kernel call.
     auto inputs = last(stack, buffer_args.size());
     for (int i = 0; i < buffer_args.size(); i++) {
-      codegen.bind(buffer_args[i], inputs[i].toTensor().data_ptr());
+      codegen->bind(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
     at::Tensor output =
         at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
-    codegen.bind(*tensor_output, output.data_ptr());
+    codegen->bind(*tensor_output, output.data_ptr());
 
     // Call the kernel.
-    codegen.run();
+    codegen->run();
 
     // Update the stack.
     drop(stack, buffer_args.size());
