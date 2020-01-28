@@ -68,3 +68,22 @@ TORCH_API std::ostream& operator<<(std::ostream& stream, const Stmt&);
 } // namespace compiler
 } // namespace jit
 } // namespace torch
+
+namespace std {
+
+using torch::jit::compiler::Expr;
+using torch::jit::compiler::Stmt;
+
+inline std::string to_string(const Expr& expr) {
+  std::ostringstream oss;
+  oss << expr;
+  return oss.str();
+}
+
+inline std::string to_string(const Stmt& stmt) {
+  std::ostringstream oss;
+  oss << stmt;
+  return oss.str();
+}
+
+}; // namespace std

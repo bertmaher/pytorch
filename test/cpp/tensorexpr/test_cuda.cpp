@@ -16,14 +16,29 @@ using namespace torch::jit::compiler;
 using namespace torch::jit::compiler::schedule;
 
 void testCudaTestVectorAdd01() {
-  const int N = 1024;
-  Buffer a_buf("a", kFloat32, {N});
-  Buffer b_buf("b", kFloat32, {N});
+  const int block_count = 1024;
+  const int block_size = 256;
+  const int num_iter = 12;
+  Buffer a_buf("a", kFloat32, {num_iter, block_count, block_size});
+  Buffer b_buf("b", kFloat32, {num_iter, block_count, block_size});
   Tensor c = Compute(
-      "c", {{N, "n"}}, [&](const Var& n) { return a_buf(n) + b_buf(n); });
+      "c",
+      {
+          {num_iter, "n"},
+          {block_size, "b_id"},
+          {num_iter, "t_id"},
+      },
+      [&](const Var& n, const Var& b_id, const Var& t_id) {
+        return a_buf(n, b_id, t_id) + b_buf(n, b_id, t_id);
+      });
   Schedule sch({c});
+  const Var& b_id = c.arg(1);
+  const Var& t_id = c.arg(2);
+  c.GPUExecConfig({b_id}, {t_id});
+  // XXXQQQ: lower into: For(..., attrs={'threadIdx.x'})
   Stmt stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
+  const int N = block_count * block_size * num_iter;
   PaddedBuffer<float> a_v(N);
   PaddedBuffer<float> b_v(N);
   PaddedBuffer<float> c_v(N);

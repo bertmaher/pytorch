@@ -179,7 +179,6 @@ class CompareSelect : public BinaryOpNode<CompareSelect> {
       : BinaryOpNode(lhs, rhs, IRNodeType::kCompareSelect, ReturnType::kint32),
         compare_op_(cmp_op) {}
   friend class BinaryOpNode<CompareSelect>;
-
 };
 
 // Encode an integer immediate value.
@@ -258,7 +257,7 @@ class Var : public Expr {
   const std::string& name_hint() const {
     return this->node()->name_hint();
   }
-  bool is_null() const {
+  bool empty() const {
     return (this->node() == nullptr);
   }
 };
@@ -316,6 +315,85 @@ class Block : public StmtNode<Block> {
   std::vector<Stmt> stmts_;
 };
 
+class LoopOptions {
+ public:
+  // GPU Block Index
+  bool is_gpu_block_index() const {
+    return gpu_block_index_ != -1;
+  }
+
+  bool gpu_block_index() const {
+    return gpu_block_index_;
+  }
+
+  std::string gpu_block_index_str() const {
+    DCHECK(is_gpu_block_index());
+    static const char* kBlockIndexNames[] = {
+        "blockIdx.x",
+        "blockIdx.y",
+        "blockIdx.z",
+        "blockIdx.w",
+    };
+    DCHECK(gpu_block_index_ >= 0 && gpu_block_index_ < 4);
+    return kBlockIndexNames[gpu_block_index_];
+  }
+
+  void set_gpu_block_index(int index) {
+    if (is_gpu_thread_index()) {
+      throw std::runtime_error("Cannot set both gpu block and thread index");
+    }
+    if (is_gpu_block_index() && gpu_block_index() != index) {
+      throw std::runtime_error(
+          "Cannot set a previously set block index: " +
+          std::to_string(gpu_block_index()) + " vs " + std::to_string(index));
+    }
+    gpu_block_index_ = index;
+  }
+
+  // GPU Thread Index
+  bool is_gpu_thread_index() const {
+    return gpu_thread_index_ != -1;
+  }
+
+  int gpu_thread_index() const {
+    return gpu_thread_index_;
+  }
+
+  std::string gpu_thread_index_str() const {
+    DCHECK(is_gpu_thread_index());
+    static const char* kThreadIndexNames[] = {
+        "threadIdx.x", "threadIdx.y", "threadIdx.z", "threadIdx.w"};
+    DCHECK(gpu_thread_index_ >= 0 && gpu_thread_index_ < 4);
+    return kThreadIndexNames[gpu_thread_index_];
+  }
+
+  void set_gpu_thread_index(int index) {
+    if (is_gpu_block_index()) {
+      throw std::runtime_error("Cannot set both gpu thread and block index");
+    }
+    if (is_gpu_thread_index() && gpu_thread_index() != index) {
+      throw std::runtime_error(
+          "Cannot set a previously set thread index: " +
+          std::to_string(gpu_thread_index()) + " vs " + std::to_string(index));
+    }
+    gpu_thread_index_ = index;
+  }
+
+  std::string ToString() const {
+    std::ostringstream oss;
+    if (is_gpu_block_index()) {
+      oss << gpu_block_index_str();
+    } else if (is_gpu_thread_index()) {
+      oss << gpu_thread_index_str();
+    }
+    return oss.str();
+  }
+
+ private:
+  int gpu_block_index_ = -1;
+  int gpu_thread_index_ = -1;
+};
+
 class For : public StmtNode<For> {
  public:
   const Var& var() const {
@@ -340,14 +418,41 @@ class For : public StmtNode<For> {
     }
     return Stmt(new For(var, start, stop, body));
   }
+  static Stmt make(
+      const Var& var,
+      const Expr& start,
+      const Expr& stop,
+      const Stmt& body,
+      const LoopOptions& loop_options) {
+    if (body.empty()) {
+      return Stmt();
+    }
+    return Stmt(new For(var, start, stop, body, loop_options));
+  }
+  const LoopOptions loop_options() const {
+    return loop_options_;
+  }
 
  private:
   For(const Var& var, const Expr& start, const Expr& stop, const Stmt& body)
       : var_(var), start_(start), stop_(stop), body_(body) {}
+
+  For(const Var& var,
+      const Expr& start,
+      const Expr& stop,
+      const Stmt& body,
+      const LoopOptions& loop_options)
+      : var_(var),
+        start_(start),
+        stop_(stop),
+        body_(body),
+        loop_options_(loop_options) {}
+
   Var var_;
   Expr start_;
   Expr stop_;
   Stmt body_;
+  LoopOptions loop_options_;
 };
 
 // Represents a ramp vector node:

@@ -157,6 +157,45 @@ void ScheduleNode::ComputeInline(TensorExprNode* expr_node) {
   inlined_functions_.push_back(texpr_op->func());
 }
 
+void ScheduleNode::GPUExecConfig(
+    TensorExprNode* expr_node,
+    const std::vector<Var>& blockIdx,
+    const std::vector<Var>& threadIdx) {
+  // Extract all the ancestors into a var* to loop-axis lookup table
+  std::unordered_map<const Variable*, LoopAxis*> var_to_loop;
+  TensorExprNode* node = expr_node;
+  while (node != nullptr) {
+    if (node->is_loop_axis()) {
+      LoopAxis* loop_axis = node->loop_axis();
+      const Var& loop_var = loop_axis->var();
+      var_to_loop[loop_var.node()] = loop_axis;
+    }
+    node = node->parent();
+  }
+
+  // Set the blockIndex attr.
+  for (int i = 0; i < blockIdx.size(); i++) {
+    auto iter = var_to_loop.find(blockIdx[i].node());
+    if (iter == var_to_loop.end()) {
+      throw std::runtime_error(
+          "Invalid blockIdx: " + std::to_string(i) + ", " +
+          blockIdx[i].name_hint());
+    }
+    iter->second->set_gpu_block_index(i);
+  }
+
+  // Set the threadIdx attr.
+  for (int i = 0; i < threadIdx.size(); i++) {
+    auto iter = var_to_loop.find(threadIdx[i].node());
+    if (iter == var_to_loop.end()) {
+      throw std::runtime_error(
+          "Invalid threadIdx: " + std::to_string(i) + ", " +
+          threadIdx[i].name_hint());
+    }
+    iter->second->set_gpu_thread_index(i);
+  }
+}
+
 void ScheduleNode::SplitWithTail(
     TensorExprNode* expr_node,
     const Var& loop_var,
@@ -498,7 +537,8 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     Stmt body = Lower(node->first_child());
     const Var& var = loop_axis->var();
     const Range& range = loop_axis->range();
-    Stmt for_stmt = For::make(var, range.start(), range.stop(), body);
+    Stmt for_stmt = For::make(
+        var, range.start(), range.stop(), body, loop_axis->loop_options());
     return for_stmt;
   } else if (node->is_empty_value()) {
     return Lower(node->first_child());
@@ -514,6 +554,7 @@ void LoopAxis::CloneFrom(const LoopAxis* other) {
   this->axis_type_ = other->axis_type_;
   this->is_leaf_ = other->is_leaf_;
   this->output_group_index_ = other->output_group_index_;
+  this->loop_options_ = other->loop_options_;
 
   this->loop_axis_transform_ = CloneObject(other->loop_axis_transform_);
 }

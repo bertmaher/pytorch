@@ -105,6 +105,10 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
 
   void CloneFrom(const LoopAxis* other);
 
+  const LoopOptions& loop_options() const {
+    return loop_options_;
+  }
+
  private:
   friend class ScheduleNode;
   friend class LoopAxisTransform;
@@ -133,6 +137,14 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
     output_group_index_ = output_group_index;
   }
 
+  void set_gpu_block_index(int block_index) {
+    loop_options_.set_gpu_block_index(block_index);
+  }
+
+  void set_gpu_thread_index(int thread_index) {
+    loop_options_.set_gpu_thread_index(thread_index);
+  }
+
   Var loop_var_;
   Range loop_range_;
   AxisType axis_type_;
@@ -140,6 +152,7 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
   bool is_leaf_ = true;
   LoopAxisTransform* loop_axis_transform_ = nullptr;
   int output_group_index_ = -1;
+  LoopOptions loop_options_;
 };
 
 // Loop Axis transformations
@@ -476,6 +489,11 @@ class TORCH_API ScheduleNode : public RefCounted {
       TensorExprNode** tail_op);
 
   void ComputeInline(TensorExprNode* expr_node);
+
+  void GPUExecConfig(
+      TensorExprNode* expr_node,
+      const std::vector<Var>& blockIdx,
+      const std::vector<Var>& threadIdx);
 
   Stmt Lower();
 

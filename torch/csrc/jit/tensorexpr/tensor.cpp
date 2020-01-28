@@ -33,6 +33,14 @@ void TensorOperationNode::SplitWithTail(
   }
 }
 
+void TensorOperationNode::GPUExecConfig(
+    const std::vector<Var>& blockIdx,
+    const std::vector<Var>& threadIdx) {
+  check_expr_node();
+  schedule::ScheduleNode* schedule = expr_node_->schedule();
+  schedule->GPUExecConfig(expr_node_, blockIdx, threadIdx);
+}
+
 void TensorOperationNode::ComputeInline() {
   check_expr_node();
   schedule::ScheduleNode* schedule = expr_node_->schedule();
