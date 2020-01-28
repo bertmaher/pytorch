@@ -40,6 +40,10 @@ class CodeGen {
     return buffer_args_;
   }
 
+  virtual void bind(const BufferArg& buf, const CallArg& data) = 0;
+
+  virtual void run() = 0;
+
  private:
   RefHandle<IRNode> ir_node_;
   std::vector<BufferArg> buffer_args_;
@@ -77,7 +81,9 @@ class CodeGen::CallArg {
   template <typename T>
   CallArg(const std::vector<T>& buffer) : ptr_(const_cast<T*>(buffer.data())) {}
 
-  void* data() {
+  CallArg(void* ptr) : ptr_(ptr) {}
+
+  void* data() const {
     return ptr_;
   }
 

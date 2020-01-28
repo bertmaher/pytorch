@@ -81,12 +81,11 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
  public:
   using CodeGen::CodeGen;
 
-  template <typename Buf>
-  void bindBuffer(Buf b, void* d) {
-    buffer_mapping_[BufferArg(b).var().node()] = d;
+  void bind(const BufferArg& buf, const CallArg& data) override {
+    buffer_mapping_[buf.var().node()] = data.data();
   }
 
-  void eval() {
+  void run() override {
     ir_node().node()->accept(this);
   }
 

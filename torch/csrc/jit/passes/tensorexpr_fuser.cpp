@@ -572,14 +572,15 @@ struct TensorExprKernel {
 
     auto inputs = last(stack, buffer_args.size());
     for (size_t i = 0; i < buffer_args.size(); i++) {
-      eval.bindBuffer(buffer_args[i], inputs[i].toTensor().data_ptr());
+      eval.bind(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
 
     at::Tensor output =
         at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
-    eval.bindBuffer(*tensor_output, output.data_ptr());
+    eval.bind(*tensor_output, output.data_ptr());
 
-    eval.eval();
+    eval.run();
+
     drop(stack, buffer_args.size());
     stack.insert(stack.end(), std::move(output));
 #endif

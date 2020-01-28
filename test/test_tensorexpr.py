@@ -260,3 +260,16 @@ def test_lt():
     b = torch.zeros(1024, dtype=torch.int32)
     x= traced(a, b)
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
+
+def test_reps():
+    def easy(x, y):
+        c = torch.add(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024)))
+
+    for _ in range(32):
+        a = torch.ones(1024)
+        b = torch.zeros(1024)
+        x = traced(a, b)
+        np.testing.assert_allclose(np.ones(1024), x.numpy())
