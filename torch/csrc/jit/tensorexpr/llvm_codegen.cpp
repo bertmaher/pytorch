@@ -512,7 +512,7 @@ void LLVMCodeGen::visit(const Load* v) {
   if (unmasked_load && idx_ramp) {
     auto* stride_imm = idx_ramp->stride().AsNode<IntImm>();
     if (stride_imm && stride_imm->value() == 1) {
-      auto first_idx = irb_.CreateExtractElement(idx, 0ULL);
+      auto first_idx = irb_.CreateExtractElement(idx, uint64_t{0ULL});
       auto addr = irb_.CreateGEP(base, first_idx);
       auto vaddr = irb_.CreateBitOrPointerCast(addr, llvm::PointerType::get(loadType, 0));
       value_ = irb_.CreateAlignedLoad(loadType, vaddr, 4);
@@ -648,7 +648,7 @@ void LLVMCodeGen::visit(const Store* v) {
   if (unmasked_store && idx_ramp) {
     auto* stride_imm = idx_ramp->stride().AsNode<IntImm>();
     if (stride_imm && stride_imm->value() == 1) {
-      auto first_idx = irb_.CreateExtractElement(idx, 0ULL);
+      auto first_idx = irb_.CreateExtractElement(idx, uint64_t{0});
       auto addr = irb_.CreateGEP(base, first_idx);
       auto vaddr = irb_.CreateBitOrPointerCast(addr, llvm::PointerType::get(val->getType(), 0));
       irb_.CreateAlignedStore(val, vaddr, 4);
