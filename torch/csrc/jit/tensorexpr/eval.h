@@ -15,7 +15,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 class Value {
  public:
@@ -81,13 +81,15 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
  public:
   using CodeGen::CodeGen;
 
-  template <typename Buf>
-  void bindBuffer(Buf b, void* d) {
-    buffer_mapping_[BufferArg(b).var().node()] = d;
+  ~SimpleIREvaluator() override {}
+
+  void bind(const BufferArg& buf, const CallArg& data) override {
+    buffer_mapping_[buf.var().node()] = data.data();
   }
 
-  void eval() {
+  void run() override {
     ir_node().node()->accept(this);
+    buffer_mapping_.clear();
   }
 
   template <typename... Ts>
@@ -604,6 +606,6 @@ inline Stmt Substitute(Stmt* stmt, const VarMapping& var_mapping) {
   return stmt->accept_mutator(&var_sub);
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

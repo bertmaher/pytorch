@@ -5,7 +5,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 namespace {
 
@@ -123,6 +123,6 @@ Stmt FunctionNode::ElementStmt() {
   return update_stmt;
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

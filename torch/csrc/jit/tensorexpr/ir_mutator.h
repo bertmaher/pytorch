@@ -3,7 +3,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 class Add;
 class Sub;
@@ -66,6 +66,6 @@ class TORCH_API IRMutator {
   virtual Stmt mutate(const Free* v);
 };
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

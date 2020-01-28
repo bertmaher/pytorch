@@ -11,7 +11,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 namespace schedule {
 
 // Schedule basics
@@ -105,6 +105,10 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
 
   void CloneFrom(const LoopAxis* other);
 
+  const LoopOptions& loop_options() const {
+    return loop_options_;
+  }
+
  private:
   friend class ScheduleNode;
   friend class LoopAxisTransform;
@@ -133,6 +137,14 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
     output_group_index_ = output_group_index;
   }
 
+  void set_gpu_block_index(int block_index) {
+    loop_options_.set_gpu_block_index(block_index);
+  }
+
+  void set_gpu_thread_index(int thread_index) {
+    loop_options_.set_gpu_thread_index(thread_index);
+  }
+
   Var loop_var_;
   Range loop_range_;
   AxisType axis_type_;
@@ -140,6 +152,7 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
   bool is_leaf_ = true;
   LoopAxisTransform* loop_axis_transform_ = nullptr;
   int output_group_index_ = -1;
+  LoopOptions loop_options_;
 };
 
 // Loop Axis transformations
@@ -147,7 +160,8 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
 // several output groups are generated. Each output group is responsible for
 // producing a subset within the input region. Note that each input axis can be
 // used in at most one transform.
-class TORCH_API LoopAxisTransform : public Cloneable<LoopAxisTransform, ScheduleObject> {
+class TORCH_API LoopAxisTransform
+    : public Cloneable<LoopAxisTransform, ScheduleObject> {
  public:
   LoopAxisTransform() {}
 
@@ -318,7 +332,8 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
 // This variable type node could contain one of multiple types that follows:
 //   * A single loop axis
 //   * a tensor expr op.
-class TORCH_API TensorExprNode : public Cloneable<TensorExprNode, ScheduleObject> {
+class TORCH_API TensorExprNode
+    : public Cloneable<TensorExprNode, ScheduleObject> {
  public:
   enum NodeType {
     // These could show up in the tensor expression trees.
@@ -477,6 +492,11 @@ class TORCH_API ScheduleNode : public RefCounted {
 
   void ComputeInline(TensorExprNode* expr_node);
 
+  void GPUExecConfig(
+      TensorExprNode* expr_node,
+      const std::vector<Var>& blockIdx,
+      const std::vector<Var>& threadIdx);
+
   Stmt Lower();
 
   using CloneMap = std::unordered_map<ScheduleObject*, ScheduleObject*>;
@@ -582,6 +602,6 @@ class TORCH_API Schedule : RefHandle<ScheduleNode> {
 };
 
 } // namespace schedule
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

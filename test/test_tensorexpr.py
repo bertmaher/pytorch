@@ -339,3 +339,34 @@ def test_unary_ops():
         cc = aa + bb
         out =np_fn(cc)
         np.testing.assert_allclose(out, x.numpy())
+
+def test_reps():
+    def easy(x, y):
+        c = torch.add(x, y)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024)))
+
+    for _ in range(32):
+        a = torch.ones(1024)
+        b = torch.zeros(1024)
+        x = traced(a, b)
+        np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_add_const_rhs():
+    def test(x):
+        return x + 3.0
+    traced = torch.jit.trace(test, torch.rand(4))
+    x = torch.rand(4)
+    y = traced(x)
+    np.testing.assert_allclose(x.numpy() + 3.0, y.numpy())
+
+def test_int_output():
+    def test(x, y, z):
+        return x * y * z
+    xs = [(torch.rand(4) * 3 + 1).to(torch.int32) for i in range(3)]
+    x, y, z = xs
+    xn, yn, zn = [t.numpy() for t in xs]
+    traced = torch.jit.trace(test, (x, y, z))
+    res = traced(x, y, z)
+    np.testing.assert_allclose(xn * yn * zn, res.numpy())

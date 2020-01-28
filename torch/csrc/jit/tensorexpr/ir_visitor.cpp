@@ -5,7 +5,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 template <typename Op>
 static void visit_binary_op(const BinaryOpNode<Op>* v, IRVisitor* visitor) {
@@ -118,6 +118,6 @@ void IRVisitor::visit(const Free* v) {
   buffer_var.accept(this);
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

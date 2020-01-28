@@ -4,7 +4,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 class Buffer {
  public:
@@ -61,11 +61,11 @@ class Buffer {
     CHECK(ndim() == 2);
     return x * strides_[0] + y;
   }
-  Expr Index(const Expr& x, const Expr& y, const Expr& z) {
+  Expr Index(const Expr& x, const Expr& y, const Expr& z) const {
     CHECK(ndim() == 3);
     return x * strides_[0] + y * strides_[1] + z;
   }
-  Expr Index(const Expr& x, const Expr& y, const Expr& z, const Expr& w) {
+  Expr Index(const Expr& x, const Expr& y, const Expr& z, const Expr& w) const {
     CHECK(ndim() == 4);
     return x * strides_[0] + y * strides_[1] + z * strides_[2] + w;
   }
@@ -101,6 +101,6 @@ inline Expr Buffer::LoadValue(const Expr& index) const {
   return Load::make(*this, index, Expr(1));
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

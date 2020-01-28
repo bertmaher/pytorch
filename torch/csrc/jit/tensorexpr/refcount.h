@@ -7,7 +7,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 // A refcounted object.
 // Callers can call "Ref()" and "Unref" to increment and decrement its reference
@@ -79,7 +79,7 @@ class RefCounted {
 template <class NodeType>
 class RefHandle {
  public:
-  bool is_null() const {
+  bool empty() const {
     return node_ == nullptr;
   }
 
@@ -97,7 +97,7 @@ class RefHandle {
   explicit RefHandle(const RefHandle& other) {
     CopyFrom(other);
   }
-  
+
   template <typename U>
   explicit RefHandle(const RefHandle<U>& other) {
     CopyFrom(other);
@@ -164,6 +164,6 @@ class RefHandle {
   friend class RefHandle;
 };
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

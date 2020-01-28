@@ -4,7 +4,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 Expr Expr::operator+(const Expr& other) const {
   return Add::make(*this, other);
@@ -142,6 +142,6 @@ Expr fmod(const Expr& v1, const Expr& v2) {
   return Intrinsics::make(kFmod, v1, v2);
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

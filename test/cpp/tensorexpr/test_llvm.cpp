@@ -15,8 +15,8 @@
 
 namespace torch {
 namespace jit {
-using namespace torch::jit::compiler;
-using namespace torch::jit::compiler::schedule;
+using namespace torch::jit::tensorexpr;
+using namespace torch::jit::tensorexpr::schedule;
 
 void testLLVMIntImmTest() {
   auto a = IntImm::make(2);

@@ -4,7 +4,7 @@
 
 namespace torch {
 namespace jit {
-using namespace torch::jit::compiler;
+using namespace torch::jit::tensorexpr;
 
 void testTypeTest01() {
   {

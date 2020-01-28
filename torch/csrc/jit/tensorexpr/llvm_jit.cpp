@@ -26,8 +26,9 @@ class TORCH_API PytorchLLVMJITImpl {
     MangleAndInterner Mangle(LLJ->getExecutionSession(), LLJ->getDataLayout());
 
     // Register implementations of intrinsics
-    cantFail(LLJ->defineAbsolute(*Mangle("log10_float"),
-      { llvm::pointerToJITTargetAddress(ffptr(&std::log10)), {} } ));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("log10_float"),
+        {llvm::pointerToJITTargetAddress(ffptr(&std::log10)), {}}));
   }
 
   Error addModule(ThreadSafeModule M) {

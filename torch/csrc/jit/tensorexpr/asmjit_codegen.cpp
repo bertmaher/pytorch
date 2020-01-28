@@ -6,7 +6,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 static void dumpCode(asmjit::BaseBuilder& cb, const char* phase) {
   asmjit::String sb;
@@ -99,6 +99,6 @@ int ASMJITCodeGen::value() {
   return fn();
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

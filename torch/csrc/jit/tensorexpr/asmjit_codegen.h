@@ -7,7 +7,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 class TORCH_API ASMJITCodeGen : public IRVisitor {
  private:
@@ -27,6 +27,6 @@ class TORCH_API ASMJITCodeGen : public IRVisitor {
   int value();
 };
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

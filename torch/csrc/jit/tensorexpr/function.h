@@ -9,7 +9,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 // represent a range [start, stop)
 class Range {
@@ -102,6 +102,6 @@ class Function : public RefHandle<FunctionNode> {
   }
 };
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

@@ -5,7 +5,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 enum ScalarType {
   kScalarUninitialized,
@@ -85,6 +85,6 @@ std::string Dtype::ToCppString() const {
   }
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

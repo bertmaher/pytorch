@@ -7,7 +7,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 class TORCH_API IRPrinter : public IRVisitor {
  public:
@@ -65,6 +65,25 @@ class TORCH_API IRPrinter : public IRVisitor {
 TORCH_API std::ostream& operator<<(std::ostream& stream, const Expr&);
 TORCH_API std::ostream& operator<<(std::ostream& stream, const Stmt&);
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch
+
+namespace std {
+
+using torch::jit::tensorexpr::Expr;
+using torch::jit::tensorexpr::Stmt;
+
+inline std::string to_string(const Expr& expr) {
+  std::ostringstream oss;
+  oss << expr;
+  return oss.str();
+}
+
+inline std::string to_string(const Stmt& stmt) {
+  std::ostringstream oss;
+  oss << stmt;
+  return oss.str();
+}
+
+}; // namespace std

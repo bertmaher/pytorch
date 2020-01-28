@@ -9,7 +9,7 @@
 namespace torch {
 namespace jit {
 
-using namespace torch::jit::compiler;
+using namespace torch::jit::tensorexpr;
 
 void testIRPrinterBasicValueTest() {
   Expr a = IntImm::make(2), b = IntImm::make(3);

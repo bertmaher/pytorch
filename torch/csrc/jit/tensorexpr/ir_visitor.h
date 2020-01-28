@@ -3,7 +3,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 class Add;
 class Sub;
@@ -62,6 +62,6 @@ class TORCH_API IRVisitor {
   TORCH_API virtual void visit(const Free* v);
 };
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

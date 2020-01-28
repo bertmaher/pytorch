@@ -8,7 +8,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 using int32 = std::int32_t;
 
@@ -103,6 +103,6 @@ inline Dtype BinaryOpDtype(
   return op1_dtype;
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

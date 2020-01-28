@@ -2,7 +2,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 void IRPrinter::print(Expr expr) {
   expr.accept(this);
@@ -126,7 +126,12 @@ void IRPrinter::visit(const For* v) {
   const Var& var = v->var();
   os() << "for (" << var.dtype().ToCppString() << " " << var << " = "
        << v->start() << "; " << var << " < " << v->stop() << "; " << var
-       << "++) {" << std::endl;
+       << "++) {";
+  std::string loop_options_str = v->loop_options().ToString();
+  if (!loop_options_str.empty()) {
+    os() << " // " << loop_options_str;
+  }
+  os() << std::endl;
   os() << v->body() << std::endl;
   os() << "}";
 }
@@ -198,6 +203,6 @@ std::ostream& operator<<(std::ostream& stream, const Stmt& stmt) {
   return stream;
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

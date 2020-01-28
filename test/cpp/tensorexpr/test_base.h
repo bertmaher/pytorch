@@ -5,7 +5,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 template <typename U, typename V>
 void ExpectAllNear(
@@ -26,6 +26,6 @@ static void assertAllEqual(const std::vector<T>& vec, const T& val) {
     ASSERT_EQ(elt, val);
   }
 }
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

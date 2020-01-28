@@ -8,7 +8,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 int PaddedBufferBase::Index(const std::vector<int>& indices) const {
   DCHECK_EQ(dims_.size(), indices.size());
@@ -105,6 +105,6 @@ template void ExpectAllEqual(
     const PaddedBuffer<int>& f1,
     const PaddedBuffer<int>& f2);
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

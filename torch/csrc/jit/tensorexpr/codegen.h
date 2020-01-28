@@ -6,7 +6,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 template <typename T>
 class PaddedBuffer;
@@ -24,6 +24,10 @@ class CodeGen {
   CodeGen(const Expr& expr, Ts... ts)
       : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
 
+  CodeGen(const IRNode* node) : ir_node_(node) {}
+
+  virtual ~CodeGen() {}
+
   RefHandle<IRNode>& ir_node() {
     return ir_node_;
   }
@@ -38,6 +42,14 @@ class CodeGen {
 
   const std::vector<BufferArg>& buffer_args() const {
     return buffer_args_;
+  }
+
+  virtual void bind(const BufferArg& buf, const CallArg& data) {
+    LOG(FATAL) << "Unimplemented interface";
+  }
+
+  virtual void run() {
+    LOG(FATAL) << "Unimplemented interface";
   }
 
  private:
@@ -77,7 +89,9 @@ class CodeGen::CallArg {
   template <typename T>
   CallArg(const std::vector<T>& buffer) : ptr_(const_cast<T*>(buffer.data())) {}
 
-  void* data() {
+  CallArg(void* ptr) : ptr_(ptr) {}
+
+  void* data() const {
     return ptr_;
   }
 
@@ -85,6 +99,6 @@ class CodeGen::CallArg {
   void* ptr_ = nullptr;
 };
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

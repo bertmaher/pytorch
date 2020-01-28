@@ -5,7 +5,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 template <typename Op>
 static Expr mutate_binary_op(
@@ -255,6 +255,6 @@ Stmt IRMutator::mutate(const Free* v) {
   return Free::make(buffer_var_new);
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

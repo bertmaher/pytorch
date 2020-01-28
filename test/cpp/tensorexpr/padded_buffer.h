@@ -7,7 +7,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 template <typename T>
 struct DefaultPaddedValue;
@@ -131,6 +131,6 @@ template <typename T>
 inline CodeGen::CallArg::CallArg(const PaddedBuffer<T>& buffer)
     : ptr_(const_cast<T*>(buffer.data())) {}
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

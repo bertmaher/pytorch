@@ -7,7 +7,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 
 // The commomn class between all IR nodes.
 class IRNode : public RefCounted {
@@ -191,6 +191,6 @@ TORCH_API Expr trunc(const Expr& v);
 TORCH_API Expr pow(const Expr& v1, const Expr& v2);
 TORCH_API Expr fmod(const Expr& v1, const Expr& v2);
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch

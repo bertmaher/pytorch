@@ -9,7 +9,7 @@
 namespace torch {
 namespace jit {
 
-using namespace torch::jit::compiler;
+using namespace torch::jit::tensorexpr;
 
 void testATen_cast_Float() {
   const int kTotalSize = 128;

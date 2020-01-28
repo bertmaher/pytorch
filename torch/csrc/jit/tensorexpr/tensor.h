@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <torch/csrc/WindowsTorchApiMacro.h>
+#include <vector>
 
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
@@ -9,7 +9,7 @@
 
 namespace torch {
 namespace jit {
-namespace compiler {
+namespace tensorexpr {
 namespace schedule {
 class TensorExprNode;
 class ScheduleNode;
@@ -30,6 +30,10 @@ class TORCH_API TensorOperationNode : public RefCounted {
       TensorOperation* tail_op);
 
   void ComputeInline();
+
+  void GPUExecConfig(
+      const std::vector<Var>& blockIdx,
+      const std::vector<Var>& threadIdx);
 
   TensorExprNode* expr_node() {
     return expr_node_;
@@ -67,6 +71,9 @@ class TensorNode : public TensorOperationNode {
   }
   const Var& buffer_var() const {
     return function_.func_var();
+  }
+  const Var& arg(int index) const {
+    return function_.arg(index);
   }
   Dtype dtype() const {
     return function_.body().dtype();
@@ -116,6 +123,12 @@ class TORCH_API TensorOperation : public RefHandle<TensorOperationNode> {
     node()->ComputeInline();
   }
 
+  void GPUExecConfig(
+      const std::vector<Var>& blockIdx,
+      const std::vector<Var>& threadIdx) {
+    node()->GPUExecConfig(blockIdx, threadIdx);
+  }
+
  protected:
   TensorOperation(TensorOperationNode* node) : BaseClass(node) {}
 };
@@ -138,6 +151,9 @@ class Tensor : public TensorOperation {
   }
   const Function& function() const {
     return node()->function();
+  }
+  const Var& arg(int index) const {
+    return node()->arg(index);
   }
   int output_index() const {
     return node()->output_index();
@@ -255,6 +271,6 @@ inline Expr Tensor::call(const std::vector<T>& args) const {
   return FunctionCall::make(*this, params);
 }
 
-} // namespace compiler
+} // namespace tensorexpr
 } // namespace jit
 } // namespace torch
