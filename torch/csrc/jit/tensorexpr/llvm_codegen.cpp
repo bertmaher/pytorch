@@ -59,6 +59,7 @@ LLVMCodeGen::LLVMCodeGen(const IRNode* node, const std::vector<Buffer*>& args, D
     SubtargetFeatures.AddFeature(Feature.first(), Feature.second);
   }
 
+  JTMB.setCodeGenOptLevel(llvm::CodeGenOpt::Default);
   JTMB.setCPU(llvm::sys::getHostCPUName());
   JTMB.addFeatures(SubtargetFeatures.getFeatures());
 #endif
