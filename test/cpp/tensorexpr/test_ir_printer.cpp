@@ -5,8 +5,6 @@
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
-
 #include <sstream>
 namespace torch {
 namespace jit {

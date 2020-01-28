@@ -2,12 +2,18 @@
 
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 #include "torch/csrc/jit/tensorexpr/schedule.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
+#include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/function.h"
+#include "torch/csrc/jit/tensorexpr/ir.h"
+#include "torch/csrc/jit/tensorexpr/tensor.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 
 #include <cmath>
 #include <sstream>
 #include <string>
 #include <stdexcept>
+#include <vector>
 
 namespace torch {
 namespace jit {
@@ -52,23 +58,6 @@ void testExprLetTest02() {
   SimpleIREvaluator eval(e2);
   eval();
   EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4 * 6));
-}
-
-void testExprTensor01() {
-  Tensor tensor =
-      Compute("f", {{3, "x"}, {4, "y"}}, [](const Var& x, const Var& y) {
-        return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
-      });
-  std::vector<float> result;
-  SimpleTensorEvaluator<float> tensor_eval;
-  tensor_eval.evaluate(tensor, &result);
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 4; j++) {
-      float reference_v = 1 + i * i + j * j;
-      int index = i * 4 + j;
-      EXPECT_EQ(result[index], reference_v);
-    }
-  }
 }
 
 static Expr test_01(const Expr& expr) {

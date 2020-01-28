@@ -6,7 +6,10 @@
 #include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
 #include "torch/csrc/jit/tensorexpr/schedule.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
+#include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/function.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 
 #include <numeric>
 

@@ -1,4 +1,3 @@
-
 #include "test/cpp/tensorexpr/test_base.h"
 #include <sstream>
 #include <stdexcept>
@@ -9,7 +8,7 @@
 #include "torch/csrc/jit/tensorexpr/cuda_codegen.h"
 #include "torch/csrc/jit/tensorexpr/schedule.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "torch/csrc/jit/tensorexpr/tests/padded_buffer.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 
 namespace torch {
 namespace jit {

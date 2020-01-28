@@ -3,9 +3,9 @@
 #include <sstream>
 #include <stdexcept>
 
-
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
-#include "torch/csrc/jit/tensorexpr/tests/test_utils.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
+
 namespace torch {
 namespace jit {
 

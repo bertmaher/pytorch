@@ -1,37 +1,31 @@
 #pragma once
 
-#if defined(USE_GTEST)
 #include <gtest/gtest.h>
 #include <test/cpp/common/support.h>
-#else
-#include "c10/util/Exception.h"
-#define ASSERT_EQ(x, y) TORCH_INTERNAL_ASSERT((x) == (y))
-#define ASSERT_NE(x, y) TORCH_INTERNAL_ASSERT((x) != (y))
-#define ASSERT_TRUE TORCH_INTERNAL_ASSERT
-#define ASSERT_FALSE(x) ASSERT_TRUE(!(x))
-#define ASSERT_THROWS_WITH(statement, substring)                         \
-  try {                                                                  \
-    (void)statement;                                                     \
-    ASSERT_TRUE(false);                                                  \
-  } catch (const std::exception& e) {                                    \
-    ASSERT_NE(std::string(e.what()).find(substring), std::string::npos); \
-  }
-#define ASSERT_ANY_THROW(statement)     \
-  {                                     \
-    bool threw = false;                 \
-    try {                               \
-      (void)statement;                  \
-    } catch (const std::exception& e) { \
-      threw = true;                     \
-    }                                   \
-    ASSERT_TRUE(threw);                 \
-  }
 
-#endif // defined(USE_GTEST)
+namespace torch {
+namespace jit {
+namespace compiler {
 
-static inline bool isSandcastle() {
-  return (
-      (std::getenv("SANDCASTLE")) ||
-      (std::getenv("TW_JOB_USER") &&
-       std::string(std::getenv("TW_JOB_USER")) == "sandcastle"));
+template <typename U, typename V>
+void ExpectAllNear(
+    const std::vector<U>& v1,
+    const std::vector<U>& v2,
+    V threshold,
+    const std::string& name = "") {
+  ASSERT_EQ(v1.size(), v2.size());
+  for (int i = 0; i < v1.size(); i++) {
+    EXPECT_NEAR(v1[i], v2[i], threshold)
+        << "element index: " << i << ", name: " << name;
+  }
 }
+
+template <typename T>
+static void assertAllEqual(const std::vector<T>& vec, const T& val) {
+  for (auto const& elt : vec) {
+    ASSERT_EQ(elt, val);
+  }
+}
+} // namespace compiler
+} // namespace jit
+} // namespace torch
