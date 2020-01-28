@@ -43,9 +43,13 @@ class CodeGen {
     return buffer_args_;
   }
 
-  virtual void bind(const BufferArg& buf, const CallArg& data) = 0;
+  virtual void bind(const BufferArg& buf, const CallArg& data) {
+    LOG(FATAL) << "Unimplemented interface";
+  }
 
-  virtual void run() = 0;
+  virtual void run() {
+    LOG(FATAL) << "Unimplemented interface";
+  }
 
  private:
   RefHandle<IRNode> ir_node_;
