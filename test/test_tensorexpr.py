@@ -273,3 +273,11 @@ def test_reps():
         b = torch.zeros(1024)
         x = traced(a, b)
         np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_add_const_rhs():
+    def test(x):
+        return x + 3.0
+    traced = torch.jit.trace(test, torch.rand(4))
+    x = torch.rand(4)
+    y = traced(x)
+    np.testing.assert_allclose(x.numpy() + 3.0, y.numpy())

@@ -270,8 +270,6 @@ struct TensorExprKernel {
   std::vector<Buffer> buffer_args;
   Tensor* tensor_output;
   std::unordered_map<int64_t, Tensor> tensors;
-  std::unordered_map<int64_t, Expr> constants;
-  Stmt stmt;
   std::unique_ptr<CodeGen> codegen;
 
   Expr constant(torch::jit::Value* v) {
@@ -288,10 +286,6 @@ struct TensorExprKernel {
 
     LOG(FATAL) << "Not a constant!";
     return Expr();
-  }
-
-  const Tensor& tensor(torch::jit::Value* v) {
-    return tensors.at(v->unique());
   }
 
   template <typename T>
@@ -322,6 +316,14 @@ struct TensorExprKernel {
     return e;
   }
 
+  Expr tensorOrConstant(torch::jit::Value* v, const std::vector<Var>& axes) {
+    auto ti = tensors.find(v->unique());
+    if (ti != tensors.end()) {
+      return broadcast(ti->second, axes);
+    }
+    return constant(v);
+  }
+
   Tensor ComputeOneOperand(const std::string& name, Node* n,
                            std::function<Expr(const Expr&)> inner_expr) {
     return Compute(
@@ -329,7 +331,7 @@ struct TensorExprKernel {
       texprDims(n->output()),
       [this, n, inner_expr](const std::vector<Var>& axes) {
         std::vector<Expr> inputs = {
-          broadcast(tensor(n->inputs()[0]), axes)
+          tensorOrConstant(n->inputs()[0], axes)
         };
 
         promoteInputs(inputs);
@@ -346,8 +348,8 @@ struct TensorExprKernel {
       texprDims(n->output()),
       [this, n, inner_expr](const std::vector<Var>& axes) {
         std::vector<Expr> inputs = {
-          broadcast(tensor(n->inputs()[0]), axes),
-          broadcast(tensor(n->inputs()[1]), axes),
+          tensorOrConstant(n->inputs()[0], axes),
+          tensorOrConstant(n->inputs()[1], axes),
         };
 
         promoteInputs(inputs);
@@ -364,9 +366,9 @@ struct TensorExprKernel {
       texprDims(n->output()),
       [this, n, inner_expr](const std::vector<Var>& axes) {
         std::vector<Expr> inputs = {
-          broadcast(tensor(n->inputs()[0]), axes),
-          broadcast(tensor(n->inputs()[1]), axes),
-          constant(n->inputs()[2]),
+          tensorOrConstant(n->inputs()[0], axes),
+          tensorOrConstant(n->inputs()[1], axes),
+          tensorOrConstant(n->inputs()[2], axes),
         };
 
         promoteInputs(inputs);
@@ -532,7 +534,7 @@ struct TensorExprKernel {
         t.ComputeInline();
       }
     }
-    stmt = sch.Lower();
+    Stmt stmt = sch.Lower();
 
 #ifdef ENABLE_LLVM
     // Set up formal params (inputs, then outputs) for kernel.
