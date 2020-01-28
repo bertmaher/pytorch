@@ -281,3 +281,13 @@ def test_add_const_rhs():
     x = torch.rand(4)
     y = traced(x)
     np.testing.assert_allclose(x.numpy() + 3.0, y.numpy())
+
+def test_int_output():
+    def test(x, y, z):
+        return x * y * z
+    xs = [(torch.rand(4) * 3 + 1).to(torch.int32) for i in range(3)]
+    x, y, z = xs
+    xn, yn, zn = [t.numpy() for t in xs]
+    traced = torch.jit.trace(test, (x, y, z))
+    res = traced(x, y, z)
+    np.testing.assert_allclose(xn * yn * zn, res.numpy())

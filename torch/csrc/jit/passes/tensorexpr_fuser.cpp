@@ -205,6 +205,17 @@ Dtype texprType(const c10::optional<at::ScalarType>& st) {
   }
 }
 
+at::ScalarType tensorType(const Tensor& t) {
+  auto const& stype = t.dtype().scalar_type();
+  if (stype == kInt32) {
+    return at::ScalarType::Int;
+  } else if (stype == kFloat32) {
+    return at::ScalarType::Float;
+  }
+  LOG(FATAL) << "Unhandled datatype";
+  return at::ScalarType::Float;
+}
+
 std::vector<Expr> texprSizes(const c10::VaryingShape& shape) {
   std::vector<Expr> dims;
   for (size_t i = 0; i < *shape.size(); i++) {
@@ -562,7 +573,7 @@ struct TensorExprKernel {
       codegen->bind(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
     at::Tensor output =
-        at::empty(bufferSizes(*tensor_output), at::ScalarType::Float);
+      at::empty(bufferSizes(*tensor_output), tensorType(*tensor_output));
     codegen->bind(*tensor_output, output.data_ptr());
 
     // Call the kernel.
