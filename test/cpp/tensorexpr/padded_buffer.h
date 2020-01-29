@@ -29,6 +29,14 @@ class PaddedBufferBase {
     return name_;
   }
 
+  int size() const {
+    return total_size_;
+  }
+
+  int raw_size() const {
+    return total_size_ + 2 * kPaddingSize;
+  }
+
  protected:
   explicit PaddedBufferBase(
       const std::vector<int>& dims,
@@ -72,6 +80,12 @@ class PaddedBuffer : public PaddedBufferBase {
   }
   const T* data() const {
     return const_cast<PaddedBuffer*>(this)->data();
+  }
+  T* raw_data() {
+    return data_.data();
+  }
+  const T* raw_data() const {
+    return const_cast<PaddedBuffer*>(this)->raw_data();
   }
   T& operator()(int i0) {
     // There is a bit performance impact with forming a vector here. But this
