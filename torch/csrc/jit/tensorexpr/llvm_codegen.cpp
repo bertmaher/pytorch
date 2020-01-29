@@ -43,9 +43,8 @@ LLVMCodeGen::LLVMCodeGen(
     : CodeGen(node),
       context_(std::make_unique<llvm::LLVMContext>()),
       irb_(*context_.getContext()) {
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmPrinters();
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
 
 #if 0
   // FIXME: Switch to using detectHost() rather than setting up the JTMB manually
