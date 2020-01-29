@@ -144,7 +144,7 @@ void IRPrinter::visit(const Block* v) {
 
 void IRPrinter::visit(const Store* v) {
   // TODO: handle the mask
-  os() << v->base_handle() << "[" << v->index() << "] = " << v->value();
+  os() << v->base_handle() << "[" << v->index() << "] = " << v->value() << ";";
 }
 
 void IRPrinter::visit(const Broadcast* v) {
@@ -172,11 +172,11 @@ void IRPrinter::visit(const Allocate* v) {
     }
     os() << dims[i];
   }
-  os() << "})";
+  os() << "});";
 }
 
 void IRPrinter::visit(const Free* v) {
-  os() << "Free(" << v->buffer_var() << ")";
+  os() << "Free(" << v->buffer_var() << ");";
 }
 
 std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
