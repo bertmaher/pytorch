@@ -33,6 +33,7 @@ class Free;
 
 class TORCH_API IRMutator {
  public:
+  virtual ~IRMutator() {}
   virtual Expr mutate(const Add* v);
   virtual Expr mutate(const Sub* v);
   virtual Expr mutate(const Mul* v);

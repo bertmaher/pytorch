@@ -31,6 +31,7 @@ class Free;
 
 class TORCH_API IRVisitor {
  public:
+  TORCH_API virtual ~IRVisitor() {}
   TORCH_API virtual void visit(const Add* v);
   TORCH_API virtual void visit(const Sub* v);
   TORCH_API virtual void visit(const Mul* v);
