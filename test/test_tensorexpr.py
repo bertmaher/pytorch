@@ -289,6 +289,28 @@ def test_lt():
     x = traced(a, b)
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
 
+def test_min_max():
+    def test(x, y):
+        return torch.max(torch.min(x, y), torch.tensor([4.0]))
+
+    traced = torch.jit.trace(test, (torch.zeros(1024), torch.zeros(1024)))
+    a = 8.0 * torch.rand(1024)
+    b = 8.0 * torch.rand(1024)
+    np.testing.assert_allclose(
+        traced(a, b),
+        np.maximum(np.minimum(a.numpy(), b.numpy()), [4.0]))
+
+
+def test_clamp():
+    def test(x):
+        return torch.clamp(x + 3.0, 0.0, 6.0)
+
+    traced = torch.jit.trace(test, (torch.zeros(1024)))
+    a = 20.0 * torch.rand(1024) - 10.0
+    an = a.numpy()
+    np.testing.assert_allclose(
+        traced(a),
+        np.clip(an + 3.0, 0.0, 6.0))
 
 def test_reps():
     def easy(x, y):
@@ -403,3 +425,21 @@ def test_unary_ops():
         cc = aa + bb
         out = np_fn(cc)
         np.testing.assert_allclose(out, x.numpy())
+
+def test_nans():
+    def test_max(x, y):
+        return torch.max(2 * x, 2 * y)
+
+    def test_min(x, y):
+        return torch.min(2 * x, 2 * y)
+
+    tmax = torch.jit.trace(test_max, (torch.rand(1), torch.rand(1)))
+    tmin = torch.jit.trace(test_min, (torch.rand(1), torch.rand(1)))
+
+    x = torch.tensor([np.nan])
+    y = torch.tensor([1.0])
+
+    assert(not np.isnan(tmin(x, y).item()))
+    assert(np.isnan(tmin(y, x).item()))
+    assert(not np.isnan(tmax(x, y).item()))
+    assert(np.isnan(tmax(y, x).item()))

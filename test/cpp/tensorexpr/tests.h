@@ -13,7 +13,6 @@ namespace jit {
   _(ExprBasicValueTest02) \
   _(ExprLetTest01) \
   _(ExprLetTest02) \
-  _(ExprNoLeakTest01) \
   _(ExprVectorAdd01) \
   _(ExprCompareSelectEQ) \
   _(ExprSubstitute01) \
@@ -64,10 +63,6 @@ namespace jit {
   _(LLVMElemwiseMaxNumNaNFloat) \
   _(LLVMElemwiseMinNumFloat) \
   _(LLVMElemwiseMinNumNaNFloat) \
-  _(LLVMElemwiseMaximumFloat) \
-  _(LLVMElemwiseMaximumNaNFloat) \
-  _(LLVMElemwiseMinimumFloat) \
-  _(LLVMElemwiseMinimumNaNFloat) \
   _(LLVMCompareSelectIntEQ) \
   _(LLVMCompareSelectFloatEQ) \
   _(LLVMStoreFloat) \

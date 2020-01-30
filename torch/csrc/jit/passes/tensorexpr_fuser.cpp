@@ -55,6 +55,9 @@ bool isSupported(Node* node) {
     case aten::gt:
     case aten::le:
     case aten::lt:
+    case aten::min:
+    case aten::max:
+    case aten::clamp:
     case aten::log10:
 #ifndef ENABLE_LLVM
     case aten::log:
@@ -77,7 +80,7 @@ bool isSupported(Node* node) {
     case aten::ceil:
     case aten::round:
     case aten::trunc:
-#endif	
+#endif
       return true;
     default:
       return false;
@@ -407,6 +410,26 @@ struct TensorExprKernel {
         });
   }
 
+  Tensor ComputeThreeOperand(
+      const std::string& name,
+      Node* n,
+      std::function<Expr(const Expr&, const Expr&, const Expr&)> inner_expr) {
+    return Compute(
+        name,
+        texprDims(n->output()),
+        [this, n, inner_expr](const std::vector<Var>& axes) {
+          std::vector<Expr> inputs = {
+              tensorOrConstant(n->inputs()[0], axes),
+              tensorOrConstant(n->inputs()[1], axes),
+              tensorOrConstant(n->inputs()[2], axes),
+          };
+
+          promoteInputs(inputs);
+          Expr compute = inner_expr(inputs[0], inputs[1], inputs[2]);
+          return demoteOutput(compute, n->output());
+        });
+  }
+
   Tensor ComputeNode(Node* n) {
     switch (n->kind()) {
       case aten::add: {
@@ -475,6 +498,29 @@ struct TensorExprKernel {
         return ComputeTwoOperand(
             "aten_lt", n, [](const Expr& lhs, const Expr& rhs) {
               return lhs < rhs;
+            });
+      } break;
+
+      case aten::min: {
+        return ComputeTwoOperand(
+            "aten_min", n, [](const Expr& lhs, const Expr& rhs) {
+              return Min::make(lhs, rhs, false);
+            });
+      } break;
+
+      case aten::max: {
+        return ComputeTwoOperand(
+            "aten_max", n, [](const Expr& lhs, const Expr& rhs) {
+              return Max::make(lhs, rhs, false);
+            });
+      } break;
+
+      case aten::clamp: {
+        return ComputeThreeOperand(
+            "aten_max",
+            n,
+            [](const Expr& in, const Expr& min, const Expr& max) {
+              return Max::make(Min::make(in, max, false), min, false);
             });
       } break;
 
