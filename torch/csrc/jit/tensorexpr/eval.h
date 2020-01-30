@@ -151,7 +151,6 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
           result_v[i] = lhs_v[i] / rhs_v[i];
           break;
         case IRNodeType::kMax:
-          result_v[i] = std::fmax(lhs_v[i], rhs_v[i]);
           if (option) {
             // Propagate NaNs
             if (std::isnan(lhs_v[i])) {
@@ -159,10 +158,11 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
             } else if (std::isnan(rhs_v[i])) {
               result_v[i] = rhs_v[i];
             }
+          } else {
+            result_v[i] = lhs_v[i] > rhs_v[i] ? lhs_v[i] : rhs_v[i];
           }
           break;
         case IRNodeType::kMin:
-          result_v[i] = std::fmin(lhs_v[i], rhs_v[i]);
           if (option) {
             // Propagate NaNs
             if (std::isnan(lhs_v[i])) {
@@ -170,6 +170,8 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
             } else if (std::isnan(rhs_v[i])) {
               result_v[i] = rhs_v[i];
             }
+          } else {
+            result_v[i] = lhs_v[i] < rhs_v[i] ? lhs_v[i] : rhs_v[i];
           }
           break;
         default:
