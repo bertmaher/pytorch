@@ -328,8 +328,7 @@ def test_int_output():
 
 def test_abs():
     def easy(x, y):
-        temp = torch.add(x, y)
-        c = torch.abs(temp)
+        c = torch.abs(torch.add(x, y))
         return c
 
     traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
@@ -345,48 +344,39 @@ def test_abs():
 
 def test_unary_ops():
     def easy_sin(x, y):
-        temp = torch.add(x, y)
-        c = torch.sin(temp)
+        c = torch.sin(torch.add(x, y))
         return c
 
     def easy_asin(x, y):
-        temp = torch.add(x, y)
-        c = torch.asin(temp)
+        c = torch.asin(torch.add(x, y))
         return c
 
     def easy_sinh(x, y):
-        temp = torch.add(x, y)
-        c = torch.sinh(temp)
+        c = torch.sinh(torch.add(x, y))
         return c
 
     def easy_cos(x, y):
-        temp = torch.add(x, y)
-        c = torch.cos(temp)
+        c = torch.cos(torch.add(x, y))
         return c
 
     def easy_acos(x, y):
-        temp = torch.add(x, y)
-        c = torch.acos(temp)
+        c = torch.acos(torch.add(x, y))
         return c
 
     def easy_cosh(x, y):
-        temp = torch.add(x, y)
-        c = torch.cosh(temp)
+        c = torch.cosh(torch.add(x, y))
         return c
 
     def easy_tan(x, y):
-        temp = torch.add(x, y)
-        c = torch.tan(temp)
+        c = torch.tan(torch.add(x, y))
         return c
 
     def easy_atan(x, y):
-        temp = torch.add(x, y)
-        c = torch.atan(temp)
+        c = torch.atan(torch.add(x, y))
         return c
 
     def easy_tanh(x, y):
-        temp = torch.add(x, y)
-        c = torch.tanh(temp)
+        c = torch.tanh(torch.add(x, y))
         return c
 
     trig_fns = {
