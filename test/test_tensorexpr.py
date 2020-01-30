@@ -291,3 +291,38 @@ def test_int_output():
     traced = torch.jit.trace(test, (x, y, z))
     res = traced(x, y, z)
     np.testing.assert_allclose(xn * yn * zn, res.numpy())
+
+def test_abs():
+    def easy(x, y):
+        temp = torch.add(x, y)
+        c = torch.abs(temp)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    aa = np.array(1024, dtype=float)
+    bb = np.array(1024, dtype=float)
+    aa.fill(-0.5)
+    bb.fill(-0.5)
+    a = torch.from_numpy(aa)
+    b = torch.from_numpy(bb)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+def test_round():
+    def easy(x, y):
+        temp = torch.add(x, y)
+        c = torch.round(temp)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
+    aa = np.array(1024, dtype=float)
+    bb = np.array(1024, dtype=float)
+    aa.fill(-0.4)
+    bb.fill(-0.4)
+    a = torch.from_numpy(aa)
+    b = torch.from_numpy(bb)
+    x= traced(a, b)
+    np.testing.assert_allclose(np.ones(1024), x.numpy())
+
+
+
