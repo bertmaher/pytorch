@@ -427,3 +427,22 @@ def test_unary_ops():
         cc = aa + bb
         out = np_fn(cc)
         np.testing.assert_allclose(out, x.numpy())
+
+
+def test_nans():
+    def test_max(x, y):
+        return torch.max(2 * x, 2 * y)
+
+    def test_min(x, y):
+        return torch.min(2 * x, 2 * y)
+
+    tmax = torch.jit.trace(test_max, (torch.rand(1), torch.rand(1)))
+    tmin = torch.jit.trace(test_min, (torch.rand(1), torch.rand(1)))
+
+    x = torch.tensor([np.nan])
+    y = torch.tensor([1.0])
+
+    assert(not np.isnan(tmin(x, y).item()))
+    assert(np.isnan(tmin(y, x).item()))
+    assert(not np.isnan(tmax(x, y).item()))
+    assert(np.isnan(tmax(y, x).item()))

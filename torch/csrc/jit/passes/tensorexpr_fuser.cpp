@@ -504,14 +504,14 @@ struct TensorExprKernel {
       case aten::min: {
         return ComputeTwoOperand(
             "aten_min", n, [](const Expr& lhs, const Expr& rhs) {
-              return Min::make(lhs, rhs, true);
+              return Min::make(lhs, rhs, false);
             });
       } break;
 
       case aten::max: {
         return ComputeTwoOperand(
             "aten_max", n, [](const Expr& lhs, const Expr& rhs) {
-              return Max::make(lhs, rhs, true);
+              return Max::make(lhs, rhs, false);
             });
       } break;
 

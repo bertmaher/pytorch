@@ -64,10 +64,6 @@ namespace jit {
   _(LLVMElemwiseMaxNumNaNFloat) \
   _(LLVMElemwiseMinNumFloat) \
   _(LLVMElemwiseMinNumNaNFloat) \
-  _(LLVMElemwiseMaximumFloat) \
-  _(LLVMElemwiseMaximumNaNFloat) \
-  _(LLVMElemwiseMinimumFloat) \
-  _(LLVMElemwiseMinimumNaNFloat) \
   _(LLVMCompareSelectIntEQ) \
   _(LLVMCompareSelectFloatEQ) \
   _(LLVMStoreFloat) \
