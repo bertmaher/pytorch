@@ -628,7 +628,6 @@ struct TensorExprKernel {
 
   explicit TensorExprKernel(const Node* node) {
     auto subgraph = node->g(attr::Subgraph);
-    std::cout << *subgraph;
 
     // Bind inputs to buffers.
     for (auto const& input : subgraph->inputs()) {
@@ -650,7 +649,6 @@ struct TensorExprKernel {
         continue;
       }
       skip_llvm_codegen = isSupported(n) && isInterpretedOnly(n);
-      std::cout << "get here \n" << skip_llvm_codegen << "\n" << *n;
       tensors.emplace(n->output()->unique(), ComputeNode(n));
     }
 

@@ -221,7 +221,15 @@ private:
     case aten::div:
     case aten::t:
     case aten::sigmoid:
+    case aten::sin:
+    case aten::cos:
+    case aten::tan:
+    case aten::sinh:
+    case aten::cosh:
     case aten::tanh:
+    case aten::asin:
+    case aten::acos:
+    case aten::atan:
     case aten::mm:
     case aten::min:
     case aten::max:
