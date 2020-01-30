@@ -290,6 +290,30 @@ def test_lt():
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
 
 
+def test_min_max():
+    def test(x, y):
+        return torch.max(torch.min(x, y), torch.tensor([4.0]))
+
+    traced = torch.jit.trace(test, (torch.zeros(1024), torch.zeros(1024)))
+    a = 8.0 * torch.rand(1024)
+    b = 8.0 * torch.rand(1024)
+    np.testing.assert_allclose(
+        traced(a, b),
+        np.maximum(np.minimum(a.numpy(), b.numpy()), [4.0]))
+
+
+def test_clamp():
+    def test(x):
+        return torch.clamp(x + 3.0, 0.0, 6.0)
+
+    traced = torch.jit.trace(test, (torch.zeros(1024)))
+    a = 20.0 * torch.rand(1024) - 10.0
+    an = a.numpy()
+    np.testing.assert_allclose(
+        traced(a),
+        np.clip(an + 3.0, 0.0, 6.0))
+
+
 def test_reps():
     def easy(x, y):
         c = torch.add(x, y)
