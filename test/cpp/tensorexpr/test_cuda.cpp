@@ -1,3 +1,5 @@
+#ifdef USE_CUDA
+
 #include <sstream>
 #include <stdexcept>
 #include "test/cpp/tensorexpr/test_base.h"
@@ -77,3 +79,12 @@ void testCudaTestVectorAdd01() {
 }
 } // namespace jit
 } // namespace torch
+
+#else // USE_CUDA
+namespace torch {
+namespace jit {
+void testCudaTestVectorAdd01() { }
+}
+}
+
+#endif
