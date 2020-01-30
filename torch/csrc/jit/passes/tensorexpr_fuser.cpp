@@ -55,8 +55,9 @@ bool isSupported(Node* node) {
     case aten::gt:
     case aten::le:
     case aten::lt:
-    case aten::log:
     case aten::log10:
+#ifndef ENABLE_LLVM
+    case aten::log:
     case aten::log2:
     case aten::exp:
     case aten::erf:
@@ -76,31 +77,7 @@ bool isSupported(Node* node) {
     case aten::ceil:
     case aten::round:
     case aten::trunc:
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool isInterpretedOnly(Node* node) {
-  // TODO:
-  switch (node->kind()) {
-    case aten::cos:
-    case aten::sin:
-    case aten::tan:
-    case aten::cosh:
-    case aten::sinh:
-    case aten::tanh:
-    case aten::acos:
-    case aten::asin:
-    case aten::atan:
-    case aten::abs:
-    case aten::sqrt:
-    case aten::rsqrt:
-    case aten::floor:
-    case aten::ceil:
-    case aten::round:
-    case aten::trunc:
+#endif	
       return true;
     default:
       return false;
@@ -648,7 +625,6 @@ struct TensorExprKernel {
       if (n->kind() == prim::Constant) {
         continue;
       }
-      skip_llvm_codegen = isSupported(n) && isInterpretedOnly(n);
       tensors.emplace(n->output()->unique(), ComputeNode(n));
     }
 
@@ -665,28 +641,23 @@ struct TensorExprKernel {
       }
     }
     Stmt stmt = sch.Lower();
-
-    if (skip_llvm_codegen) {
-      codegen = std::make_unique<SimpleIREvaluator>(stmt);
-    } else {
 #ifdef ENABLE_LLVM
-      // Set up formal params (inputs, then outputs) for kernel.
-      std::vector<Buffer*> params;
-      for (auto& b : buffer_args) {
-        params.push_back(&b);
-      }
-      Buffer outbuf(
-          tensor_output->function().func_var(),
-          tensor_output->dtype(),
-          tensor_output->dims());
-      params.push_back(&outbuf);
-
-      // Generate code.
-      codegen = std::make_unique<LLVMCodeGen>(stmt, params);
-#else
-      codegen = std::make_unique<SimpleIREvaluator>(stmt);
-#endif
+    // Set up formal params (inputs, then outputs) for kernel.
+    std::vector<Buffer*> params;
+    for (auto& b : buffer_args) {
+      params.push_back(&b);
     }
+    Buffer outbuf(
+        tensor_output->function().func_var(),
+        tensor_output->dtype(),
+        tensor_output->dims());
+    params.push_back(&outbuf);
+
+    // Generate code.
+    codegen = std::make_unique<LLVMCodeGen>(stmt, params);
+#else
+    codegen = std::make_unique<SimpleIREvaluator>(stmt);
+#endif
   }
 
   void run(Stack& stack) {
