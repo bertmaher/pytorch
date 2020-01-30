@@ -619,7 +619,6 @@ struct TensorExprKernel {
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
-    bool skip_llvm_codegen = false;
     // Bind nodes to tensor compute expressions.
     for (auto const& n : subgraph->nodes()) {
       if (n->kind() == prim::Constant) {
