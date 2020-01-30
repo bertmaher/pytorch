@@ -1,5 +1,6 @@
-import torch
 import numpy as np
+import torch
+
 
 def test_easy():
     def easy(x, y):
@@ -13,13 +14,16 @@ def test_easy():
     x = traced(a, b)
     np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
 
+
 def test_three_arg():
     def easy(x, y, z):
         aaa = torch.add(x, y)
         bbb = torch.add(aaa, z)
         return bbb
 
-    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024)))
+    traced = torch.jit.trace(
+        easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024))
+    )
 
     a = torch.rand(1024)
     b = torch.rand(1024)
@@ -27,6 +31,7 @@ def test_three_arg():
     x = traced(a, b, c)
     npr = a.numpy() + b.numpy() + c.numpy()
     np.testing.assert_allclose(npr, x.numpy())
+
 
 def test_all_combos():
     def easy(x, y, z):
@@ -43,7 +48,9 @@ def test_all_combos():
         d = c + a
         return d
 
-    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024)))
+    traced = torch.jit.trace(
+        easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024))
+    )
 
     a = torch.rand(1024)
     b = torch.rand(1024)
@@ -51,6 +58,7 @@ def test_all_combos():
     x = traced(a, b, c)
     npr = np_easy(a.numpy(), b.numpy(), c.numpy())
     np.testing.assert_allclose(npr, x.numpy())
+
 
 def test_rank_two():
     def easy(x, y, z):
@@ -68,7 +76,9 @@ def test_rank_two():
         return d
 
     shape = 32, 32
-    traced = torch.jit.trace(easy, (torch.rand(shape), torch.rand(shape), torch.rand(shape)))
+    traced = torch.jit.trace(
+        easy, (torch.rand(shape), torch.rand(shape), torch.rand(shape))
+    )
 
     a = torch.rand(shape)
     b = torch.rand(shape)
@@ -76,6 +86,7 @@ def test_rank_two():
     x = traced(a, b, c)
     npr = np_easy(a.numpy(), b.numpy(), c.numpy())
     np.testing.assert_allclose(npr, x.numpy())
+
 
 def test_broadcast():
     def easy(x, y, z):
@@ -97,6 +108,7 @@ def test_broadcast():
     x = traced(a, b, c)
     npr = np_easy(a.numpy(), b.numpy(), c.numpy())
     np.testing.assert_allclose(npr, x.numpy())
+
 
 def test_broadcast_2():
     zero = torch.tensor([0.0], dtype=torch.float)
@@ -120,6 +132,7 @@ def test_broadcast_2():
     rnp = foo_np(x.numpy(), y.numpy(), z.numpy())
     np.testing.assert_allclose(r, rnp)
 
+
 def test_broadcast_big2():
     zero = torch.tensor([0.0], dtype=torch.float)
 
@@ -142,6 +155,7 @@ def test_broadcast_big2():
     rnp = foo_np(x.numpy(), y.numpy(), z.numpy())
     np.testing.assert_allclose(r, rnp)
 
+
 def test_alpha():
     def alpha(x):
         aaa = torch.add(x, x, alpha=2.0)
@@ -152,6 +166,7 @@ def test_alpha():
     a = torch.tensor([1.0])
     x = traced(a)
     np.testing.assert_allclose(a.numpy() + 2.0 * a.numpy(), x.numpy())
+
 
 def test_constant():
     def constant(x):
@@ -165,13 +180,16 @@ def test_constant():
     x = traced(a)
     np.testing.assert_allclose(a.numpy() + 1.0, x.numpy())
 
+
 def test_add_sub():
     def easy(x, y, z):
         aaa = torch.add(x, y)
         bbb = torch.sub(aaa, z)
         return bbb
 
-    traced = torch.jit.trace(easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024)))
+    traced = torch.jit.trace(
+        easy, (torch.rand(1024), torch.rand(1024), torch.rand(1024))
+    )
 
     a = torch.rand(1024)
     b = torch.rand(1024)
@@ -179,17 +197,22 @@ def test_add_sub():
     x = traced(a, b, c)
     np.testing.assert_allclose(a.numpy() + b.numpy() - c.numpy(), x.numpy())
 
+
 def test_promotion():
     def easy(x, y):
         aaa = torch.add(x, y)
         return aaa
 
-    traced = torch.jit.trace(easy, (torch.zeros(1024, dtype=torch.int32), torch.rand(1024, dtype=torch.float32)))
+    traced = torch.jit.trace(
+        easy,
+        (torch.zeros(1024, dtype=torch.int32), torch.rand(1024, dtype=torch.float32)),
+    )
 
     a = torch.zeros(1024, dtype=torch.int32)
     b = torch.rand(1024, dtype=torch.float32)
     x = traced(a, b)
     np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
+
 
 def test_eq():
     def easy(x, y):
@@ -199,8 +222,9 @@ def test_eq():
     traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
     a = torch.zeros(1024, dtype=torch.int32)
     b = torch.zeros(1024, dtype=torch.int32)
-    x= traced(a, b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.ones(1024), x.numpy())
+
 
 def test_ne():
     def easy(x, y):
@@ -210,8 +234,9 @@ def test_ne():
     traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
     a = torch.zeros(1024, dtype=torch.int32)
     b = torch.ones(1024, dtype=torch.int32)
-    x= traced(a, b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.ones(1024), x.numpy())
+
 
 def test_ge():
     def easy(x, y):
@@ -223,8 +248,9 @@ def test_ge():
     aa.fill(5)
     a = torch.from_numpy(aa)
     b = torch.zeros(1024, dtype=torch.int32)
-    x= traced(a,b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.ones(1024), x.numpy())
+
 
 def test_gt():
     def easy(x, y):
@@ -234,8 +260,9 @@ def test_gt():
     traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
     a = torch.ones(1024, dtype=torch.int32)
     b = torch.zeros(1024, dtype=torch.int32)
-    x= traced(a, b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.ones(1024), x.numpy())
+
 
 def test_le():
     def easy(x, y):
@@ -247,8 +274,9 @@ def test_le():
     aa.fill(5)
     a = torch.from_numpy(aa)
     b = torch.zeros(1024, dtype=torch.int32)
-    x= traced(a, b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
+
 
 def test_lt():
     def easy(x, y):
@@ -258,8 +286,9 @@ def test_lt():
     traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
     a = torch.ones(1024, dtype=torch.int32)
     b = torch.zeros(1024, dtype=torch.int32)
-    x= traced(a, b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
+
 
 def test_reps():
     def easy(x, y):
@@ -274,23 +303,28 @@ def test_reps():
         x = traced(a, b)
         np.testing.assert_allclose(np.ones(1024), x.numpy())
 
+
 def test_add_const_rhs():
     def test(x):
         return x + 3.0
+
     traced = torch.jit.trace(test, torch.rand(4))
     x = torch.rand(4)
     y = traced(x)
     np.testing.assert_allclose(x.numpy() + 3.0, y.numpy())
 
+
 def test_int_output():
     def test(x, y, z):
         return x * y * z
+
     xs = [(torch.rand(4) * 3 + 1).to(torch.int32) for i in range(3)]
     x, y, z = xs
     xn, yn, zn = [t.numpy() for t in xs]
     traced = torch.jit.trace(test, (x, y, z))
     res = traced(x, y, z)
     np.testing.assert_allclose(xn * yn * zn, res.numpy())
+
 
 def test_abs():
     def easy(x, y):
@@ -305,8 +339,9 @@ def test_abs():
     bb.fill(-0.5)
     a = torch.from_numpy(aa)
     b = torch.from_numpy(bb)
-    x= traced(a, b)
+    x = traced(a, b)
     np.testing.assert_allclose(np.ones(1024), x.numpy())
+
 
 def test_unary_ops():
     def easy_sin(x, y):
@@ -354,9 +389,17 @@ def test_unary_ops():
         c = torch.tanh(temp)
         return c
 
-    trig_fns = {easy_sin : np.sin, easy_asin : np.arcsin, easy_sinh : np.sinh, 
-                easy_cos : np.cos, easy_acos : np.arccos, easy_cosh : np.cosh, 
-                easy_tan : np.tan, easy_atan : np.arctan, easy_tanh : np.tanh }
+    trig_fns = {
+        easy_sin: np.sin,
+        easy_asin: np.arcsin,
+        easy_sinh: np.sinh,
+        easy_cos: np.cos,
+        easy_acos: np.arccos,
+        easy_cosh: np.cosh,
+        easy_tan: np.tan,
+        easy_atan: np.arctan,
+        easy_tanh: np.tanh,
+    }
 
     for torch_fn, np_fn in trig_fns.items():
         traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
@@ -368,5 +411,5 @@ def test_unary_ops():
         b = torch.from_numpy(bb)
         x = traced(a, b)
         cc = aa + bb
-        out =np_fn(cc)
+        out = np_fn(cc)
         np.testing.assert_allclose(out, x.numpy())
