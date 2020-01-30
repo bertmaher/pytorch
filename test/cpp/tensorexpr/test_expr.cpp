@@ -64,15 +64,6 @@ static Expr test_01(const Expr& expr) {
   return expr;
 }
 
-void testExprNoLeakTest01() {
-  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
-  {
-    Expr r = 1;
-    r = test_01(r);
-  }
-  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
-}
-
 void testExprVectorAdd01() {
   const int kVectorSize = 8;
   const int kVectorCount = 128;
@@ -163,26 +154,21 @@ void testExprCompareSelectEQ() {
 }
 
 void testExprSubstitute01() {
-  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object before the test";
-  {
-    Expr x = Variable::make("x", kFloat32);
-    Expr y = Variable::make("y", kFloat32);
-    Expr e = (x - 1.0f) * (x + y + 2.0f);
+  Expr x = Variable::make("x", kFloat32);
+  Expr y = Variable::make("y", kFloat32);
+  Expr e = (x - 1.0f) * (x + y + 2.0f);
 
-    Expr z = Variable::make("z", kFloat32);
-    Expr e2 = Substitute(&e, {{x, z + 1.0f}});
-    Expr e2_ref = ((z + 1.0f) - 1.0f) * ((z + 1.0f) + y + 2.0f);
-    std::ostringstream oss;
-    oss << e2;
-    std::string e2_str = oss.str();
+  Expr z = Variable::make("z", kFloat32);
+  Expr e2 = Substitute(&e, {{x, z + 1.0f}});
+  Expr e2_ref = ((z + 1.0f) - 1.0f) * ((z + 1.0f) + y + 2.0f);
+  std::ostringstream oss;
+  oss << e2;
+  std::string e2_str = oss.str();
 
-    oss.str("");
-    oss << e2_ref;
-    std::string e2_ref_str = oss.str();
-    ASSERT_EQ(e2_str, e2_ref_str);
-  }
-  // TODO: move this to a test fixture and enable for all tests.
-  ASSERT_EQ(RefCounted::CheckNoLiveRefCount(), true) << "leaked refcounted object after the test";
+  oss.str("");
+  oss << e2_ref;
+  std::string e2_ref_str = oss.str();
+  ASSERT_EQ(e2_str, e2_ref_str);
 }
 
 void testExprMath01() {

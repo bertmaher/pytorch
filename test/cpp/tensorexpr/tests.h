@@ -13,7 +13,6 @@ namespace jit {
   _(ExprBasicValueTest02) \
   _(ExprLetTest01) \
   _(ExprLetTest02) \
-  _(ExprNoLeakTest01) \
   _(ExprVectorAdd01) \
   _(ExprCompareSelectEQ) \
   _(ExprSubstitute01) \
