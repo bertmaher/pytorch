@@ -347,84 +347,98 @@ def test_int_output():
     res = traced(x, y, z)
     np.testing.assert_allclose(xn * yn * zn, res.numpy())
 
-
-def test_abs():
-    def easy(x, y):
-        c = torch.abs(torch.add(x, y))
-        return c
-
-    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
-    aa = np.array(1024, dtype=float)
-    bb = np.array(1024, dtype=float)
-    aa.fill(-0.5)
-    bb.fill(-0.5)
-    a = torch.from_numpy(aa)
-    b = torch.from_numpy(bb)
-    x = traced(a, b)
-    np.testing.assert_allclose(np.ones(1024), x.numpy())
-
-
 def test_unary_ops():
-    def easy_sin(x, y):
+    def test_sin(x, y):
         c = torch.sin(torch.add(x, y))
         return c
 
-    def easy_asin(x, y):
+    def test_asin(x, y):
         c = torch.asin(torch.add(x, y))
         return c
 
-    def easy_sinh(x, y):
+    def test_sinh(x, y):
         c = torch.sinh(torch.add(x, y))
         return c
 
-    def easy_cos(x, y):
+    def test_cos(x, y):
         c = torch.cos(torch.add(x, y))
         return c
 
-    def easy_acos(x, y):
+    def test_acos(x, y):
         c = torch.acos(torch.add(x, y))
         return c
 
-    def easy_cosh(x, y):
+    def test_cosh(x, y):
         c = torch.cosh(torch.add(x, y))
         return c
 
-    def easy_tan(x, y):
+    def test_tan(x, y):
         c = torch.tan(torch.add(x, y))
         return c
 
-    def easy_atan(x, y):
+    def test_atan(x, y):
         c = torch.atan(torch.add(x, y))
         return c
 
-    def easy_tanh(x, y):
+    def test_tanh(x, y):
         c = torch.tanh(torch.add(x, y))
         return c
 
-    trig_fns = {
-        easy_sin: np.sin,
-        easy_asin: np.arcsin,
-        easy_sinh: np.sinh,
-        easy_cos: np.cos,
-        easy_acos: np.arccos,
-        easy_cosh: np.cosh,
-        easy_tan: np.tan,
-        easy_atan: np.arctan,
-        easy_tanh: np.tanh,
-    }
+    def test_sqrt(x, y):
+        c = torch.sqrt(torch.add(x, y))
+        return c
 
-    for torch_fn, np_fn in trig_fns.items():
+    def test_floor(x, y):
+        c = torch.floor(torch.add(x, y))
+        return c
+
+    def test_ceil(x, y):
+        c = torch.ceil(torch.add(x, y))
+        return c
+
+    def test_trunc(x, y):
+        c = torch.trunc(torch.add(x, y))
+        return c
+
+    def test_abs(x, y):
+        c = torch.abs(torch.add(x, y))
+        return c
+
+    fns = {
+        test_sin,
+        test_asin,
+        test_sinh,
+        test_cos,
+        test_acos,
+        test_cosh,
+        test_tan,
+        test_atan,
+        test_tanh,
+        test_sqrt,
+        test_floor,
+        test_ceil,
+        test_trunc,
+        test_abs,
+    }
+    
+    rand_a = torch.rand(1024, dtype=float)
+    rand_b = torch.rand(1024, dtype=float)
+    zeros = torch.zeros(1024, dtype=float)
+    cc = np.array(1024, dtype=float) 
+    cc.fill(np.nan)
+    nans = torch.from_numpy(cc)
+
+    for torch_fn in fns:
+        #random floats
         traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
-        aa = np.array(1024, dtype=float)
-        bb = np.array(1024, dtype=float)
-        aa.fill(0.5)
-        bb.fill(0.4)
-        a = torch.from_numpy(aa)
-        b = torch.from_numpy(bb)
-        x = traced(a, b)
-        cc = aa + bb
-        out = np_fn(cc)
-        np.testing.assert_allclose(out, x.numpy())
+        x = traced(rand_a, rand_b)
+        y = torch_fn(rand_a, rand_b)
+        np.testing.assert_allclose(x.numpy(), y.numpy())
+        #nans
+        traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
+        x = traced(nans, rand_b)
+        y = torch_fn(nans, rand_b)
+        np.testing.assert_allclose(x.numpy(), y.numpy())
 
 def test_nans():
     def test_max(x, y):
@@ -443,3 +457,33 @@ def test_nans():
     assert(np.isnan(tmin(y, x).item()))
     assert(not np.isnan(tmax(x, y).item()))
     assert(np.isnan(tmax(y, x).item()))
+
+def test_remainder():
+    def run_remainder(x, y):
+        c = torch.remainder(torch.add(x, y), x)
+        return c
+
+    a = torch.rand(1024, dtype=float) 
+    b = torch.rand(1024, dtype=float) 
+    zeros = torch.zeros(1024, dtype=float)
+    cc = np.array(1024, dtype=float) 
+    cc.fill(np.nan)
+    nans = torch.from_numpy(cc)
+
+    #random floats
+    traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
+    x = traced(a, b)
+    y = run_remainder(a, b)
+    np.testing.assert_allclose(x.numpy(), y.numpy())
+
+    #div by 0
+    traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
+    x = traced(zeros, a)
+    y = run_remainder(zeros, a)
+    np.testing.assert_allclose(x.numpy(), y.numpy())
+
+    #numerators and denominatos are nan
+    traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
+    x = traced(nans, a)
+    y = run_remainder(nans, a)
+    np.testing.assert_allclose(x.numpy(), y.numpy())

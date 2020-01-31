@@ -230,6 +230,11 @@ private:
     case aten::asin:
     case aten::acos:
     case aten::atan:
+    case aten::floor:
+    case aten::ceil:
+    case aten::trunc:
+    case aten::sqrt:
+    case aten::remainder:
     case aten::mm:
     case aten::min:
     case aten::max:

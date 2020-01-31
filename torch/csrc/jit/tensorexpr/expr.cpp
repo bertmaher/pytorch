@@ -142,6 +142,9 @@ Expr fmod(const Expr& v1, const Expr& v2) {
   return Intrinsics::make(kFmod, v1, v2);
 }
 
+Expr remainder(const Expr& v1, const Expr& v2) {
+  return Intrinsics::make(kRemainder, v1, v2);
+}
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch

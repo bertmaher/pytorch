@@ -16,6 +16,8 @@
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
 
+#undef ENABLE_LLVM
+
 namespace {
 
 const Symbol& getTensorExprSymbol() {
@@ -80,6 +82,7 @@ bool isSupported(Node* node) {
     case aten::ceil:
     case aten::round:
     case aten::trunc:
+    case aten::remainder:
 #endif
       return true;
     default:
@@ -576,6 +579,14 @@ struct TensorExprKernel {
             "aten_fmod", n, [](const Expr& lhs, const Expr& rhs) {
               return fmod(lhs, rhs);
             });
+      } break;
+
+      case aten::remainder: {
+        return ComputeTwoOperand(
+            "aten_remainder", n, [](const Expr& lhs, const Expr& rhs) {
+              return remainder(lhs, rhs);
+            });
+
       } break;
 
       case aten::acos: {

@@ -674,6 +674,7 @@ enum IntrinsicsOp {
   kRound,
   kTrunc,
   kFmod,
+  kRemainder,
   kRand, // We need more discussions on this. Should we consider stateful?
 };
 
@@ -745,6 +746,8 @@ class Intrinsics : public CallNode<Intrinsics> {
         return "rand";
       case kFmod:
         return "fmod";
+      case kRemainder:
+        return "remainder";
       default:
         throw std::runtime_error(
             "invalid op_type: " + std::to_string(op_type()));

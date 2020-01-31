@@ -561,6 +561,8 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         return std::pow(v1, v2);
       case kFmod:
         return std::fmod(v1, v2);
+      case kRemainder:
+	      return std::remainderf(v1, v2);
       default:
         throw std::runtime_error("nvalid op_type: " + std::to_string(op_type));
     }
