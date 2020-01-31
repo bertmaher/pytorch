@@ -48,18 +48,18 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
  private:
   explicit LLVMCodeGen(
       const IRNode* node,
-      const std::vector<Buffer*>& args,
+      const std::vector<BufferArg>& args,
       Dtype dtype = kInt32);
 
  public:
   explicit LLVMCodeGen(
       const Stmt& stmt,
-      const std::vector<Buffer*>& args,
+      const std::vector<BufferArg>& args,
       Dtype dtype = kInt32);
   explicit LLVMCodeGen(const Stmt& stmt);
   explicit LLVMCodeGen(
       const Expr& expr,
-      const std::vector<Buffer*>& args,
+      const std::vector<BufferArg>& args,
       Dtype dtype = kInt32);
   explicit LLVMCodeGen(const Expr& expr);
 

@@ -101,7 +101,7 @@ void testLLVMBufferTest() {
   std::vector<int32_t> v(5);
   std::vector<void*> args({v.data()});
   auto rv = IntImm::make(0);
-  LLVMCodeGen cg(rv, {&a});
+  LLVMCodeGen cg(rv, {a});
   EXPECT_EQ(cg.value<int>(args), 0);
 }
 
@@ -116,7 +116,7 @@ void testLLVMBlockTest() {
       Store::make(a, IntImm::make(0), IntImm::make(4), IntImm::make(1)),
   });
 
-  LLVMCodeGen cg(block, {&a});
+  LLVMCodeGen cg(block, {a});
   EXPECT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(v[0], 4);
   EXPECT_EQ(v[1], 4);
@@ -133,7 +133,7 @@ void testLLVMLoadStoreTest() {
       IntImm::make(0),
       Load::make(a, IntImm::make(0), IntImm::make(1)),
       IntImm::make(1));
-  LLVMCodeGen cg(store, {&a, &b});
+  LLVMCodeGen cg(store, {a, b});
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   EXPECT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(a_buffer[0], 42);
@@ -151,7 +151,7 @@ void testLLVMVecLoadStoreTest() {
       Ramp::make(0, 1, 4),
       Load::make(a, Ramp::make(0, 1, 4), Broadcast::make(IntImm::make(1), 4)),
       Broadcast::make(IntImm::make(1), 4));
-  LLVMCodeGen cg(store, {&a, &b});
+  LLVMCodeGen cg(store, {a, b});
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   EXPECT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(a_buffer[0], 1);
@@ -176,7 +176,7 @@ void testLLVMMemcpyTest() {
   auto expr =
       For::make(i, 0, N, Store::make(b, i, Load::make(a, i, mask), mask));
 
-  LLVMCodeGen cg(expr, {&a, &b});
+  LLVMCodeGen cg(expr, {a, b});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -194,10 +194,9 @@ void testLLVMBzeroTest() {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto expr =
-      For::make(i, 0, N, Store::make(b, i, IntImm::make(0), mask));
+  auto expr = For::make(i, 0, N, Store::make(b, i, IntImm::make(0), mask));
 
-  LLVMCodeGen cg(expr, {&b});
+  LLVMCodeGen cg(expr, {b});
 
   std::vector<void*> args({b_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -227,7 +226,7 @@ void testLLVMElemwiseAdd() {
           Add::make(Load::make(a, i, mask), Load::make(b, i, mask)),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -257,7 +256,7 @@ void testLLVMElemwiseAddFloat() {
       N,
       Store::make(c, i, Load::make(a, i, mask) + Load::make(b, i, mask), mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -282,10 +281,14 @@ void testLLVMElemwiseLog10Float() {
   auto expr = For::make(
       i,
       0,
-      N/4,
-      Store::make(b, Ramp::make(i * 4, 1, 4), log10(Load::make(a, Ramp::make(i * 4, 1, 4), mask)), mask));
+      N / 4,
+      Store::make(
+          b,
+          Ramp::make(i * 4, 1, 4),
+          log10(Load::make(a, Ramp::make(i * 4, 1, 4), mask)),
+          mask));
 
-  LLVMCodeGen cg(expr, {&a, &b});
+  LLVMCodeGen cg(expr, {a, b});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -317,7 +320,7 @@ void testLLVMElemwiseMaxInt() {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -351,7 +354,7 @@ void testLLVMElemwiseMinInt() {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -385,7 +388,7 @@ void testLLVMElemwiseMaxNumFloat() {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -419,7 +422,7 @@ void testLLVMElemwiseMaxNumNaNFloat() {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -452,7 +455,7 @@ void testLLVMElemwiseMinNumFloat() {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -486,7 +489,7 @@ void testLLVMElemwiseMinNumNaNFloat() {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), false),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -520,7 +523,7 @@ void testLLVMElemwiseMaximumFloat() {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -554,7 +557,7 @@ void testLLVMElemwiseMaximumNaNFloat() {
           Max::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -589,7 +592,7 @@ void testLLVMElemwiseMinimumFloat() {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -623,7 +626,7 @@ void testLLVMElemwiseMinimumNaNFloat() {
           Min::make(Load::make(a, i, mask), Load::make(b, i, mask), true),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -668,7 +671,7 @@ void testLLVMCompareSelectIntEQ() {
               CompareSelectOperation::kEQ),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -707,7 +710,7 @@ void testLLVMCompareSelectFloatEQ() {
               CompareSelectOperation::kEQ),
           mask));
 
-  LLVMCodeGen cg(expr, {&a, &b, &c});
+  LLVMCodeGen cg(expr, {a, b, c});
 
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
@@ -726,7 +729,7 @@ void testLLVMStoreFloat() {
   std::vector<float> result_buffer = {0.0f};
   auto expr = Store::make(
       result, IntImm::make(0), FloatImm::make(3.14f), IntImm::make(1));
-  LLVMCodeGen cg(expr, {&result});
+  LLVMCodeGen cg(expr, {result});
   std::vector<void*> args({result_buffer.data()});
   ASSERT_EQ(cg.value<int>(args), 0);
   EXPECT_EQ(result_buffer[0], 3.14f);
@@ -739,7 +742,7 @@ void testLLVMSimpleMath01() {
   Schedule sch = Schedule::make({tensor});
   Stmt stmt = sch.Lower();
   Buffer f_buf(tensor.function().func_var(), kFloat32, {N});
-  LLVMCodeGen cg(stmt, {&f_buf});
+  LLVMCodeGen cg(stmt, {f_buf});
 
   PaddedBuffer<float> f_v(N, "f_v");
   std::vector<void*> args({f_v.data()});
@@ -764,7 +767,7 @@ void testLLVMComputeMul() {
   Schedule sch = Schedule::make({c});
   Stmt s = sch.Lower();
 
-  LLVMCodeGen cg(s, {&a, &b, &c_buf});
+  LLVMCodeGen cg(s, {a, b, c_buf});
 
   std::vector<float> a_vec(N, 21.0f);
   std::vector<float> b_vec(N, 2.0f);
@@ -789,7 +792,7 @@ void testLLVMBroadcastAdd() {
   Schedule sch = Schedule::make({c});
   Stmt s = sch.Lower();
 
-  LLVMCodeGen cg(s, {&a, &b, &c_buf});
+  LLVMCodeGen cg(s, {a, b, c_buf});
 
   std::vector<float> av(M * N);
   std::iota(av.begin(), av.end(), 0);
@@ -805,6 +808,30 @@ void testLLVMBroadcastAdd() {
     }
   }
 }
+
+void testLLVMDynamicShapeAdd() {
+#if 0
+  auto testWithSize = [](int32_t size) {
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {n});
+    Buffer b(Var("b", kHandle), kFloat32, {n});
+    Buffer c(Var("c", kHandle), kFloat32, {n});
+    Var i("i", kInt32);
+    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
+    std::vector<float> aData(size, 1.0f);
+    std::vector<float> bData(size, 2.0f);
+    std::vector<float> cData(size, 0.0f);
+    LLVMCodeGen cg(s, {a, b, c, n});
+    std::vector<void*> args({aData.data(), bData.data(), cData.data(), size));
+    cg.value<float>(args);
+    ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
+  };
+  testWithSize(1);
+  testWithSize(16);
+  testWithSize(37);
+#endif
+}
+
 } // namespace jit
 } // namespace torch
 

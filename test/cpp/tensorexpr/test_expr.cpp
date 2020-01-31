@@ -269,5 +269,25 @@ void testExprBinaryMath01() {
     EXPECT_NEAR(eval.value().as<float>(), v_ref, 1e-6) << "fail: " << v_expr;
   }
 }
+
+void testExprDynamicShapeAdd() {
+  auto testWithSize = [](int32_t size) {
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {n});
+    Buffer b(Var("b", kHandle), kFloat32, {n});
+    Buffer c(Var("c", kHandle), kFloat32, {n});
+    Var i("i", kInt32);
+    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
+    std::vector<float> aData(size, 1.0f);
+    std::vector<float> bData(size, 2.0f);
+    std::vector<float> cData(size, 0.0f);
+    SimpleIREvaluator(s, a, b, c, n)(aData, bData, cData, size);
+    ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
+  };
+  testWithSize(1);
+  testWithSize(16);
+  testWithSize(37);
+}
+
 } // namespace jit
 } // namespace torch

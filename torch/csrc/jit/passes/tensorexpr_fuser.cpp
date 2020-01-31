@@ -686,17 +686,12 @@ struct TensorExprKernel {
       }
     }
     Stmt stmt = sch.Lower();
+
 #ifdef ENABLE_LLVM
     // Set up formal params (inputs, then outputs) for kernel.
-    std::vector<Buffer*> params;
-    for (auto& b : buffer_args) {
-      params.push_back(&b);
-    }
-    Buffer outbuf(
-        tensor_output->function().func_var(),
-        tensor_output->dtype(),
-        tensor_output->dims());
-    params.push_back(&outbuf);
+    std::vector<CodeGen::BufferArg> params(
+        buffer_args.begin(), buffer_args.end());
+    params.push_back(*tensor_output);
 
     // Generate code.
     codegen = std::make_unique<LLVMCodeGen>(stmt, params);

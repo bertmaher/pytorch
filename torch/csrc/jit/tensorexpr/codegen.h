@@ -66,6 +66,8 @@ class CodeGen::BufferArg {
         dtype_(tensor.function().body().dtype()) {}
   BufferArg(const Function& func)
       : var_(func.func_var()), dtype_(func.body().dtype()) {}
+  BufferArg(const Var& var) : var_(var), dtype_(var.dtype()), isVar_(true) {}
+
   const Var& var() const {
     return var_;
   }
@@ -76,9 +78,14 @@ class CodeGen::BufferArg {
     return dtype_;
   }
 
+  bool isVar() const {
+    return isVar_;
+  }
+
  private:
   Var var_;
   Dtype dtype_;
+  bool isVar_{false};
 };
 
 class CodeGen::CallArg {
@@ -91,12 +98,28 @@ class CodeGen::CallArg {
 
   CallArg(void* ptr) : ptr_(ptr) {}
 
+  CallArg(int32_t i) : ival_(i) {}
+
+  CallArg(float f) : fval_(f) {}
+
   void* data() const {
     return ptr_;
   }
 
+  int32_t intData() const {
+    return ival_;
+  }
+
+  float floatData() const {
+    return fval_;
+  }
+
  private:
-  void* ptr_ = nullptr;
+  union {
+    void* ptr_;
+    float fval_;
+    int32_t ival_;
+  };
 };
 
 } // namespace tensorexpr

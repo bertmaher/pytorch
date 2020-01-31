@@ -84,24 +84,35 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   ~SimpleIREvaluator() override {}
 
   void bind(const BufferArg& buf, const CallArg& data) override {
-    buffer_mapping_[buf.var().node()] = data.data();
+    if (buf.isVar()) {
+      if (buf.dtype() == kInt32) {
+        eval_context_[buf.var().node()] = data.intData();
+      } else if (buf.dtype() == kFloat32) {
+        eval_context_[buf.var().node()] = data.floatData();
+      } else {
+        LOG(FATAL) << "Unhandled dtype for argument " << buf.var().name_hint()
+                   << ": " << buf.dtype();
+      }
+    } else {
+      buffer_mapping_[buf.var().node()] = data.data();
+    }
   }
 
   void run() override {
     ir_node().node()->accept(this);
+    eval_context_.clear();
     buffer_mapping_.clear();
+    internal_buffers_.clear();
   }
 
   template <typename... Ts>
   void operator()(const Ts&... ts) {
     std::vector<CallArg> args({CallArg(ts)...});
     CHECK_EQ(args.size(), buffer_args().size());
-    BufferMapping buffer_mapping;
     for (size_t i = 0; i < args.size(); i++) {
-      buffer_mapping[buffer_args()[i].var().node()] = args[i].data();
+      bind(buffer_args()[i], args[i]);
     }
-    this->SetBufferMapping(buffer_mapping);
-    ir_node().node()->accept(this);
+    run();
   }
 
   TORCH_API void visit(const Add* v) override {
@@ -555,19 +566,9 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  using BufferMapping = std::unordered_map<const BaseExprNode*, void*>;
-  void SetBufferMapping(const BufferMapping& buffer_mapping) {
-    buffer_mapping_ = buffer_mapping;
-  }
-  void SetBufferMapping(const std::vector<std::pair<Var, void*>>& entries) {
-    for (const std::pair<Var, void*>& entry : entries) {
-      buffer_mapping_[entry.first.node()] = entry.second;
-    }
-  }
-
   Value value_;
   std::unordered_map<const BaseExprNode*, Value> eval_context_;
-  BufferMapping buffer_mapping_;
+  std::unordered_map<const BaseExprNode*, void*> buffer_mapping_;
   std::unordered_map<const Variable*, std::unique_ptr<std::vector<int>>>
       internal_buffers_;
 };

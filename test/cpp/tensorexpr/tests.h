@@ -19,6 +19,7 @@ namespace jit {
   _(ExprMath01)                 \
   _(ExprUnaryMath01)            \
   _(ExprBinaryMath01)           \
+  _(ExprDynamicShapeAdd)        \
   _(IRPrinterBasicValueTest)    \
   _(IRPrinterBasicValueTest02)  \
   _(IRPrinterLetTest01)         \
@@ -69,6 +70,7 @@ namespace jit {
   _(LLVMSimpleMath01)           \
   _(LLVMComputeMul)             \
   _(LLVMBroadcastAdd)           \
+  _(LLVMDynamicShapeAdd)        \
   _(CudaTestVectorAdd01)        \
   _(ATen_cast_Float)            \
   _(ATennegInt)                 \
