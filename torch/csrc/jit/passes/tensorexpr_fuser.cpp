@@ -16,8 +16,6 @@
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
 
-#undef ENABLE_LLVM
-
 namespace {
 
 const Symbol& getTensorExprSymbol() {
