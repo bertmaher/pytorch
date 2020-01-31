@@ -69,7 +69,9 @@ LLVMCodeGen::LLVMCodeGen(
     Dtype dtype)
     : CodeGen(node),
       context_(std::make_unique<llvm::LLVMContext>()),
-      irb_(getContext()) {
+      irb_(getContext()),
+      int32Ty_(llvm::Type::getInt32Ty(getContext())),
+      floatTy_(llvm::Type::getFloatTy(getContext())) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
@@ -81,24 +83,12 @@ LLVMCodeGen::LLVMCodeGen(
   module_->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
   module_->setTargetTriple(JTMB.getTargetTriple().str());
 
-  int32Ty_ = llvm::Type::getInt32Ty(getContext());
-  floatTy_ = llvm::Type::getFloatTy(getContext());
-
   // Emit prototype.
-  llvm::Type* ret_ty = nullptr;
-  if (dtype == kInt32) {
-    ret_ty = int32Ty_;
-  } else if (dtype == kFloat32) {
-    ret_ty = floatTy_;
-  }
+  llvm::Type* ret_ty = dtypeToLLVM(dtype);
   std::vector<llvm::Type*> params;
   for (int i = 0; i < args.size(); i++) {
     auto const& arg = args[i];
-    if (arg.dtype() == kInt32) {
-      params.push_back(llvm::Type::getInt32PtrTy(getContext()));
-    } else if (arg.dtype() == kFloat32) {
-      params.push_back(llvm::Type::getFloatPtrTy(getContext()));
-    }
+    params.push_back(dtypeToLLVMPtr(arg.dtype()));
     varToArg_[arg.var().node()] = i;
   }
   llvm::FunctionType* fntype = llvm::FunctionType::get(ret_ty, params, false);
@@ -109,9 +99,9 @@ LLVMCodeGen::LLVMCodeGen(
   }
 
   // Emit wrapper to unpack argument vector.
-  auto voidPP = llvm::Type::getInt8PtrTy(getContext())->getPointerTo();
+  auto voidPtrPtrTy = llvm::Type::getInt8PtrTy(getContext())->getPointerTo();
   auto wrapper = llvm::Function::Create(
-      llvm::FunctionType::get(int32Ty_, {voidPP}, false),
+      llvm::FunctionType::get(int32Ty_, {voidPtrPtrTy}, false),
       llvm::Function::ExternalLinkage,
       "wrapper",
       module_.get());
@@ -164,6 +154,20 @@ LLVMCodeGen::LLVMCodeGen(
 
 llvm::LLVMContext& LLVMCodeGen::getContext() {
   return *context_.getContext();
+}
+
+llvm::Type* LLVMCodeGen::dtypeToLLVM(Dtype dtype) {
+  if (dtype == kInt32) {
+    return int32Ty_;
+  } else if (dtype == kFloat32) {
+    return floatTy_;
+  }
+  LOG(FATAL) << "Unhandled dtype: " << dtype;
+  return nullptr;
+}
+
+llvm::Type* LLVMCodeGen::dtypeToLLVMPtr(Dtype dtype) {
+  return dtypeToLLVM(dtype)->getPointerTo();
 }
 
 void LLVMCodeGen::bind(const BufferArg& buf, const CallArg& data) {
