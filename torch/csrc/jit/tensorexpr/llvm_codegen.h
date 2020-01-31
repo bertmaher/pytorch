@@ -29,7 +29,7 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
  private:
   llvm::orc::ThreadSafeContext context_;
   llvm::IRBuilder<> irb_;
-  std::unique_ptr<llvm::TargetMachine> TM;
+  std::unique_ptr<llvm::TargetMachine> TM_;
   std::unique_ptr<llvm::orc::PytorchLLVMJIT> jit_;
   std::unique_ptr<llvm::Module> module_;
   llvm::Function* fn_;
@@ -50,6 +50,12 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
       const IRNode* node,
       const std::vector<BufferArg>& args,
       Dtype dtype = kInt32);
+
+  llvm::LLVMContext& getContext();
+  llvm::Type* dtypeToLLVM(Dtype dtype);
+  llvm::Type* dtypeToLLVMPtr(Dtype dtype);
+  void emitWrapper(const std::vector<llvm::Type*>& params);
+  void emitKernel(const IRNode* node, const std::vector<llvm::Type*>& params);
 
  public:
   explicit LLVMCodeGen(
