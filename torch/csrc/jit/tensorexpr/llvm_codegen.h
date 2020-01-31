@@ -29,7 +29,7 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
  private:
   llvm::orc::ThreadSafeContext context_;
   llvm::IRBuilder<> irb_;
-  std::unique_ptr<llvm::TargetMachine> TM;
+  std::unique_ptr<llvm::TargetMachine> TM_;
   std::unique_ptr<llvm::orc::PytorchLLVMJIT> jit_;
   std::unique_ptr<llvm::Module> module_;
   llvm::Function* fn_;

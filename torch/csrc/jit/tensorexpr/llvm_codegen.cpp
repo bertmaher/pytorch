@@ -69,7 +69,7 @@ LLVMCodeGen::LLVMCodeGen(
   JTMB.addFeatures(SubtargetFeatures.getFeatures());
 #endif
 
-  TM = llvm::cantFail(JTMB.createTargetMachine());
+  TM_ = llvm::cantFail(JTMB.createTargetMachine());
 
   jit_ = std::make_unique<llvm::orc::PytorchLLVMJIT>();
   module_ = std::make_unique<llvm::Module>("pytorch", *context_.getContext());
@@ -144,7 +144,7 @@ LLVMCodeGen::LLVMCodeGen(
   llvm::SmallVector<char, 0> asmBuffer;
   llvm::raw_svector_ostream asmStream(asmBuffer);
   llvm::legacy::PassManager PM;
-  TM->addPassesToEmitFile(
+  TM_->addPassesToEmitFile(
       PM,
       asmStream,
       nullptr,
@@ -743,15 +743,15 @@ void LLVMCodeGen::optimize(llvm::Module& M) {
   llvm::legacy::PassManager PM;
 
   // Add internal analysis passes from the target machine.
-  PM.add(llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  PM.add(llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
   FPM.add(
-      llvm::createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+      llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
 
   llvm::PassManagerBuilder PMB;
   PMB.OptLevel = 3;
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
-  TM->adjustPassManager(PMB);
+  TM_->adjustPassManager(PMB);
 
   PMB.populateFunctionPassManager(FPM);
   PMB.populateModulePassManager(PM);
