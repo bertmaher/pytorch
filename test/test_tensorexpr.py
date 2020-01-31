@@ -420,7 +420,6 @@ def test_unary_ops():
         test_trunc,
         test_abs,
     }
-    
     rand_a = torch.rand(1024, dtype=float)
     rand_b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
@@ -429,7 +428,6 @@ def test_unary_ops():
     nans = torch.from_numpy(cc)
 
     for torch_fn in fns:
-        # :w
         # random floats
         traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
         x = traced(rand_a, rand_b)
