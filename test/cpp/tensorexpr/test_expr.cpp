@@ -270,7 +270,7 @@ void testExprBinaryMath01() {
   }
 }
 
-void testDynamicShapeAdd() {
+void testExprDynamicShapeAdd() {
   auto testWithSize = [](int32_t size) {
     Var n("n", kInt32);
     Buffer a(Var("a", kHandle), kFloat32, {n});

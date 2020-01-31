@@ -20,25 +20,25 @@ using namespace torch::jit::tensorexpr;
 
 LLVMCodeGen::LLVMCodeGen(
     const Stmt& stmt,
-    const std::vector<Buffer*>& args,
+    const std::vector<BufferArg>& args,
     Dtype dtype)
     : LLVMCodeGen(stmt.node(), args, dtype) {}
 
 LLVMCodeGen::LLVMCodeGen(const Stmt& stmt)
-    : LLVMCodeGen(stmt, std::vector<Buffer*>()) {}
+    : LLVMCodeGen(stmt, std::vector<BufferArg>()) {}
 
 LLVMCodeGen::LLVMCodeGen(
     const Expr& expr,
-    const std::vector<Buffer*>& args,
+    const std::vector<BufferArg>& args,
     Dtype dtype)
     : LLVMCodeGen(expr.node(), args, dtype) {}
 
 LLVMCodeGen::LLVMCodeGen(const Expr& expr)
-    : LLVMCodeGen(expr, std::vector<Buffer*>()) {}
+    : LLVMCodeGen(expr, std::vector<BufferArg>()) {}
 
 LLVMCodeGen::LLVMCodeGen(
     const IRNode* node,
-    const std::vector<Buffer*>& args,
+    const std::vector<BufferArg>& args,
     Dtype dtype)
     : CodeGen(node),
       context_(std::make_unique<llvm::LLVMContext>()),
@@ -89,12 +89,12 @@ LLVMCodeGen::LLVMCodeGen(
   std::vector<llvm::Type*> params;
   for (int i = 0; i < args.size(); i++) {
     auto const& arg = args[i];
-    if (arg->dtype() == kInt32) {
+    if (arg.dtype() == kInt32) {
       params.push_back(llvm::Type::getInt32PtrTy(*context_.getContext()));
-    } else if (arg->dtype() == kFloat32) {
+    } else if (arg.dtype() == kFloat32) {
       params.push_back(llvm::Type::getFloatPtrTy(*context_.getContext()));
     }
-    varToArg_[args[i]->data().node()] = i;
+    varToArg_[arg.var().node()] = i;
   }
   llvm::FunctionType* fntype = llvm::FunctionType::get(ret_ty, params, false);
   fn_ = llvm::Function::Create(
