@@ -18,6 +18,33 @@
 
 using namespace torch::jit::tensorexpr;
 
+static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
+#if 0
+  // FIXME: Switch to using detectHost() rather than setting up the JTMB manually
+  // once LLVM 10 is available.
+  return llvm::cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
+#else
+  llvm::orc::JITTargetMachineBuilder JTMB(
+      (llvm::Triple(llvm::sys::getProcessTriple())));
+
+  // Retrieve host CPU name and sub-target features and add them to builder.
+  // Relocation model, code model and codegen opt level are kept to default
+  // values.
+  llvm::SubtargetFeatures SubtargetFeatures;
+  llvm::StringMap<bool> FeatureMap;
+  llvm::sys::getHostCPUFeatures(FeatureMap);
+  for (auto& Feature : FeatureMap) {
+    SubtargetFeatures.AddFeature(Feature.first(), Feature.second);
+  }
+
+  JTMB.setCodeGenOptLevel(llvm::CodeGenOpt::Default);
+  JTMB.setCPU(llvm::sys::getHostCPUName());
+  JTMB.addFeatures(SubtargetFeatures.getFeatures());
+
+  return JTMB;
+#endif
+}
+
 LLVMCodeGen::LLVMCodeGen(
     const Stmt& stmt,
     const std::vector<BufferArg>& args,
@@ -42,42 +69,20 @@ LLVMCodeGen::LLVMCodeGen(
     Dtype dtype)
     : CodeGen(node),
       context_(std::make_unique<llvm::LLVMContext>()),
-      irb_(*context_.getContext()) {
+      irb_(getContext()) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
-#if 0
-  // FIXME: Switch to using detectHost() rather than setting up the JTMB manually
-  // once LLVM 10 is available.
-  auto JTMB = llvm::cantFail(llvm::orc::JITTargetMachineBuilder::detectHost());
-#else
-  llvm::orc::JITTargetMachineBuilder JTMB(
-      (llvm::Triple(llvm::sys::getProcessTriple())));
-
-  // Retrieve host CPU name and sub-target features and add them to builder.
-  // Relocation model, code model and codegen opt level are kept to default
-  // values.
-  llvm::SubtargetFeatures SubtargetFeatures;
-  llvm::StringMap<bool> FeatureMap;
-  llvm::sys::getHostCPUFeatures(FeatureMap);
-  for (auto& Feature : FeatureMap) {
-    SubtargetFeatures.AddFeature(Feature.first(), Feature.second);
-  }
-
-  JTMB.setCodeGenOptLevel(llvm::CodeGenOpt::Default);
-  JTMB.setCPU(llvm::sys::getHostCPUName());
-  JTMB.addFeatures(SubtargetFeatures.getFeatures());
-#endif
-
+  auto JTMB = makeTargetMachineBuilder();
   TM_ = llvm::cantFail(JTMB.createTargetMachine());
 
   jit_ = std::make_unique<llvm::orc::PytorchLLVMJIT>();
-  module_ = std::make_unique<llvm::Module>("pytorch", *context_.getContext());
+  module_ = std::make_unique<llvm::Module>("pytorch", getContext());
   module_->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
   module_->setTargetTriple(JTMB.getTargetTriple().str());
 
-  int32Ty_ = llvm::Type::getInt32Ty(*context_.getContext());
-  floatTy_ = llvm::Type::getFloatTy(*context_.getContext());
+  int32Ty_ = llvm::Type::getInt32Ty(getContext());
+  floatTy_ = llvm::Type::getFloatTy(getContext());
 
   // Emit prototype.
   llvm::Type* ret_ty = nullptr;
@@ -90,9 +95,9 @@ LLVMCodeGen::LLVMCodeGen(
   for (int i = 0; i < args.size(); i++) {
     auto const& arg = args[i];
     if (arg.dtype() == kInt32) {
-      params.push_back(llvm::Type::getInt32PtrTy(*context_.getContext()));
+      params.push_back(llvm::Type::getInt32PtrTy(getContext()));
     } else if (arg.dtype() == kFloat32) {
-      params.push_back(llvm::Type::getFloatPtrTy(*context_.getContext()));
+      params.push_back(llvm::Type::getFloatPtrTy(getContext()));
     }
     varToArg_[arg.var().node()] = i;
   }
@@ -104,15 +109,13 @@ LLVMCodeGen::LLVMCodeGen(
   }
 
   // Emit wrapper to unpack argument vector.
-  auto voidPP =
-      llvm::Type::getInt8PtrTy(*context_.getContext())->getPointerTo();
+  auto voidPP = llvm::Type::getInt8PtrTy(getContext())->getPointerTo();
   auto wrapper = llvm::Function::Create(
       llvm::FunctionType::get(int32Ty_, {voidPP}, false),
       llvm::Function::ExternalLinkage,
       "wrapper",
       module_.get());
-  auto wrapBB =
-      llvm::BasicBlock::Create(*context_.getContext(), "wrapBB", wrapper);
+  auto wrapBB = llvm::BasicBlock::Create(getContext(), "wrapBB", wrapper);
   irb_.SetInsertPoint(wrapBB);
   llvm::SmallVector<llvm::Value*, 6> wrappedArgs;
   for (size_t i = 0; i < args.size(); i++) {
@@ -125,7 +128,7 @@ LLVMCodeGen::LLVMCodeGen(
   irb_.CreateRet(cc);
 
   // Set insert point to the real function.
-  bb_ = llvm::BasicBlock::Create(*context_.getContext(), "entry", fn_);
+  bb_ = llvm::BasicBlock::Create(getContext(), "entry", fn_);
   irb_.SetInsertPoint(bb_);
 
   // Compile the kernel.
@@ -157,6 +160,10 @@ LLVMCodeGen::LLVMCodeGen(
       llvm::orc::ThreadSafeModule(std::move(module_), context_)));
   auto sym = jit_->findSymbol("wrapper");
   kernelAddress_ = cantFail(sym.getAddress());
+}
+
+llvm::LLVMContext& LLVMCodeGen::getContext() {
+  return *context_.getContext();
 }
 
 void LLVMCodeGen::bind(const BufferArg& buf, const CallArg& data) {
@@ -446,10 +453,8 @@ llvm::Value* LLVMCodeGen::emitMaskedLoad(
     llvm::Value* mask) {
   // Create block structure for the masked load.
   auto preheader = irb_.GetInsertBlock();
-  auto condblock =
-      llvm::BasicBlock::Create(*context_.getContext(), "cond", fn_);
-  auto tailblock =
-      llvm::BasicBlock::Create(*context_.getContext(), "tail", fn_);
+  auto condblock = llvm::BasicBlock::Create(getContext(), "cond", fn_);
+  auto tailblock = llvm::BasicBlock::Create(getContext(), "tail", fn_);
 
   // Test the mask
   auto cond = irb_.CreateICmpEQ(mask, llvm::ConstantInt::get(int32Ty_, 1));
@@ -543,7 +548,7 @@ void LLVMCodeGen::visit(const For* v) {
 
   // Create loop preheader and body.
   auto preheader = irb_.GetInsertBlock();
-  auto loop = llvm::BasicBlock::Create(*context_.getContext(), "loop", fn_);
+  auto loop = llvm::BasicBlock::Create(getContext(), "loop", fn_);
   irb_.CreateBr(loop);
   irb_.SetInsertPoint(loop);
 
@@ -563,7 +568,7 @@ void LLVMCodeGen::visit(const For* v) {
 
   // Branch back to top of loop and finish phi for index variable.
   auto end_loop = irb_.GetInsertBlock();
-  auto after = llvm::BasicBlock::Create(*context_.getContext(), "after", fn_);
+  auto after = llvm::BasicBlock::Create(getContext(), "after", fn_);
   irb_.CreateCondBr(cond, loop, after);
   irb_.SetInsertPoint(after);
   idx->addIncoming(inc, end_loop);
@@ -591,10 +596,8 @@ void LLVMCodeGen::emitMaskedStore(
     llvm::Value* val) {
   // Create block structure for the masked store.
   auto preheader = irb_.GetInsertBlock();
-  auto condblock =
-      llvm::BasicBlock::Create(*context_.getContext(), "cond", fn_);
-  auto tailblock =
-      llvm::BasicBlock::Create(*context_.getContext(), "tail", fn_);
+  auto condblock = llvm::BasicBlock::Create(getContext(), "cond", fn_);
+  auto tailblock = llvm::BasicBlock::Create(getContext(), "tail", fn_);
 
   // Test the mask
   auto cond = irb_.CreateICmpEQ(mask, llvm::ConstantInt::get(int32Ty_, 1));
@@ -743,7 +746,8 @@ void LLVMCodeGen::optimize(llvm::Module& M) {
   llvm::legacy::PassManager PM;
 
   // Add internal analysis passes from the target machine.
-  PM.add(llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
+  PM.add(
+      llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
   FPM.add(
       llvm::createTargetTransformInfoWrapperPass(TM_->getTargetIRAnalysis()));
 
