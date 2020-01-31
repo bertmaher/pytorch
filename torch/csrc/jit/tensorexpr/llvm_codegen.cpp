@@ -83,22 +83,49 @@ LLVMCodeGen::LLVMCodeGen(
   module_->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
   module_->setTargetTriple(JTMB.getTargetTriple().str());
 
-  // Emit prototype.
-  llvm::Type* ret_ty = dtypeToLLVM(dtype);
+  // Emit prototype and bind argument Vars to parameter indices.
+  llvm::Type* retTy = dtypeToLLVM(dtype);
   std::vector<llvm::Type*> params;
   for (int i = 0; i < args.size(); i++) {
     auto const& arg = args[i];
     params.push_back(dtypeToLLVMPtr(arg.dtype()));
     varToArg_[arg.var().node()] = i;
   }
-  llvm::FunctionType* fntype = llvm::FunctionType::get(ret_ty, params, false);
+  llvm::FunctionType* fntype = llvm::FunctionType::get(retTy, params, false);
   fn_ = llvm::Function::Create(
       fntype, llvm::Function::PrivateLinkage, "pytorch", module_.get());
   for (int i = 0; i < args.size(); i++) {
     fn_->addParamAttr(i, llvm::Attribute::NoAlias);
   }
 
-  // Emit wrapper to unpack argument vector.
+  emitWrapper(params);
+  emitKernel(node, params);
+
+  cantFail(jit_->addModule(
+      llvm::orc::ThreadSafeModule(std::move(module_), context_)));
+  auto sym = jit_->findSymbol("wrapper");
+  kernelAddress_ = cantFail(sym.getAddress());
+}
+
+llvm::LLVMContext& LLVMCodeGen::getContext() {
+  return *context_.getContext();
+}
+
+llvm::Type* LLVMCodeGen::dtypeToLLVM(Dtype dtype) {
+  if (dtype == kInt32) {
+    return int32Ty_;
+  } else if (dtype == kFloat32) {
+    return floatTy_;
+  }
+  LOG(FATAL) << "Unhandled dtype: " << dtype;
+  return nullptr;
+}
+
+llvm::Type* LLVMCodeGen::dtypeToLLVMPtr(Dtype dtype) {
+  return dtypeToLLVM(dtype)->getPointerTo();
+}
+
+void LLVMCodeGen::emitWrapper(const std::vector<llvm::Type*>& params) {
   auto voidPtrPtrTy = llvm::Type::getInt8PtrTy(getContext())->getPointerTo();
   auto wrapper = llvm::Function::Create(
       llvm::FunctionType::get(int32Ty_, {voidPtrPtrTy}, false),
@@ -108,7 +135,7 @@ LLVMCodeGen::LLVMCodeGen(
   auto wrapBB = llvm::BasicBlock::Create(getContext(), "wrapBB", wrapper);
   irb_.SetInsertPoint(wrapBB);
   llvm::SmallVector<llvm::Value*, 6> wrappedArgs;
-  for (size_t i = 0; i < args.size(); i++) {
+  for (size_t i = 0; i < params.size(); i++) {
     auto argp = irb_.CreateGEP(
         wrapper->arg_begin(), llvm::ConstantInt::getSigned(int32Ty_, i));
     auto arg = irb_.CreatePointerCast(irb_.CreateLoad(argp), params[i]);
@@ -116,7 +143,9 @@ LLVMCodeGen::LLVMCodeGen(
   }
   auto cc = irb_.CreateCall(fn_, wrappedArgs);
   irb_.CreateRet(cc);
+}
 
+void LLVMCodeGen::emitKernel(const IRNode* node, const std::vector<llvm::Type*>& params) {
   // Set insert point to the real function.
   bb_ = llvm::BasicBlock::Create(getContext(), "entry", fn_);
   irb_.SetInsertPoint(bb_);
@@ -145,29 +174,6 @@ LLVMCodeGen::LLVMCodeGen(
   PM.run(*module_);
   llvm::errs() << asmStream.str();
 #endif
-
-  cantFail(jit_->addModule(
-      llvm::orc::ThreadSafeModule(std::move(module_), context_)));
-  auto sym = jit_->findSymbol("wrapper");
-  kernelAddress_ = cantFail(sym.getAddress());
-}
-
-llvm::LLVMContext& LLVMCodeGen::getContext() {
-  return *context_.getContext();
-}
-
-llvm::Type* LLVMCodeGen::dtypeToLLVM(Dtype dtype) {
-  if (dtype == kInt32) {
-    return int32Ty_;
-  } else if (dtype == kFloat32) {
-    return floatTy_;
-  }
-  LOG(FATAL) << "Unhandled dtype: " << dtype;
-  return nullptr;
-}
-
-llvm::Type* LLVMCodeGen::dtypeToLLVMPtr(Dtype dtype) {
-  return dtypeToLLVM(dtype)->getPointerTo();
 }
 
 void LLVMCodeGen::bind(const BufferArg& buf, const CallArg& data) {
