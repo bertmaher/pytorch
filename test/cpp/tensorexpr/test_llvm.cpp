@@ -194,8 +194,7 @@ void testLLVMBzeroTest() {
 
   auto mask = IntImm::make(1);
   Var i("i", kInt32);
-  auto expr =
-      For::make(i, 0, N, Store::make(b, i, IntImm::make(0), mask));
+  auto expr = For::make(i, 0, N, Store::make(b, i, IntImm::make(0), mask));
 
   LLVMCodeGen cg(expr, {b});
 
@@ -282,8 +281,12 @@ void testLLVMElemwiseLog10Float() {
   auto expr = For::make(
       i,
       0,
-      N/4,
-      Store::make(b, Ramp::make(i * 4, 1, 4), log10(Load::make(a, Ramp::make(i * 4, 1, 4), mask)), mask));
+      N / 4,
+      Store::make(
+          b,
+          Ramp::make(i * 4, 1, 4),
+          log10(Load::make(a, Ramp::make(i * 4, 1, 4), mask)),
+          mask));
 
   LLVMCodeGen cg(expr, {a, b});
 

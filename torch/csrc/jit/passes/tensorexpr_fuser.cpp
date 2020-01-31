@@ -689,7 +689,8 @@ struct TensorExprKernel {
 
 #ifdef ENABLE_LLVM
     // Set up formal params (inputs, then outputs) for kernel.
-    std::vector<CodeGen::BufferArg> params(buffer_args.begin(), buffer_args.end());
+    std::vector<CodeGen::BufferArg> params(
+        buffer_args.begin(), buffer_args.end());
     params.push_back(*tensor_output);
 
     // Generate code.

@@ -19,7 +19,7 @@ namespace jit {
   _(ExprMath01)                 \
   _(ExprUnaryMath01)            \
   _(ExprBinaryMath01)           \
-  _(ExprDynamicShapeAdd)            \
+  _(ExprDynamicShapeAdd)        \
   _(IRPrinterBasicValueTest)    \
   _(IRPrinterBasicValueTest02)  \
   _(IRPrinterLetTest01)         \
@@ -105,7 +105,7 @@ namespace jit {
   _(ATengeInt)                  \
   _(ATengtInt)                  \
   _(ATenleInt)                  \
-  _(ATenltInt)                  \
+  _(ATenltInt)
 
 #define TH_FORALL_TESTS_CUDA(_)
 
