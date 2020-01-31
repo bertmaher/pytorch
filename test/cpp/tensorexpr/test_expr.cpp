@@ -272,16 +272,16 @@ void testExprBinaryMath01() {
 
 void testDynamicShapeAdd() {
   auto testWithSize = [](int32_t size) {
-    Buffer n(Var("n", kHandle), kInt32, {1});
-    Buffer a(Var("a", kHandle), kFloat32, {n.data()});
-    Buffer b(Var("b", kHandle), kFloat32, {n.data()});
-    Buffer c(Var("c", kHandle), kFloat32, {n.data()});
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {n});
+    Buffer b(Var("b", kHandle), kFloat32, {n});
+    Buffer c(Var("c", kHandle), kFloat32, {n});
     Var i("i", kInt32);
-    Stmt s = For::make(i, 0, n(0), Store::make(c, i, a(i) + b(i), 1));
+    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
-    SimpleIREvaluator(s, a, b, c, n)(aData, bData, cData, &size);
+    SimpleIREvaluator(s, a, b, c, n)(aData, bData, cData, size);
     ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
   };
   testWithSize(1);

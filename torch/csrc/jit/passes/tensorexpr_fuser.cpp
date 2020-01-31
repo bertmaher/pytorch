@@ -686,6 +686,7 @@ struct TensorExprKernel {
       }
     }
     Stmt stmt = sch.Lower();
+
 #ifdef ENABLE_LLVM
     // Set up formal params (inputs, then outputs) for kernel.
     std::vector<Buffer*> params;
