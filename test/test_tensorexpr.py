@@ -429,12 +429,13 @@ def test_unary_ops():
     nans = torch.from_numpy(cc)
 
     for torch_fn in fns:
-        #random floats
+        # :w
+        # random floats
         traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
         x = traced(rand_a, rand_b)
         y = torch_fn(rand_a, rand_b)
         np.testing.assert_allclose(x.numpy(), y.numpy())
-        #nans
+        # nans
         traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
         x = traced(nans, rand_b)
         y = torch_fn(nans, rand_b)
@@ -470,19 +471,19 @@ def test_remainder():
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
-    #random floats
+    # random floats
     traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
     x = traced(a, b)
     y = run_remainder(a, b)
     np.testing.assert_allclose(x.numpy(), y.numpy())
 
-    #div by 0
+    # div by 0
     traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
     x = traced(zeros, a)
     y = run_remainder(zeros, a)
     np.testing.assert_allclose(x.numpy(), y.numpy())
 
-    #numerators and denominatos are nan
+    # numerators and denominatos are nan
     traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
     x = traced(nans, a)
     y = run_remainder(nans, a)
