@@ -289,6 +289,7 @@ def test_lt():
     x = traced(a, b)
     np.testing.assert_allclose(np.zeros(1024), x.numpy())
 
+
 def test_min_max():
     def test(x, y):
         return torch.max(torch.min(x, y), torch.tensor([4.0]))
@@ -311,6 +312,7 @@ def test_clamp():
     np.testing.assert_allclose(
         traced(a),
         np.clip(an + 3.0, 0.0, 6.0))
+
 
 def test_reps():
     def easy(x, y):
