@@ -31,12 +31,22 @@ static std::atomic<bool> executor_mode{true};
 static std::atomic<bool> profiling_mode{true};
 #endif
 
+static std::atomic<size_t> num_profiled_runs{1};
+static std::atomic<size_t> bailout_depth{1};
 
 std::atomic<bool>& getProfilingMode() {
   return profiling_mode;
 }
 std::atomic<bool>& getExecutorMode() {
   return executor_mode;
+}
+
+std::atomic<size_t>& getNumProfiledRuns() {
+  return num_profiled_runs;
+}
+
+std::atomic<size_t>& getBailoutDepth() {
+  return bailout_depth;
 }
 
 static bool needsGradientInProfilingMode(Block* b) {
@@ -126,7 +136,9 @@ ProfilingGraphExecutorImpl::ProfilingGraphExecutorImpl(
     const std::shared_ptr<Graph>& graph)
     : GraphExecutorImplBase(graph) {}
 
-ExecutionPlan ProfilingGraphExecutorImpl::getPlanFor(Stack& stack) {
+ExecutionPlan ProfilingGraphExecutorImpl::getPlanFor(
+    Stack& stack,
+    size_t remaining_bailout_depth) {
   std::lock_guard<std::mutex> lock(compile_mutex);
   GRAPH_DEBUG("Running ProfilingGraphExecutorImpl ", this);
 
@@ -135,7 +147,7 @@ ExecutionPlan ProfilingGraphExecutorImpl::getPlanFor(Stack& stack) {
   }
 
   // simple executor
-  if (!getProfilingMode()) {
+  if (remaining_bailout_depth == 0) {
     auto copy = graph->copy();
     runProfilingInsensitiveOptimizations(copy);
     GRAPH_DUMP("Optimized SimpleExecutor Graph : ", copy);
@@ -162,7 +174,7 @@ ExecutionPlan ProfilingGraphExecutorImpl::getPlanFor(Stack& stack) {
   auto copy = pr_->graph()->copy();
   runProfilingOptimizations(copy);
   // cache
-  optimized_plan_ = ExecutionPlan(copy);
+  optimized_plan_ = ExecutionPlan(copy, remaining_bailout_depth);
   return *optimized_plan_;
 }
 

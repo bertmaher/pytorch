@@ -162,8 +162,7 @@
     - arg: THTensor* result
       output: True
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - THIndexTensor* index
 ]]
 [[
@@ -175,8 +174,7 @@
   return: argument 0
   arguments:
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - THIndexTensor* index
     - THTensor* source
 ]]
@@ -219,8 +217,7 @@
   return: argument 0
   arguments:
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - THIndexTensor* index
     - THTensor* source
 ]]
@@ -234,8 +231,7 @@
   options:
     - arguments:
       - THTensor* self
-      - arg: long dim
-        wrap_dim: self
+      - long dim
       - THIndexTensor* index
       - real value
 ]]
@@ -249,15 +245,13 @@
     - cname: scatter
       arguments:
         - THTensor* self
-        - arg: long dim
-          wrap_dim: self
+        - long dim
         - THIndexTensor* index
         - THTensor* src
     - cname: scatterFill
       arguments:
         - THTensor* self
-        - arg: long dim
-          wrap_dim: self
+        - long dim
         - THIndexTensor* index
         - real value
 ]]
@@ -265,20 +259,21 @@
   name: _th_scatter_add_
   return: argument 0
   cname: scatterAdd
-  cpu_bool: True
+  backends:
+    - CUDA
   cuda_bool: True
   variants: function
   arguments:
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - THIndexTensor* index
     - THTensor* src
 ]]
 [[
   name: _th_gather
   cname: gather
-  cpu_bool: True
+  backends:
+    - CUDA
   cuda_bool: True
   variants:
     - function
@@ -288,8 +283,7 @@
       output: True
       resize: index
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - THIndexTensor* index
 ]]
 [[
@@ -339,8 +333,7 @@
         - arg: THIndexTensor* min_indices
           output: True
         - THTensor* self
-        - arg: long dim
-          wrap_dim: self
+        - long dim
         - bool keepdim
 ]]
 [[
@@ -377,8 +370,7 @@
         - arg: THIndexTensor* max_indices
           output: True
         - THTensor* self
-        - arg: long dim
-          wrap_dim: self
+        - long dim
         - bool keepdim
 ]]
 [[
@@ -392,8 +384,7 @@
     - arg: THIndexTensor* indices
       output: True
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - bool keepdim
 ]]
 [[
@@ -408,8 +399,7 @@
     - arg: THIndexTensor* indices
       output: True
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - bool descending
 ]]
 [[
@@ -427,8 +417,7 @@
       output: True
     - THTensor* self
     - long k
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - bool largest
     - bool sorted
 ]]
@@ -590,8 +579,7 @@
       output: True
     - THTensor* self
     - real p
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - real maxnorm
 ]]
 [[
@@ -608,8 +596,7 @@
     - THTensor* self
     - THTensor* self
     - real p
-    - arg: long dim
-      wrap_dim: self
+    - long dim
     - real maxnorm
 ]]
 [[
@@ -660,8 +647,7 @@
     - arg: THTensor* result
       output: True
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
 ]]
 [[
   name: _th_cumprod
@@ -674,8 +660,7 @@
     - arg: THTensor* result
       output: True
     - THTensor* self
-    - arg: long dim
-      wrap_dim: self
+    - long dim
 ]]
 [[
   name: _th_trace
@@ -1299,36 +1284,6 @@
     - double std
     - THGenerator* generator
 ]]
-[[
-  name: _th_log_normal_
-  cname: logNormal
-  variants: function
-  types:
-    - floating_point
-  backends:
-    - CPU
-  return: self
-  arguments:
-    - THTensor* self
-    - double mean
-    - double std
-    - THGenerator* generator
-]]
-[[
-  name: _th_exponential_
-  types:
-    - floating_point
-  backends:
-    - CPU
-  cname: exponential
-  variants: function
-  return: self
-  arguments:
-    - THTensor* self
-    - double lambd
-    - THGenerator* generator
-]]
-
 [[
   name: _th_copy_ignoring_overlaps_
   cname: copyIgnoringOverlaps
