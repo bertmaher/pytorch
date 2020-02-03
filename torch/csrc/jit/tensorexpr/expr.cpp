@@ -6,8 +6,56 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
+Kernel::~Kernel() {
+  for (KernelObject* p : kernel_objects_) {
+    delete p;
+  }
+}
+
+KernelObject::KernelObject() {
+  Kernel& kernel = Kernel::GetCurrentKernel();
+  kernel.kernel_objects_.push_back(this);
+}
+
+KernelObject::~KernelObject() {}
+
 Expr Expr::operator+(const Expr& other) const {
   return Add::make(*this, other);
+}
+
+static std::vector<Kernel*>& GetKernelStack() {
+  thread_local std::vector<Kernel*> kernel_stacks;
+  return kernel_stacks;
+}
+
+Kernel& Kernel::GetCurrentKernel() {
+  std::vector<Kernel*>& kernel_stack = GetKernelStack();
+  if (kernel_stack.empty()) {
+    throw std::runtime_error(
+        "A KernelScope must be bound before creating KernelObject");
+  }
+  return *kernel_stack.back();
+}
+
+KernelScope::KernelScope() : owning_kernel_(true) {
+  kernel_ = new Kernel;
+  GetKernelStack().push_back(kernel_);
+}
+
+KernelScope::KernelScope(Kernel& kernel) : owning_kernel_(false) {
+  kernel_ = &kernel;
+  GetKernelStack().push_back(&kernel);
+}
+
+KernelScope::~KernelScope() {
+  std::vector<Kernel*>& kernel_stack = GetKernelStack();
+  if (kernel_ != kernel_stack.back()) {
+    throw std::runtime_error("Mismatch KernelScope and kernel");
+  }
+  if (owning_kernel_) {
+    delete kernel_;
+  }
+  kernel_stack.pop_back();
 }
 
 Expr Expr::operator-(const Expr& other) const {

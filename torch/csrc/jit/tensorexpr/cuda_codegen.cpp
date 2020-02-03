@@ -140,7 +140,7 @@ void CudaCodeGen::Initialize() {
   oss_ << ") {";
 
   oss_ << std::endl;
-  ir_node().node()->accept(printer_.get());
+  ir_node()->accept(printer_.get());
   oss_ << std::endl;
   oss_ << "}";
 

@@ -20,6 +20,7 @@ namespace jit {
 using namespace torch::jit::tensorexpr;
 
 void testExprBasicValueTest() {
+  KernelScope kernel_scope;
   Expr a = IntImm::make(2), b = IntImm::make(3);
   Expr c = Add::make(a, b);
   SimpleIREvaluator eval(c);
@@ -28,6 +29,7 @@ void testExprBasicValueTest() {
 }
 
 void testExprBasicValueTest02() {
+  KernelScope kernel_scope;
   Expr a(2.0f);
   Expr b(3.0f);
   Expr c(4.0f);
@@ -39,6 +41,7 @@ void testExprBasicValueTest02() {
 }
 
 void testExprLetTest01() {
+  KernelScope kernel_scope;
   Var x("x", kFloat32);
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
@@ -49,6 +52,7 @@ void testExprLetTest01() {
 }
 
 void testExprLetTest02() {
+  KernelScope kernel_scope;
   Var x("x", kFloat32);
   Var y("y", kFloat32);
   Expr value = Expr(3.f);
@@ -65,6 +69,7 @@ static Expr test_01(const Expr& expr) {
 }
 
 void testExprVectorAdd01() {
+  KernelScope kernel_scope;
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
@@ -117,6 +122,7 @@ void testExprVectorAdd01() {
 }
 
 void testExprCompareSelectEQ() {
+  KernelScope kernel_scope;
   constexpr int N = 1024;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -154,6 +160,7 @@ void testExprCompareSelectEQ() {
 }
 
 void testExprSubstitute01() {
+  KernelScope kernel_scope;
   Expr x = Variable::make("x", kFloat32);
   Expr y = Variable::make("y", kFloat32);
   Expr e = (x - 1.0f) * (x + y + 2.0f);
@@ -172,6 +179,7 @@ void testExprSubstitute01() {
 }
 
 void testExprMath01() {
+  KernelScope kernel_scope;
   Expr v = sin(Expr(1.0f));
 
   std::ostringstream oss;
@@ -186,6 +194,7 @@ void testExprMath01() {
 }
 
 void testExprUnaryMath01() {
+  KernelScope kernel_scope;
   struct TestConfig {
     std::function<Expr(const Expr&)> func;
     std::function<float(float)> ref_func;
@@ -247,6 +256,7 @@ void testExprUnaryMath01() {
 }
 
 void testExprBinaryMath01() {
+  KernelScope kernel_scope;
   struct TestConfig {
     std::function<Expr(const Expr&, const Expr&)> func;
     std::function<float(float, float)> ref_func;
@@ -271,6 +281,7 @@ void testExprBinaryMath01() {
 }
 
 void testExprDynamicShapeAdd() {
+  KernelScope kernel_scope;
   auto testWithSize = [](int32_t size) {
     Var n("n", kInt32);
     Buffer a(Var("a", kHandle), kFloat32, {n});
@@ -290,6 +301,7 @@ void testExprDynamicShapeAdd() {
 }
 
 void testCond01() {
+  KernelScope kernel_scope;
   const int N = 16;
   PaddedBuffer<float> a_v(N);
   Buffer a_buf("a", kFloat32, {N});
