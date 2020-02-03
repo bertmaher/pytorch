@@ -63,7 +63,9 @@ bool isSupported(Node* node) {
     case aten::log:
     case aten::log2:
     case aten::exp:
+    case aten::expm1:
     case aten::erf:
+    case aten::erfc:
     case aten::cos:
     case aten::sin:
     case aten::tan:
@@ -81,6 +83,10 @@ bool isSupported(Node* node) {
     case aten::round:
     case aten::trunc:
     case aten::remainder:
+    case aten::sigmoid:
+    case aten::relu:
+    case aten::neg:
+    case aten::frac:
 #endif
       return true;
     default:
@@ -545,6 +551,11 @@ struct TensorExprKernel {
             "aten_exp", n, [](const Expr& a) { return exp(a); });
       } break;
 
+      case aten::expm1: {
+        return ComputeOneOperand(
+            "aten_expm1", n, [](const Expr& a) { return expm1(a); });
+      } break;
+
       case aten::erf: {
         return ComputeOneOperand(
             "aten_erf", n, [](const Expr& a) { return erf(a); });
@@ -650,6 +661,31 @@ struct TensorExprKernel {
       case aten::trunc: {
         return ComputeOneOperand(
             "aten_trunc", n, [](const Expr& a) { return trunc(a); });
+      } break;
+
+      case aten::sigmoid: {
+        return ComputeOneOperand(
+            "aten_sigmoid", n, [](const Expr& a) { return sigmoid(a); });
+      } break;
+
+      case aten::relu: {
+        return ComputeOneOperand(
+            "aten_relu", n, [](const Expr& a) { return relu(a); });
+      } break;
+
+      case aten::neg: {
+        return ComputeOneOperand(
+            "aten_neg", n, [](const Expr& a) { return neg(a); });
+      } break;
+
+      case aten::erfc: {
+        return ComputeOneOperand(
+            "aten_erfc", n, [](const Expr& a) { return erfc(a); });
+      } break;
+
+      case aten::frac: {
+        return ComputeOneOperand(
+            "aten_frac", n, [](const Expr& a) { return frac(a); });
       } break;
 
       default: {

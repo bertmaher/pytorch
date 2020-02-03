@@ -559,8 +559,12 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         return std::log2(v);
       case kLog10:
         return std::log10(v);
+      case kLog1p:
+        return std::log1p(v);
       case kErf:
         return std::erf(v);
+      case kErfc:
+        return std::erfc(v);
       case kSqrt:
         return std::sqrt(v);
       case kRsqrt:
@@ -573,6 +577,15 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         return std::round(v);
       case kTrunc:
         return std::trunc(v);
+      case kSigmoid:
+        return 1.0f / (1.0f + std::expf(-v));
+      case kRelu:
+        return (v < 0 ? 0.0f : v);
+      case kFrac:
+        float intpart;
+        return std::modf(v, &intpart);
+      case kNeg:
+        return -v;
       default:
         throw std::runtime_error("invalid op_type: " + std::to_string(op_type));
     }
