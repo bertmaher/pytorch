@@ -184,6 +184,7 @@ std::pair<graph_node_list::iterator, bool> scanNode(
   return {++consumer->reverseIterator(), false};
 }
 
+#define TX_DEBUG 1
 void fuseTensorExprs(std::shared_ptr<Graph>& graph) {
 #if TX_DEBUG
   std::cout << "Entering TExprFuser\n";
@@ -710,6 +711,8 @@ struct TensorExprKernel {
   }
 
   void run(Stack& stack) {
+    std::cerr << "Running kernel" << std::endl;
+    std::cerr.flush();
     // Set up arguments (inputs, then outputs) for kernel call.
     auto inputs = last(stack, buffer_args.size());
     for (int i = 0; i < buffer_args.size(); i++) {

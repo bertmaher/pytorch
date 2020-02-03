@@ -425,7 +425,7 @@ def test_unary_ops():
     rand_a = torch.rand(1024, dtype=float)
     rand_b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
@@ -464,10 +464,10 @@ def test_remainder():
         c = torch.remainder(torch.add(x, y), x)
         return c
 
-    a = torch.rand(1024, dtype=float) 
-    b = torch.rand(1024, dtype=float) 
+    a = torch.rand(1024, dtype=float)
+    b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
@@ -488,3 +488,37 @@ def test_remainder():
     x = traced(nans, a)
     y = run_remainder(nans, a)
     np.testing.assert_allclose(x.numpy(), y.numpy())
+
+
+def test_dynamic_shape():
+    def test(x, y, z):
+        return x + y + z
+
+    print("-" * 80)
+    print("Tracing function")
+    print("-" * 80)
+    trace = torch.jit.trace(test, (torch.rand(8), torch.rand(8), torch.rand(8)))
+
+    print("-" * 80)
+    print("Running traced function")
+    print("-" * 80)
+    x, y, z = [torch.rand(4) for _ in range(3)]
+    result = trace(x, y, z)
+    np.testing.assert_allclose(result.numpy(), x.numpy() + y.numpy() + z.numpy())
+
+    print("-" * 80)
+    print("Running traced function as argument")
+    print("-" * 80)
+    np.testing.assert_allclose(trace(x, y, z).numpy(), test(x, y, z).numpy())
+
+    print("-" * 80)
+    print("Running traced function with novel size")
+    print("-" * 80)
+    x, y, z = [torch.rand(6) for _ in range(3)]
+    np.testing.assert_allclose(trace(x, y, z).numpy(), test(x, y, z).numpy())
+
+    print("-" * 80)
+    print("Running traced function with same novelsize")
+    print("-" * 80)
+    x, y, z = [torch.rand(6) for _ in range(3)]
+    np.testing.assert_allclose(trace(x, y, z).numpy(), test(x, y, z).numpy())
