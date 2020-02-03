@@ -115,7 +115,9 @@ namespace jit {
 
 #define DECLARE_TENSOREXPR_TEST(name) void test##name();
 TH_FORALL_TESTS(DECLARE_TENSOREXPR_TEST)
+#ifdef USE_CUDA
 TH_FORALL_TESTS_CUDA(DECLARE_TENSOREXPR_TEST)
+#endif
 #undef DECLARE_TENSOREXPR_TEST
 
 } // namespace jit
