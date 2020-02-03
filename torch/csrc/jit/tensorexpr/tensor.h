@@ -29,6 +29,13 @@ class TORCH_API TensorOperationNode : public RefCounted {
       Var* tail_var,
       TensorOperation* tail_op);
 
+  void SplitWithMask(
+      const Var& loop_var,
+      int factor,
+      bool factor_on_inner,
+      Var* outer_var,
+      Var* inner_var);
+
   void ComputeInline();
 
   void GPUExecConfig(
@@ -117,6 +124,16 @@ class TORCH_API TensorOperation : public RefHandle<TensorOperationNode> {
         inner_var,
         tail_var,
         tail_op);
+  }
+
+  void SplitWithMask(
+      const Var& loop_var,
+      int factor,
+      bool factor_on_inner,
+      Var* outer_var,
+      Var* inner_var) {
+    return node()->SplitWithMask(
+        loop_var, factor, factor_on_inner, outer_var, inner_var);
   }
 
   void ComputeInline() {

@@ -28,6 +28,7 @@ namespace jit {
   _(ExprSimple01)               \
   _(ExprLower01)                \
   _(ExprSimple02)               \
+  _(ExprSplitWithMask01)        \
   _(ScheduleBroadcastAddBuffer) \
   _(ScheduleFunctionCall01)     \
   _(ScheduleInlineFunc01)       \

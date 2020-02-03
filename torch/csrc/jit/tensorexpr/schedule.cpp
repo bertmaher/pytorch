@@ -215,7 +215,6 @@ void ScheduleNode::SplitWithTail(
       }
     }
     loop_node = loop_node->parent();
-    ;
   }
 
   if (loop_node == nullptr) {
@@ -274,6 +273,57 @@ void ScheduleNode::SplitWithTail(
   CHECK(expr_node->is_tensor_expr_op());
   // This transform is left after the tail axis is cloned, so it doesn't affect
   // the tail axis.
+  expr_node->tensor_expr_op()->ApplyLoopTransform(split_transform, 0);
+  TensorExprNode::ReplaceSubtree(loop_node, outer_node);
+}
+
+// TODO: Merge with SplitWithTail
+void ScheduleNode::SplitWithMask(
+    TensorExprNode* expr_node,
+    const Var& loop_var,
+    int factor,
+    bool factor_on_inner,
+    Var* outer_var,
+    Var* inner_var) {
+  // find the loop_axis that contains loop_var in the ancestor
+  TensorExprNode* loop_node = expr_node;
+  while (loop_node != nullptr) {
+    if (loop_node->is_loop_axis()) {
+      LoopAxis* loop_axis = loop_node->loop_axis();
+      if (loop_axis->var() == loop_var) {
+        break;
+      }
+    }
+    loop_node = loop_node->parent();
+  }
+
+  if (loop_node == nullptr) {
+    // TODO: change to a recoverable error.
+    LOG(FATAL) << "loop var cannot be found in the ancestors of node";
+  }
+
+  // create the new loop_axis
+  SplitAxisWithMask* split_transform = this->NewSplitAxisWithMask(
+      loop_node->loop_axis(), factor, factor_on_inner);
+  CHECK(split_transform->output_group_count() == 1);
+  CHECK(split_transform->output_group_size(0) == 2);
+  LoopAxis* outer_axis = split_transform->output(0, 0);
+  LoopAxis* inner_axis = split_transform->output(0, 1);
+
+  // replace loop_node with the new loop_axis
+  TensorExprNode* outer_node = this->NewTensorExprNode();
+  outer_node->set_loop_axis(outer_axis);
+  *outer_var = outer_axis->var();
+  TensorExprNode* inner_node = outer_node->NewFirstChild();
+  inner_node->set_loop_axis(inner_axis);
+  *inner_var = inner_axis->var();
+  TensorExprNode* loop_sibling = loop_node->next_sibling();
+  TensorExprNode* loop_child = loop_node->first_child();
+  inner_node->SetFirstChild(loop_child);
+  outer_node->SetNextSibling(loop_sibling);
+
+  CHECK(expr_node->is_tensor_expr_op());
+  expr_node->tensor_expr_op()->AddPredicate(split_transform->predicate());
   expr_node->tensor_expr_op()->ApplyLoopTransform(split_transform, 0);
   TensorExprNode::ReplaceSubtree(loop_node, outer_node);
 }
@@ -530,6 +580,11 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     CHECK(node->first_child() == nullptr);
     TensorExprOp* expr_op = node->tensor_expr_op();
     Stmt stmt = expr_op->ElementStmt();
+    // TODO: the predicate should be hoisted to as high as possible in the acestor chain.
+    const std::vector<Expr>& predicates = expr_op->predicates();
+    for (int i = 0; i < predicates.size(); i++) {
+      stmt = Cond::make(predicates[i], stmt, Stmt());
+    }
     return stmt;
   } else if (node->is_loop_axis()) {
     CHECK(node->first_child() != nullptr);
@@ -585,6 +640,10 @@ void SplitAxisTransform::CloneFrom(const SplitAxisTransform* other) {
 }
 
 void SplitAxisWithTail::CloneFrom(const SplitAxisWithTail* other) {
+  this->SplitAxisTransform::CloneFrom(other);
+}
+
+void SplitAxisWithMask::CloneFrom(const SplitAxisWithMask* other) {
   this->SplitAxisTransform::CloneFrom(other);
 }
 
@@ -697,25 +756,87 @@ SplitAxisWithTail::SplitAxisWithTail(
   }
 }
 
-Stmt SplitAxisWithTail::ConvertToNewArgs(Stmt* stmt, int output_group) {
+// TODO: merge with SplitAxisWithTail
+SplitAxisWithMask::SplitAxisWithMask(
+    LoopAxis* loop_axis,
+    int factor,
+    bool factor_on_inner)
+    : BaseClass(loop_axis, factor, factor_on_inner) {
+  // TODO: support factor_on_inner == false;
+  CHECK(factor_on_inner) << "only factor_on_inner = True is supported for now";
+
+  // TODO: Support dynamic shapes
+  int size = this->stop() - this->start();
+  if (size % factor != 0) {
+    CHECK(this->start() == 0) << "Non-zero start is not implemented yet";
+    if (this->stop() % factor != 0) {
+      predicate_ = CompareSelect::make(loop_axis->var(), this->stop(), kLT);
+    }
+  }
+  int split_count = (size + factor - 1) / factor;
+
+  this->set_output_group_count(1);
+  const std::string& loop_var_name = loop_axis->var().name_hint();
+  Dtype loop_var_dtype = loop_axis->var().dtype();
+  LoopAxis* outer = this->NewAxis(
+      Var(loop_var_name + ".outer", loop_var_dtype), Range(0, split_count));
+  LoopAxis* inner = this->NewAxis(
+      Var(loop_var_name + ".inner", loop_var_dtype), Range(0, factor));
+  this->set_output_group(0, {outer, inner});
+}
+
+Expr SplitAxisWithTail::combined_loop_index(int output_group) {
   LoopAxis* original_axis = this->input(0);
   Var original_var = original_axis->var();
   LoopAxis* outer = this->output(0, 0);
   LoopAxis* inner = this->output(0, 1);
-  Expr combined_loop_index;
+  Expr combined_index;
   if (output_group == 0) {
     // x -> x.outer * inner.size + x.inner
-    combined_loop_index = outer->var() * inner->range().stop() + inner->var();
+    combined_index = outer->var() * inner->range().stop() + inner->var();
   } else if (output_group == 1) {
     LoopAxis* tail = this->output(1, 0);
     // x -> x.tail + outer.size * inner.size
-    combined_loop_index =
+    combined_index =
         tail->var() + outer->range().stop() * inner->range().stop();
   } else {
     LOG(FATAL) << "invalid output_group: " << output_group;
   }
-  Stmt new_stmt = Substitute(stmt, {{original_var, combined_loop_index}});
+  return combined_index;
+}
+
+Stmt SplitAxisWithTail::ConvertToNewArgs(Stmt* stmt, int output_group) {
+  Expr combined_index = combined_loop_index(output_group);
+  Stmt new_stmt = Substitute(stmt, {{input(0)->var(), combined_index}});
   return new_stmt;
+}
+
+Expr SplitAxisWithTail::ConvertToNewArgs(Expr* expr, int output_group) {
+  Expr combined_index = combined_loop_index(output_group);
+  Expr new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
+  return new_expr;
+}
+
+Expr SplitAxisWithMask::combined_loop_index(int output_group) {
+  DCHECK_EQ(output_group, 0) << "Ininvalid output group: " << output_group;
+  LoopAxis* original_axis = this->input(0);
+  Var original_var = original_axis->var();
+  LoopAxis* outer = this->output(0, 0);
+  LoopAxis* inner = this->output(0, 1);
+  Expr combined_index = outer->var() * inner->range().stop() + inner->var();
+  return combined_index;
+}
+
+Stmt SplitAxisWithMask::ConvertToNewArgs(Stmt* stmt, int output_group) {
+  Expr combined_index = combined_loop_index(output_group);
+  Stmt new_stmt = Substitute(stmt, {{input(0)->var(), combined_index}});
+  return new_stmt;
+}
+
+Expr SplitAxisWithMask::ConvertToNewArgs(Expr* expr, int output_group) {
+  Expr combined_index = combined_loop_index(output_group);
+  Expr new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
+  return new_expr;
 }
 
 LoopAxis* LoopAxisTransform::NewAxis(

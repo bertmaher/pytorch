@@ -1,17 +1,17 @@
-#include "test/cpp/tensorexpr/test_base.h"
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include "test/cpp/tensorexpr/test_base.h"
 
-#include "torch/csrc/jit/tensorexpr/ir_printer.h"
-#include "torch/csrc/jit/tensorexpr/schedule.h"
-#include "torch/csrc/jit/tensorexpr/tensor.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/eval.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
-#include "test/cpp/tensorexpr/padded_buffer.h"
+#include "torch/csrc/jit/tensorexpr/ir_printer.h"
+#include "torch/csrc/jit/tensorexpr/schedule.h"
+#include "torch/csrc/jit/tensorexpr/tensor.h"
 
 namespace torch {
 namespace jit {
@@ -121,6 +121,42 @@ void testExprSimple02() {
 
     ExpectAllNear(f_v, f_ref, 1e-5);
   }
+}
+
+void testExprSplitWithMask01() {
+  const int M = 26;
+  const int N = 5;
+  Buffer a_buf("a", kFloat32, {M, N});
+  Buffer b_buf("b", kFloat32, {M, N});
+  Tensor tensor =
+      Compute("f", {{M, "m"}, {N, "n"}}, [&](const Expr& m, const Expr& n) {
+        return a_buf(m, n) + b_buf(m, n) + 1.0f;
+      });
+  Var m = tensor.function().arg(0);
+  Var n = tensor.function().arg(1);
+  Var n_outer;
+  Var n_inner;
+
+  Schedule sch({tensor});
+  tensor.SplitWithMask(n, 4, true, &n_outer, &n_inner);
+
+  Stmt stmt = sch.Lower();
+
+  PaddedBuffer<float> a_v(M, N, "a");
+  PaddedBuffer<float> b_v(M, N, "b");
+  PaddedBuffer<float> c_v(M, N, "c");
+  PaddedBuffer<float> c_ref(M, N, "c_ref");
+  for (int m = 0; m < M; m++) {
+    for (int n = 0; n < N; n++) {
+      a_v(m, n) = 2 * m;
+      b_v(m, n) = 3 * n;
+      c_ref(m, n) = a_v(m, n) + b_v(m, n) + 1.0f;
+    }
+  }
+
+  SimpleIREvaluator(stmt, a_buf, b_buf, tensor)(a_v, b_v, c_v);
+
+  ExpectAllNear(c_v, c_ref, 1e-5);
 }
 
 void testScheduleBroadcastAddBuffer() {

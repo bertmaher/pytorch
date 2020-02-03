@@ -33,6 +33,19 @@ void TensorOperationNode::SplitWithTail(
   }
 }
 
+void TensorOperationNode::SplitWithMask(
+    const Var& loop_var,
+    int factor,
+    bool factor_on_inner,
+    Var* outer_var,
+    Var* inner_var) {
+  check_expr_node();
+  schedule::ScheduleNode* schedule = expr_node_->schedule();
+  schedule::TensorExprNode* tail_expr_node = nullptr;
+  schedule->SplitWithMask(
+      expr_node_, loop_var, factor, factor_on_inner, outer_var, inner_var);
+}
+
 void TensorOperationNode::GPUExecConfig(
     const std::vector<Var>& blockIdx,
     const std::vector<Var>& threadIdx) {

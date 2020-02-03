@@ -171,6 +171,11 @@ class TORCH_API LoopAxisTransform
     return Stmt();
   }
 
+  virtual Expr ConvertToNewArgs(Expr* stmt, int group_index) {
+    LOG(FATAL) << "unmiplemented";
+    return Expr();
+  }
+
   int output_group_count() const {
     return outputs_.size();
   }
@@ -269,15 +274,35 @@ class SplitAxisWithTail
   using BaseClass = Cloneable<SplitAxisWithTail, SplitAxisTransform>;
   void CloneFrom(const SplitAxisWithTail* other);
   Stmt ConvertToNewArgs(Stmt* stmt, int output_group) override;
+  Expr ConvertToNewArgs(Expr* stmt, int output_group) override;
   SplitAxisWithTail() {}
 
  private:
   friend class ScheduleNode;
   SplitAxisWithTail(LoopAxis* loop_axis, int factor, bool factor_on_inner);
+  Expr combined_loop_index(int output_group);
 };
 
-// TODO: Implement the following transforms.
-class SplitAxisWithMask;
+class SplitAxisWithMask
+    : public Cloneable<SplitAxisWithMask, SplitAxisTransform> {
+ public:
+  using BaseClass = Cloneable<SplitAxisWithMask, SplitAxisTransform>;
+  void CloneFrom(const SplitAxisWithMask* other);
+  Stmt ConvertToNewArgs(Stmt* stmt, int output_group) override;
+  Expr ConvertToNewArgs(Expr* stmt, int output_group) override;
+  SplitAxisWithMask() {}
+  const Expr& predicate() const {
+    return predicate_;
+  }
+
+ private:
+  friend class ScheduleNode;
+  SplitAxisWithMask(LoopAxis* loop_axis, int factor, bool factor_on_inner);
+  Expr combined_loop_index(int output_group);
+
+  Expr predicate_; // original predicate
+};
+
 class FuseAxisTransform;
 
 // Section: Tensor Expr Tree
@@ -304,6 +329,7 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
   void CloneFrom(const TensorExprOp* other) {
     this->func_ = other->func_;
     this->element_stmt_ = other->element_stmt_;
+    this->predicates_ = other->predicates_;
   }
 
   Stmt ElementStmt() const {
@@ -313,6 +339,20 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
   void ApplyLoopTransform(LoopAxisTransform* loop_transform, int group_index) {
     element_stmt_ =
         loop_transform->ConvertToNewArgs(&element_stmt_, group_index);
+    for (int i = 0; i < predicates_.size(); i++) {
+      predicates_[i] =
+          loop_transform->ConvertToNewArgs(&predicates_[i], group_index);
+    }
+  }
+
+  void AddPredicate(const Expr& predicate) {
+    if (!predicate.empty()) {
+      predicates_.push_back(predicate);
+    }
+  }
+
+  const std::vector<Expr>& predicates() const {
+    return predicates_;
   }
 
  private:
@@ -326,6 +366,7 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
   // We still need to know the buffer this writes to.
   Function func_;
   Stmt element_stmt_;
+  std::vector<Expr> predicates_;
 };
 
 // Part of the recursive node structure in the tensor expr tree.
@@ -463,6 +504,13 @@ class TORCH_API ScheduleNode : public RefCounted {
     return NewObject<SplitAxisWithTail>(loop_axis, factor, factor_on_inner);
   }
 
+  SplitAxisWithMask* NewSplitAxisWithMask(
+      LoopAxis* loop_axis,
+      int factor,
+      bool factor_on_inner) {
+    return NewObject<SplitAxisWithMask>(loop_axis, factor, factor_on_inner);
+  }
+
   TensorExprOp* NewTensorExprOp(const Function& func) {
     return NewObject<TensorExprOp>(func);
   }
@@ -489,6 +537,14 @@ class TORCH_API ScheduleNode : public RefCounted {
       Var* inner_var,
       Var* tail_var,
       TensorExprNode** tail_op);
+
+  void SplitWithMask(
+      TensorExprNode* expr_node,
+      const Var& loop_var,
+      int factor,
+      bool factor_on_inner,
+      Var* outer_var,
+      Var* inner_var);
 
   void ComputeInline(TensorExprNode* expr_node);
 
