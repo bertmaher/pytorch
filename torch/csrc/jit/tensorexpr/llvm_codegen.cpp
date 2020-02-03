@@ -88,14 +88,20 @@ LLVMCodeGen::LLVMCodeGen(
   std::vector<llvm::Type*> params;
   for (int i = 0; i < args.size(); i++) {
     auto const& arg = args[i];
-    params.push_back(dtypeToLLVMPtr(arg.dtype()));
+    if (arg.isVar()) {
+      params.push_back(dtypeToLLVM(arg.dtype()));
+    } else {
+      params.push_back(dtypeToLLVMPtr(arg.dtype()));
+    }
     varToArg_[arg.var().node()] = i;
   }
   llvm::FunctionType* fntype = llvm::FunctionType::get(retTy, params, false);
   fn_ = llvm::Function::Create(
       fntype, llvm::Function::PrivateLinkage, "pytorch", module_.get());
   for (int i = 0; i < args.size(); i++) {
-    fn_->addParamAttr(i, llvm::Attribute::NoAlias);
+    if (!args[i].isVar()) {
+      fn_->addParamAttr(i, llvm::Attribute::NoAlias);
+    }
   }
 
   emitWrapper(params);

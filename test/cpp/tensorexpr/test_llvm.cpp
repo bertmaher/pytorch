@@ -810,7 +810,6 @@ void testLLVMBroadcastAdd() {
 }
 
 void testLLVMDynamicShapeAdd() {
-#if 0
   auto testWithSize = [](int32_t size) {
     Var n("n", kInt32);
     Buffer a(Var("a", kHandle), kFloat32, {n});
@@ -822,14 +821,40 @@ void testLLVMDynamicShapeAdd() {
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
     LLVMCodeGen cg(s, {a, b, c, n});
-    std::vector<void*> args({aData.data(), bData.data(), cData.data(), size));
+    // FIXME: int to pointer cast is pretty gross but this API is just for
+    // testing anyways.
+    std::vector<void*> args(
+        {aData.data(), bData.data(), cData.data(), (void*)(intptr_t)size});
     cg.value<float>(args);
     ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
   };
   testWithSize(1);
   testWithSize(16);
   testWithSize(37);
-#endif
+}
+
+void testLLVMBindDynamicShapeAdd() {
+  auto testWithSize = [](int32_t size) {
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {n});
+    Buffer b(Var("b", kHandle), kFloat32, {n});
+    Buffer c(Var("c", kHandle), kFloat32, {n});
+    Var i("i", kInt32);
+    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
+    std::vector<float> aData(size, 1.0f);
+    std::vector<float> bData(size, 2.0f);
+    std::vector<float> cData(size, 0.0f);
+    LLVMCodeGen cg(s, {a, b, c, n});
+    cg.bind(a, aData);
+    cg.bind(b, bData);
+    cg.bind(c, cData);
+    cg.bind(n, size);
+    cg.run();
+    ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
+  };
+  testWithSize(1);
+  testWithSize(16);
+  testWithSize(37);
 }
 
 } // namespace jit
