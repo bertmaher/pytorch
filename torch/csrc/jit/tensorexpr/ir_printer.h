@@ -19,6 +19,7 @@ class TORCH_API IRPrinter : public IRVisitor {
   void visit(const Sub* v) override;
   void visit(const Mul* v) override;
   void visit(const Div* v) override;
+  void visit(const Mod* v) override;
   void visit(const Max* v) override;
   void visit(const Min* v) override;
   void visit(const CompareSelect* v) override;
@@ -36,6 +37,7 @@ class TORCH_API IRPrinter : public IRVisitor {
   void visit(const BaseCallNode* v) override;
   void visit(const Allocate* v) override;
   void visit(const Free* v) override;
+  void visit(const Cond* v) override;
 
   std::ostream& os() {
     return printer_os_;

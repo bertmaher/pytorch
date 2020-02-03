@@ -106,3 +106,10 @@ inline Dtype BinaryOpDtype(
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
+
+namespace std {
+
+using torch::jit::tensorexpr::Dtype;
+std::string to_string(const Dtype& dtype);
+
+} // namespace std

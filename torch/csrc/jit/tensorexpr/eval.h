@@ -77,6 +77,14 @@ inline const std::vector<int>& Value::as_vec<int>() const {
 template <typename T>
 class PaddedBuffer;
 
+inline int mod_value(int lhs, int rhs) {
+  return lhs % rhs;
+}
+
+inline float mod_value(float lhs, float rhs) {
+  return std::fmod(lhs, rhs);
+}
+
 class SimpleIREvaluator : public CodeGen, public IRVisitor {
  public:
   using CodeGen::CodeGen;
@@ -127,6 +135,9 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   TORCH_API void visit(const Div* v) override {
     visit_binary_op(v);
   }
+  TORCH_API void visit(const Mod* v) override {
+    visit_binary_op(v);
+  }
   TORCH_API void visit(const Max* v) override {
     visit_binary_op(v, v->propagate_nans());
   }
@@ -160,6 +171,9 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
           break;
         case IRNodeType::kDiv:
           result_v[i] = lhs_v[i] / rhs_v[i];
+          break;
+        case IRNodeType::kMod:
+          result_v[i] = mod_value(lhs_v[i], rhs_v[i]);
           break;
         case IRNodeType::kMax:
           if (option) {
@@ -501,6 +515,15 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
+  void visit(const Cond* v) override {
+    v->condition().accept(this);
+    if (value().as<int>()) {
+      v->true_stmt().accept(this);
+    } else {
+      v->false_stmt().accept(this);
+    }
+  }
+
   Value value() const {
     return value_;
   }
@@ -562,7 +585,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
       case kFmod:
         return std::fmod(v1, v2);
       case kRemainder:
-	      return std::remainderf(v1, v2);
+        return std::remainderf(v1, v2);
       default:
         throw std::runtime_error("nvalid op_type: " + std::to_string(op_type));
     }

@@ -88,3 +88,13 @@ std::string Dtype::ToCppString() const {
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
+
+namespace std {
+
+std::string to_string(const Dtype& dtype) {
+  std::ostringstream oss;
+  oss << dtype;
+  return oss.str();
+}
+
+} // namespace std

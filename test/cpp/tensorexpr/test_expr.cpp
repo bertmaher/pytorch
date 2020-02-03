@@ -1,18 +1,18 @@
 #include "test/cpp/tensorexpr/test_base.h"
 
-#include "torch/csrc/jit/tensorexpr/ir_printer.h"
-#include "torch/csrc/jit/tensorexpr/schedule.h"
+#include "test/cpp/tensorexpr/padded_buffer.h"
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/eval.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
+#include "torch/csrc/jit/tensorexpr/ir_printer.h"
+#include "torch/csrc/jit/tensorexpr/schedule.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "test/cpp/tensorexpr/padded_buffer.h"
 
 #include <cmath>
 #include <sstream>
-#include <string>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace torch {
@@ -287,6 +287,29 @@ void testExprDynamicShapeAdd() {
   testWithSize(1);
   testWithSize(16);
   testWithSize(37);
+}
+
+void testCond01() {
+  const int N = 16;
+  PaddedBuffer<float> a_v(N);
+  Buffer a_buf("a", kFloat32, {N});
+  Var index = Var("index", kInt32);
+  Stmt assign_x2 = Store::make(a_buf.data(), index, cast<float>(index) * 2, 1);
+  Stmt assign_x3 = Store::make(a_buf.data(), index, cast<float>(index) * 3, 1);
+  Expr even_cond = CompareSelect::make(Mod::make(index, 2), 0, kEQ);
+  Stmt assign = Cond::make(even_cond, assign_x2, assign_x3);
+  Stmt for_stmt = For::make(index, 0, N, assign);
+  SimpleIREvaluator(for_stmt, a_buf)(a_v);
+
+  PaddedBuffer<float> a_ref(N);
+  for (int i = 0; i < N; i++) {
+    if (i % 2 == 0) {
+      a_ref(i) = i * 2;
+    } else {
+      a_ref(i) = i * 3;
+    }
+  }
+  ExpectAllNear(a_v, a_ref, 1e-5);
 }
 
 } // namespace jit
