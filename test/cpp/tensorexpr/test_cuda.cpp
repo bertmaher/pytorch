@@ -77,14 +77,65 @@ void testCudaTestVectorAdd01() {
   cudaFree(b_dev);
   cudaFree(c_dev);
 }
+
+static void testCudaTestVectorAdd02_impl(int N, int block_size) {
+  Buffer a_buf("a", kFloat32, {N});
+  Buffer b_buf("b", kFloat32, {N});
+  Tensor c = Compute(
+      "c",
+      {
+          {N, "N"},
+      },
+      [&](const Var& n) { return a_buf(n) + b_buf(n); });
+  Schedule sch({c});
+  const Var& n = c.arg(0);
+  Var n_outer;
+  Var n_inner;
+  c.SplitWithMask(n, block_size, true, &n_outer, &n_inner);
+  c.GPUExecConfig({n_outer}, {n_inner});
+  Stmt stmt = sch.Lower();
+  CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
+  PaddedBuffer<float> a_v(N);
+  PaddedBuffer<float> b_v(N);
+  PaddedBuffer<float> c_v(N);
+  PaddedBuffer<float> c_ref(N);
+
+  for (int i = 0; i < N; i++) {
+    a_v(i) = i;
+    b_v(i) = i * 3 + 7;
+    c_ref(i) = a_v(i) + b_v(i);
+  }
+
+  // TODO: move gpu support into PaddedBuffer
+  float* a_dev = nullptr;
+  cudaMalloc(&a_dev, N * sizeof(float));
+  float* b_dev = nullptr;
+  cudaMalloc(&b_dev, N * sizeof(float));
+  float* c_dev = nullptr;
+  cudaMalloc(&c_dev, N * sizeof(float));
+  cudaMemcpy(a_dev, a_v.data(), N * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(b_dev, b_v.data(), N * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(c_dev, c_v.data(), N * sizeof(float), cudaMemcpyHostToDevice);
+  cudaDeviceSynchronize();
+
+  cuda_cg(c_dev, a_dev, b_dev);
+
+  cudaDeviceSynchronize();
+  cudaMemcpy(c_v.data(), c_dev, N * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+
+  ExpectAllNear(c_v, c_ref, 1e-5);
+
+  cudaFree(a_dev);
+  cudaFree(b_dev);
+  cudaFree(c_dev);
+}
+
+void testCudaTestVectorAdd02() {
+  testCudaTestVectorAdd02_impl(1024, 128);
+  testCudaTestVectorAdd02_impl(1030, 128);
+}
 } // namespace jit
 } // namespace torch
-
-#else // USE_CUDA
-namespace torch {
-namespace jit {
-void testCudaTestVectorAdd01() { }
-}
-}
 
 #endif

@@ -1,6 +1,6 @@
 #include "torch/csrc/jit/tensorexpr/cuda_codegen.h"
 
-#define DEBUG_PRINT 0
+#define DEBUG_PRINT 1
 
 namespace torch {
 namespace jit {

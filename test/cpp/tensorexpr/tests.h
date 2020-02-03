@@ -73,7 +73,6 @@ namespace jit {
   _(LLVMBroadcastAdd)           \
   _(LLVMDynamicShapeAdd)        \
   _(LLVMBindDynamicShapeAdd)    \
-  _(CudaTestVectorAdd01)        \
   _(Cond01)                     \
   _(ATen_cast_Float)            \
   _(ATennegInt)                 \
@@ -110,7 +109,9 @@ namespace jit {
   _(ATenleInt)                  \
   _(ATenltInt)
 
-#define TH_FORALL_TESTS_CUDA(_)
+#define TH_FORALL_TESTS_CUDA(_) \
+  _(CudaTestVectorAdd01)        \
+  _(CudaTestVectorAdd02)
 
 #define DECLARE_TENSOREXPR_TEST(name) void test##name();
 TH_FORALL_TESTS(DECLARE_TENSOREXPR_TEST)
