@@ -857,6 +857,31 @@ void testLLVMBindDynamicShapeAdd() {
   testWithSize(37);
 }
 
+void testLLVMTensorDynamicShapeAdd() {
+  auto testWithSize = [](int32_t size) {
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {n});
+    Buffer b(Var("b", kHandle), kFloat32, {n});
+    Tensor c =
+        Compute("c", {{n, "n"}}, [&](const Var& i) { return a(i) + b(i); });
+    Schedule sch = Schedule::make({c});
+    Stmt s = sch.Lower();
+    LLVMCodeGen cg(s, {a, b, c, n});
+    std::vector<float> aData(size, 1.0f);
+    std::vector<float> bData(size, 2.0f);
+    std::vector<float> cData(size, 0.0f);
+    cg.bind(a, aData);
+    cg.bind(b, bData);
+    cg.bind(c, cData);
+    cg.bind(n, size);
+    cg.run();
+    ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
+  };
+  testWithSize(1);
+  testWithSize(16);
+  testWithSize(37);
+}
+
 } // namespace jit
 } // namespace torch
 
