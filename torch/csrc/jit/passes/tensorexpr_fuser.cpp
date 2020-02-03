@@ -298,7 +298,7 @@ std::vector<Expr> computeIndicesToBroadcast(
 
 struct TensorExprKernel {
   std::vector<Buffer> buffer_args;
-  Tensor* tensor_output;
+  std::vector<Tensor> tensor_outputs;
   std::unordered_map<int64_t, Tensor> tensors;
   std::unique_ptr<CodeGen> codegen;
 
@@ -674,6 +674,7 @@ struct TensorExprKernel {
               }));
       buffer_args.push_back(std::move(in_buffer));
     }
+
     // Bind nodes to tensor compute expressions.
     for (auto const& n : subgraph->nodes()) {
       if (n->kind() == prim::Constant) {
@@ -682,17 +683,18 @@ struct TensorExprKernel {
       tensors.emplace(n->output()->unique(), ComputeNode(n));
     }
 
-    CHECK(subgraph->outputs().size() == 1ULL)
-        << "Only handle single output subgraphs";
-    auto const& output = subgraph->outputs()[0];
-    CHECK(tensors.count(output->unique())) << "Output must be a tensor";
-    tensor_output = &tensors.at(output->unique());
-    torch::jit::tensorexpr::schedule::Schedule sch({*tensor_output});
+    // Move output operands from `tensors` to `tensor_outputs`
+    for (const auto& output : subgraph->outputs()) {
+      CHECK(tensors.count(output->unique())) << "Output must be a tensor";
+      tensor_outputs.emplace_back(tensors.at(output->unique()));
+      tensors.erase(output->unique());
+    }
+
+    torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs);
+
+    // Compute non-output tensors inline
     for (auto& p : tensors) {
-      auto& t = p.second;
-      if (&t != tensor_output) {
-        t.ComputeInline();
-      }
+      p.second.ComputeInline();
     }
     Stmt stmt = sch.Lower();
 
@@ -700,7 +702,9 @@ struct TensorExprKernel {
     // Set up formal params (inputs, then outputs) for kernel.
     std::vector<CodeGen::BufferArg> params(
         buffer_args.begin(), buffer_args.end());
-    params.push_back(*tensor_output);
+    for (auto& o : tensor_outputs) {
+      params.push_back(o);
+    }
 
     // Generate code.
     codegen = std::make_unique<LLVMCodeGen>(stmt, params);
@@ -715,16 +719,20 @@ struct TensorExprKernel {
     for (int i = 0; i < buffer_args.size(); i++) {
       codegen->bind(buffer_args[i], inputs[i].toTensor().data_ptr());
     }
-    at::Tensor output =
-        at::empty(bufferSizes(*tensor_output), tensorType(*tensor_output));
-    codegen->bind(*tensor_output, output.data_ptr());
+    std::vector<at::Tensor> outputs;
+    for (auto& o : tensor_outputs) {
+      outputs.push_back(at::empty(bufferSizes(o), tensorType(o)));
+      codegen->bind(o, outputs.back().data_ptr());
+    }
 
     // Call the kernel.
     codegen->run();
 
     // Update the stack.
     drop(stack, buffer_args.size());
-    stack.insert(stack.end(), std::move(output));
+    for (auto& o : outputs) {
+      push_one(stack, std::move(o));
+    }
   }
 };
 

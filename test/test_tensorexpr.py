@@ -488,3 +488,20 @@ def test_remainder():
     x = traced(nans, a)
     y = run_remainder(nans, a)
     np.testing.assert_allclose(x.numpy(), y.numpy())
+
+def test_multioutput():
+    def easy(x):
+        b = x + 1
+        c = b + b
+        return (b, c)
+
+    traced = torch.jit.trace(
+        easy, (torch.zeros(1024))
+    )
+
+    a = torch.zeros(1024)
+    b, c = traced(a)
+    bp = a.numpy() + 1
+    cp = bp + bp
+    np.testing.assert_allclose(b.numpy(), bp)
+    np.testing.assert_allclose(c.numpy(), cp)
