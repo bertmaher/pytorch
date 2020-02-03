@@ -205,7 +205,6 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
     ptr_to_args[i] = &args_data[i];
   }
 
-  std::cout << "XXXQQQ: A" << std::endl;
   // Launch the kernels
   auto stream = at::cuda::getCurrentCUDAStream();
   AT_CUDA_DRIVER_CHECK(nvrtc().cuLaunchKernel(
