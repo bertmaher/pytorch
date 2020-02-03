@@ -79,6 +79,7 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
   void visit(const Sub* v) override;
   void visit(const Mul* v) override;
   void visit(const Div* v) override;
+  void visit(const Mod* v) override;
   void visit(const Max* v) override;
   void visit(const Min* v) override;
   void visit(const CompareSelect* v) override;
@@ -93,11 +94,12 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
   void visit(const Block* v) override;
   void visit(const Store* v) override;
   void visit(const Broadcast* v) override;
-  virtual void visit(const BaseCallNode* v);
-  virtual void visit(const Intrinsics* v);
-  virtual void visit(const FunctionCall* v);
-  virtual void visit(const Allocate* v);
-  virtual void visit(const Free* v);
+  void visit(const BaseCallNode* v) override;
+  void visit(const Intrinsics* v) override;
+  void visit(const FunctionCall* v) override;
+  void visit(const Allocate* v) override;
+  void visit(const Free* v) override;
+  void visit(const Cond* v) override;
 
   llvm::Value* emitUnmaskedLoad(llvm::Value* addr, llvm::Value* idx);
   llvm::Value* emitMaskedLoad(

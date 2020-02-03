@@ -14,6 +14,7 @@ enum IRNodeType {
   kSub,
   kMul,
   kDiv,
+  kMod,
   kMax,
   kMin,
   kCompareSelect,
@@ -119,6 +120,13 @@ class Div : public BinaryOpNode<Div> {
   Div(const Expr& lhs, const Expr& rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kDiv) {}
   friend class BinaryOpNode<Div>;
+};
+
+class Mod : public BinaryOpNode<Mod> {
+ private:
+  Mod(const Expr& lhs, const Expr& rhs)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kMod) {}
+  friend class BinaryOpNode<Mod>;
 };
 
 class Max : public BinaryOpNode<Max> {
@@ -847,6 +855,36 @@ class Free : public StmtNode<Free> {
   Free(const Var& buffer_var) : buffer_var_(buffer_var) {}
 
   Var buffer_var_;
+};
+
+class Cond : public StmtNode<Cond> {
+ public:
+  static Stmt make(
+      const Expr& condition,
+      const Stmt& true_stmt,
+      const Stmt& false_stmt) {
+    return Stmt(new Cond(condition, true_stmt, false_stmt));
+  }
+
+  const Expr& condition() const {
+    return condition_;
+  }
+
+  const Stmt& true_stmt() const {
+    return true_stmt_;
+  }
+
+  const Stmt& false_stmt() const {
+    return false_stmt_;
+  }
+
+ private:
+  Cond(const Expr& condition, const Stmt& true_stmt, const Stmt& false_stmt)
+      : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {}
+
+  Expr condition_;
+  Stmt true_stmt_;
+  Stmt false_stmt_;
 };
 
 } // namespace tensorexpr

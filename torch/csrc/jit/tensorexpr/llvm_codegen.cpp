@@ -145,7 +145,9 @@ void LLVMCodeGen::emitWrapper(const std::vector<llvm::Type*>& params) {
   irb_.CreateRet(cc);
 }
 
-void LLVMCodeGen::emitKernel(const IRNode* node, const std::vector<llvm::Type*>& params) {
+void LLVMCodeGen::emitKernel(
+    const IRNode* node,
+    const std::vector<llvm::Type*>& params) {
   // Set insert point to the real function.
   bb_ = llvm::BasicBlock::Create(getContext(), "entry", fn_);
   irb_.SetInsertPoint(bb_);
@@ -259,6 +261,10 @@ void LLVMCodeGen::visit(const Div* v) {
   }
 }
 
+void LLVMCodeGen::visit(const Mod* v) {
+  throw std::runtime_error("Mod unsupported in LLVM codegen yet");
+}
+
 void LLVMCodeGen::visit(const Max* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
@@ -277,8 +283,7 @@ void LLVMCodeGen::visit(const Max* v) {
   }
 
   value_ = irb_.CreateSelect(
-      irb_.CreateFCmp(llvm::FCmpInst::FCMP_OGT, lhs, rhs),
-      lhs, rhs);
+      irb_.CreateFCmp(llvm::FCmpInst::FCMP_OGT, lhs, rhs), lhs, rhs);
 }
 
 void LLVMCodeGen::visit(const Min* v) {
@@ -299,8 +304,7 @@ void LLVMCodeGen::visit(const Min* v) {
   }
 
   value_ = irb_.CreateSelect(
-      irb_.CreateFCmp(llvm::FCmpInst::FCMP_OLT, lhs, rhs),
-      lhs, rhs);
+      irb_.CreateFCmp(llvm::FCmpInst::FCMP_OLT, lhs, rhs), lhs, rhs);
 }
 
 void LLVMCodeGen::visit(const CompareSelect* v) {
@@ -711,9 +715,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
       llvm::cast<llvm::Function>(call_fn)->addFnAttr(
           llvm::Attribute::WillReturn);
     } break;
-    default: {
-      LOG(FATAL) << "Unimplemented: Intrinsics";
-    } break;
+    default: { LOG(FATAL) << "Unimplemented: Intrinsics"; } break;
   }
 
   std::vector<llvm::Value*> params;
@@ -749,6 +751,10 @@ void LLVMCodeGen::visit(const Allocate* v) {
 
 void LLVMCodeGen::visit(const Free* v) {
   LOG(FATAL) << "Unimplemented: Free";
+}
+
+void LLVMCodeGen::visit(const Cond* v) {
+  LOG(FATAL) << "Unimplemented: Cond";
 }
 
 void LLVMCodeGen::optimize(llvm::Module& M) {

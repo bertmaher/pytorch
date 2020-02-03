@@ -9,6 +9,7 @@ class Add;
 class Sub;
 class Mul;
 class Div;
+class Mod;
 class Max;
 class Min;
 class CompareSelect;
@@ -28,6 +29,7 @@ class Intrinsics;
 class FunctionCall;
 class Allocate;
 class Free;
+class Cond;
 
 class TORCH_API IRVisitor {
  public:
@@ -36,6 +38,7 @@ class TORCH_API IRVisitor {
   TORCH_API virtual void visit(const Sub* v);
   TORCH_API virtual void visit(const Mul* v);
   TORCH_API virtual void visit(const Div* v);
+  TORCH_API virtual void visit(const Mod* v);
   TORCH_API virtual void visit(const Max* v);
   TORCH_API virtual void visit(const Min* v);
   TORCH_API virtual void visit(const CompareSelect* v);
@@ -61,6 +64,7 @@ class TORCH_API IRVisitor {
   TORCH_API virtual void visit(const FunctionCall* v);
   TORCH_API virtual void visit(const Allocate* v);
   TORCH_API virtual void visit(const Free* v);
+  TORCH_API virtual void visit(const Cond* v);
 };
 
 } // namespace tensorexpr

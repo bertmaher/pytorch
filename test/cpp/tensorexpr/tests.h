@@ -72,6 +72,7 @@ namespace jit {
   _(LLVMBroadcastAdd)           \
   _(LLVMDynamicShapeAdd)        \
   _(CudaTestVectorAdd01)        \
+  _(Cond01)                     \
   _(ATen_cast_Float)            \
   _(ATennegInt)                 \
   _(ATennegFloat)               \

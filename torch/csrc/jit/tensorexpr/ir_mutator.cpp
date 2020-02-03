@@ -55,6 +55,10 @@ Expr IRMutator::mutate(const Div* v) {
   return mutate_binary_op(v, this);
 }
 
+Expr IRMutator::mutate(const Mod* v) {
+  return mutate_binary_op(v, this);
+}
+
 Expr IRMutator::mutate(const Max* v) {
   return mutate_binary_op(v, this, v->propagate_nans());
 }
@@ -253,6 +257,22 @@ Stmt IRMutator::mutate(const Free* v) {
   }
 
   return Free::make(buffer_var_new);
+}
+
+Stmt IRMutator::mutate(const Cond* v) {
+  Expr cond_old = v->condition();
+  Stmt true_old = v->true_stmt();
+  Stmt false_old = v->false_stmt();
+
+  Expr cond_new = cond_old.accept_mutator(this);
+  Stmt true_new = true_old.accept_mutator(this);
+  Stmt false_new = false_old.accept_mutator(this);
+
+  if (same_node(cond_old, cond_new) && same_node(true_old, true_new) &&
+      same_node(false_old, false_new)) {
+    return Stmt(v);
+  }
+  return Cond::make(cond_new, true_new, false_new);
 }
 
 } // namespace tensorexpr
