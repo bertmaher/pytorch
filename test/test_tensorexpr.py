@@ -491,34 +491,21 @@ def test_remainder():
 
 
 def test_dynamic_shape():
+    torch._C._jit_set_num_profiled_runs(2)
+    torch._C._jit_override_can_fuse_on_cpu(True)
+    # torch._C._jit_set_profiling_executor(False)
     def test(x, y, z):
-        return x + y + z
+        return 2 * x + 3 * y + 4 * z
 
     print("-" * 80)
     print("Tracing function")
     print("-" * 80)
-    trace = torch.jit.trace(test, (torch.rand(8), torch.rand(8), torch.rand(8)))
+    x, y, z = [torch.rand(8) for _ in range(3)]
+    trace = torch.jit.trace(test, (x, y, z))
 
-    print("-" * 80)
-    print("Running traced function")
-    print("-" * 80)
-    x, y, z = [torch.rand(4) for _ in range(3)]
-    result = trace(x, y, z)
-    np.testing.assert_allclose(result.numpy(), x.numpy() + y.numpy() + z.numpy())
-
-    print("-" * 80)
-    print("Running traced function as argument")
-    print("-" * 80)
-    np.testing.assert_allclose(trace(x, y, z).numpy(), test(x, y, z).numpy())
-
-    print("-" * 80)
-    print("Running traced function with novel size")
-    print("-" * 80)
-    x, y, z = [torch.rand(6) for _ in range(3)]
-    np.testing.assert_allclose(trace(x, y, z).numpy(), test(x, y, z).numpy())
-
-    print("-" * 80)
-    print("Running traced function with same novelsize")
-    print("-" * 80)
-    x, y, z = [torch.rand(6) for _ in range(3)]
-    np.testing.assert_allclose(trace(x, y, z).numpy(), test(x, y, z).numpy())
+    for i in range(3):
+        print(f"Running pass {i}")
+        x, y, z = [torch.rand(4) for _ in range(3)]
+        print(trace.graph_for(x, y, z))
+        xn, yn, zn = [t.numpy() for t in (x, y, z)]
+        np.testing.assert_allclose(trace(x, y, z).numpy(), 2*xn + 3*yn + 4*zn)
