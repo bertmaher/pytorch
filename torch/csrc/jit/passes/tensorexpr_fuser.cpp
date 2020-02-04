@@ -301,7 +301,7 @@ struct TensorExprKernel {
   std::vector<Tensor> tensor_outputs;
   std::unordered_map<int64_t, Tensor> tensors;
   std::unique_ptr<CodeGen> codegen;
-  Kernel kernel_arena;
+  KernelArena kernel_arena;
 
   Expr constant(torch::jit::Value* v) {
     if (v->node()->kind() == prim::Constant) {
@@ -653,9 +653,7 @@ struct TensorExprKernel {
             "aten_trunc", n, [](const Expr& a) { return trunc(a); });
       } break;
 
-      default: {
-        LOG(FATAL) << "Unhandled node kind";
-      }
+      default: { LOG(FATAL) << "Unhandled node kind"; }
     }
   }
 
