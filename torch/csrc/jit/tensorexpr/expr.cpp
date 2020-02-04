@@ -6,14 +6,14 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-Kernel::~Kernel() {
+KernelArena::~KernelArena() {
   for (KernelScopedObject* p : kernel_objects_) {
     delete p;
   }
 }
 
 KernelScopedObject::KernelScopedObject() {
-  Kernel& kernel = Kernel::GetCurrentKernel();
+  KernelArena& kernel = KernelArena::GetCurrentKernelArena();
   kernel.kernel_objects_.push_back(this);
 }
 
@@ -23,39 +23,39 @@ Expr Expr::operator+(const Expr& other) const {
   return Add::make(*this, other);
 }
 
-static std::vector<Kernel*>& GetKernelStack() {
-  thread_local std::vector<Kernel*> kernel_stacks;
-  return kernel_stacks;
+static std::vector<KernelArena*>& GetKernelArenaStack() {
+  thread_local std::vector<KernelArena*> kernel_arena_stack;
+  return kernel_arena_stack;
 }
 
-Kernel& Kernel::GetCurrentKernel() {
-  std::vector<Kernel*>& kernel_stack = GetKernelStack();
-  if (kernel_stack.empty()) {
+KernelArena& KernelArena::GetCurrentKernelArena() {
+  std::vector<KernelArena*>& kernel_arena_stack = GetKernelArenaStack();
+  if (kernel_arena_stack.empty()) {
     throw std::runtime_error(
         "A KernelScope must be bound before creating KernelScopedObject");
   }
-  return *kernel_stack.back();
+  return *kernel_arena_stack.back();
 }
 
-KernelScope::KernelScope() : owning_kernel_(true) {
-  kernel_ = new Kernel;
-  GetKernelStack().push_back(kernel_);
+KernelScope::KernelScope() : owning_kernel_arena_(true) {
+  kernel_arena_ = new KernelArena;
+  GetKernelArenaStack().push_back(kernel_arena_);
 }
 
-KernelScope::KernelScope(Kernel& kernel) : owning_kernel_(false) {
-  kernel_ = &kernel;
-  GetKernelStack().push_back(&kernel);
+KernelScope::KernelScope(KernelArena& kernel_arena) : owning_kernel_arena_(false) {
+  kernel_arena_ = &kernel_arena;
+  GetKernelArenaStack().push_back(&kernel_arena);
 }
 
 KernelScope::~KernelScope() {
-  std::vector<Kernel*>& kernel_stack = GetKernelStack();
-  if (kernel_ != kernel_stack.back()) {
+  std::vector<KernelArena*>& kernel_arena_stack = GetKernelArenaStack();
+  if (kernel_arena_ != kernel_arena_stack.back()) {
     throw std::runtime_error("Mismatch KernelScope and kernel");
   }
-  if (owning_kernel_) {
-    delete kernel_;
+  if (owning_kernel_arena_) {
+    delete kernel_arena_;
   }
-  kernel_stack.pop_back();
+  kernel_arena_stack.pop_back();
 }
 
 Expr Expr::operator-(const Expr& other) const {
