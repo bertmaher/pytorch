@@ -5,7 +5,6 @@
 
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
-#include "torch/csrc/jit/tensorexpr/refcount.h"
 
 namespace torch {
 namespace jit {
@@ -18,7 +17,7 @@ class ScheduleNode;
 using schedule::TensorExprNode;
 
 class TensorOperation;
-class TORCH_API TensorOperationNode : public RefCounted {
+class TORCH_API TensorOperationNode : public KernelScopedObject {
  public:
   void SplitWithTail(
       const Var& loop_var,
@@ -94,10 +93,9 @@ class TensorNode : public TensorOperationNode {
   int output_index_;
 };
 
-class TORCH_API TensorOperation : public RefHandle<TensorOperationNode> {
+class TORCH_API TensorOperation {
  public:
-  using BaseClass = RefHandle<TensorOperationNode>;
-  TensorOperation() : BaseClass(nullptr) {}
+  TensorOperation() {}
   static TensorOperation make() {
     return TensorOperation(new TensorOperationNode());
   }
@@ -147,7 +145,16 @@ class TORCH_API TensorOperation : public RefHandle<TensorOperationNode> {
   }
 
  protected:
-  TensorOperation(TensorOperationNode* node) : BaseClass(node) {}
+  TensorOperation(TensorOperationNode* node) : node_(node) {}
+  const TensorOperationNode* node() const {
+    return node_;
+  }
+  TensorOperationNode* node() {
+    return node_;
+  }
+
+ private:
+  TensorOperationNode* node_ = nullptr;
 };
 
 class Tensor : public TensorOperation {

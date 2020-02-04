@@ -5,7 +5,6 @@
 
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
-#include "torch/csrc/jit/tensorexpr/refcount.h"
 
 namespace torch {
 namespace jit {
@@ -28,7 +27,7 @@ class Range {
   Expr stop_;
 };
 
-class FunctionNode : public RefCounted {
+class FunctionNode : public KernelScopedObject {
  public:
   FunctionNode(
       const std::string& func_name,
@@ -68,16 +67,15 @@ class FunctionNode : public RefCounted {
   Expr body_;
 };
 
-class Function : public RefHandle<FunctionNode> {
+class Function {
  public:
-  using BaseClass = RefHandle<FunctionNode>;
   Function() {}
   Function(
       const std::string& func_name,
       const std::vector<Expr>& dims,
       const std::vector<Var>& args,
       const Expr& body)
-      : BaseClass(new FunctionNode(func_name, dims, args, body)) {}
+      : function_node_(new FunctionNode(func_name, dims, args, body)) {}
   int ndim() const {
     return node()->ndim();
   }
@@ -100,6 +98,16 @@ class Function : public RefHandle<FunctionNode> {
   Stmt ElementStmt() {
     return node()->ElementStmt();
   }
+
+  const FunctionNode* node() const {
+    return function_node_;
+  }
+  FunctionNode* node() {
+    return function_node_;
+  }
+
+ private:
+  FunctionNode* function_node_ = nullptr;
 };
 
 } // namespace tensorexpr

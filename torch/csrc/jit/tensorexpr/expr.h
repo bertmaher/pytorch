@@ -2,7 +2,6 @@
 
 #include "torch/csrc/jit/tensorexpr/ir_mutator.h"
 #include "torch/csrc/jit/tensorexpr/ir_visitor.h"
-#include "torch/csrc/jit/tensorexpr/refcount.h"
 #include "torch/csrc/jit/tensorexpr/types.h"
 
 namespace torch {
@@ -21,12 +20,12 @@ class Kernel {
   Kernel(const Kernel&) = delete;
   Kernel& operator=(const Kernel&) = delete;
   friend class KernelScopedObject;
-  std::vector<KernelScopedObject*> kernel_objects_;  // owned
+  std::vector<KernelScopedObject*> kernel_objects_; // owned
 };
 
 // A RAII convenience wrapper on top of a kernel.
 // It either creates a Kernel, or take another existing Kernel, and sets it as
-// the current Kernel, as long as this KernelScope object is alive. 
+// the current Kernel, as long as this KernelScope object is alive.
 class KernelScope {
  public:
   TORCH_API KernelScope();
@@ -106,7 +105,7 @@ class StmtNode : public BaseStmtNode {
   StmtNode() {}
 };
 
-// A refcounted pointer to the underlying ExprNode.
+// A wrapper object to the underlying ExprNode.
 // Also serves the primary way to build and operate on other expressions.
 class TORCH_API Expr {
  public:
