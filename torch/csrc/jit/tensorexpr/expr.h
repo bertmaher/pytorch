@@ -9,11 +9,48 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-// The commomn class between all IR nodes.
-class IRNode : public RefCounted {
+class KernelObject;
+class Kernel {
  public:
-  virtual void accept(IRVisitor* visitor) const = 0;
-  virtual ~IRNode() {}
+  static Kernel& GetCurrentKernel();
+  TORCH_API Kernel() {}
+  TORCH_API ~Kernel();
+
+ private:
+  Kernel(const Kernel&) = delete;
+  Kernel& operator=(const Kernel&) = delete;
+  friend class KernelObject;
+  std::vector<KernelObject*> kernel_objects_;
+};
+
+class KernelScope {
+ public:
+  TORCH_API KernelScope();
+  TORCH_API explicit KernelScope(Kernel& kernel);
+  TORCH_API ~KernelScope();
+
+ private:
+  KernelScope(const KernelScope&) = delete;
+  KernelScope& operator=(const KernelScope&) = delete;
+  bool owning_kernel_ = false;
+  Kernel* kernel_ = nullptr;
+};
+
+class TORCH_API KernelObject {
+ public:
+  TORCH_API KernelObject();
+  TORCH_API virtual ~KernelObject();
+
+ private:
+  KernelObject(const KernelObject&) = delete;
+  KernelObject& operator=(const KernelObject&) = delete;
+};
+
+// The commomn class between all IR nodes.
+class IRNode : public KernelObject {
+ public:
+  TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
+  TORCH_API virtual ~IRNode() {}
 };
 
 // The common base between all expression node.
@@ -64,11 +101,23 @@ class StmtNode : public BaseStmtNode {
 
 // A refcounted pointer to the underlying ExprNode.
 // Also serves the primary way to build and operate on other expressions.
-class TORCH_API Expr : public RefHandle<BaseExprNode> {
+class TORCH_API Expr {
  public:
-  using BaseHandle = RefHandle<BaseExprNode>;
-  explicit Expr() : BaseHandle(nullptr) {}
-  explicit Expr(const BaseExprNode* node) : BaseHandle(node) {}
+  Expr() {}
+  explicit Expr(const BaseExprNode* node)
+      : base_expr_node_(const_cast<BaseExprNode*>(node)) {}
+
+  BaseExprNode* node() {
+    return base_expr_node_;
+  }
+
+  const BaseExprNode* node() const {
+    return base_expr_node_;
+  }
+
+  bool empty() const {
+    return base_expr_node_ == nullptr;
+  }
 
   void accept(IRVisitor* visitor) const {
     // TODO: Consider implement this without using recursion. Otherwise,
@@ -115,13 +164,24 @@ class TORCH_API Expr : public RefHandle<BaseExprNode> {
   Expr operator>=(const Expr& other) const;
   Expr operator<(const Expr& other) const;
   Expr operator<=(const Expr& other) const;
+
+ private:
+  BaseExprNode* base_expr_node_ = nullptr;
 };
 
-class Stmt : public RefHandle<BaseStmtNode> {
+class Stmt {
  public:
-  using BaseHandle = RefHandle<BaseStmtNode>;
   Stmt() {}
-  explicit Stmt(const BaseStmtNode* node) : BaseHandle(node) {}
+  explicit Stmt(const BaseStmtNode* node)
+      : base_stmt_node_(const_cast<BaseStmtNode*>(node)) {}
+
+  BaseStmtNode* node() {
+    return base_stmt_node_;
+  }
+
+  const BaseStmtNode* node() const {
+    return base_stmt_node_;
+  }
 
   void accept(IRVisitor* visitor) const {
     if (node() == nullptr) {
@@ -145,6 +205,9 @@ class Stmt : public RefHandle<BaseStmtNode> {
   const Op* AsNode() const {
     return dynamic_cast<const Op*>(this->node());
   }
+
+ private:
+  BaseStmtNode* base_stmt_node_ = nullptr;
 };
 
 template <class Op, class Base>

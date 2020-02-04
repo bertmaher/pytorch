@@ -7,6 +7,7 @@ namespace jit {
 using namespace torch::jit::tensorexpr;
 
 void testTypeTest01() {
+  KernelScope kernel_scope;
   {
     Dtype dt1 = kInt32;
     EXPECT_EQ(dt1, kInt32);

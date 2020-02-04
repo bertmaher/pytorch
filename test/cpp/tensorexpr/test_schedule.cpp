@@ -20,6 +20,7 @@ using namespace torch::jit::tensorexpr;
 using namespace torch::jit::tensorexpr::schedule;
 
 void testExprSimple01() {
+  KernelScope kernel_scope;
   Tensor tensor =
       Compute("f", {{16, "X"}, {5, "y"}}, [](const Var& x, const Var& y) {
         return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
@@ -41,6 +42,7 @@ void testExprSimple01() {
 }
 
 void testExprLower01() {
+  KernelScope kernel_scope;
   Tensor tensor =
       Compute("f", {{16, "x"}, {5, "y"}}, [](const Var& x, const Var& y) {
         return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
@@ -56,6 +58,7 @@ void testExprLower01() {
 }
 
 void testExprSimple02() {
+  KernelScope kernel_scope;
   auto func = [](const Expr& x, const Expr& y) {
     return Expr(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
   };
@@ -124,6 +127,7 @@ void testExprSimple02() {
 }
 
 void testExprSplitWithMask01() {
+  KernelScope kernel_scope;
   const int M = 26;
   const int N = 5;
   Buffer a_buf("a", kFloat32, {M, N});
@@ -160,6 +164,7 @@ void testExprSplitWithMask01() {
 }
 
 void testScheduleBroadcastAddBuffer() {
+  KernelScope kernel_scope;
   const int M = 4;
   const int N = 5;
   const int K = 6;
@@ -208,6 +213,7 @@ void testScheduleBroadcastAddBuffer() {
 }
 
 void testScheduleFunctionCall01() {
+  KernelScope kernel_scope;
   const int M = 4;
   const int N = 5;
   const int K = 6;
@@ -268,6 +274,7 @@ static std::string remove_space(const std::string& str) {
 }
 
 void InlineFunc01Helper(const std::vector<std::string>& inline_order) {
+  KernelScope kernel_scope;
   const int M = 4;
   const int N = 5;
   const int K = 6;
@@ -382,6 +389,7 @@ void testScheduleInlineFunc01() {
 }
 
 void testScheduleFuserStyle() {
+  KernelScope kernel_scope;
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
@@ -414,6 +422,7 @@ void testScheduleFuserStyle() {
 }
 
 void testScheduleFuserThreeArg() {
+  KernelScope kernel_scope;
   const int kVectorSize = 8;
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;

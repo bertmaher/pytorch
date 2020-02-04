@@ -9,6 +9,7 @@ namespace jit {
 using namespace torch::jit::tensorexpr;
 
 void testAsmjitIntImmTest() {
+  KernelScope kernel_scope;
   auto a = IntImm::make(2);
   ASMJITCodeGen cg;
   a.accept(&cg);
@@ -16,6 +17,7 @@ void testAsmjitIntImmTest() {
 }
 
 void testAsmjitIntAddTest() {
+  KernelScope kernel_scope;
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Add::make(a, b);
@@ -25,6 +27,7 @@ void testAsmjitIntAddTest() {
 }
 
 void testAsmjitIntSubTest() {
+  KernelScope kernel_scope;
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Sub::make(a, b);
@@ -34,6 +37,7 @@ void testAsmjitIntSubTest() {
 }
 
 void testAsmjitIntMulTest() {
+  KernelScope kernel_scope;
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Mul::make(a, b);
@@ -43,6 +47,7 @@ void testAsmjitIntMulTest() {
 }
 
 void testAsmjitIntDivTest() {
+  KernelScope kernel_scope;
   auto a = IntImm::make(6);
   auto b = IntImm::make(3);
   auto c = Div::make(a, b);

@@ -20,6 +20,7 @@ using namespace torch::jit::tensorexpr;
 using namespace torch::jit::tensorexpr::schedule;
 
 void testCudaTestVectorAdd01() {
+  KernelScope kernel_scope;
   const int num_iter = 3;
   const int block_count = 16;
   const int block_size = 128;
@@ -79,6 +80,7 @@ void testCudaTestVectorAdd01() {
 }
 
 static void testCudaTestVectorAdd02_impl(int N, int block_size) {
+  KernelScope kernel_scope;
   Buffer a_buf("a", kFloat32, {N});
   Buffer b_buf("b", kFloat32, {N});
   Tensor c = Compute(

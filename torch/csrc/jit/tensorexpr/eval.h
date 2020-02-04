@@ -107,7 +107,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   void run() override {
-    ir_node().node()->accept(this);
+    ir_node()->accept(this);
     eval_context_.clear();
     buffer_mapping_.clear();
     internal_buffers_.clear();

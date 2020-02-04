@@ -18,21 +18,23 @@ class CodeGen {
 
   template <typename... Ts>
   CodeGen(const Stmt& stmt, Ts... ts)
-      : ir_node_(stmt.node()), buffer_args_({BufferArg(ts)...}) {}
+      : ir_node_(const_cast<BaseStmtNode*>(stmt.node())),
+        buffer_args_({BufferArg(ts)...}) {}
 
   template <typename... Ts>
   CodeGen(const Expr& expr, Ts... ts)
-      : ir_node_(expr.node()), buffer_args_({BufferArg(ts)...}) {}
+      : ir_node_(const_cast<BaseExprNode*>(expr.node())),
+        buffer_args_({BufferArg(ts)...}) {}
 
-  CodeGen(const IRNode* node) : ir_node_(node) {}
+  CodeGen(const IRNode* node) : ir_node_(const_cast<IRNode*>(node)) {}
 
   virtual ~CodeGen() {}
 
-  RefHandle<IRNode>& ir_node() {
+  IRNode* ir_node() {
     return ir_node_;
   }
 
-  const RefHandle<IRNode>& ir_node() const {
+  const IRNode* ir_node() const {
     return ir_node_;
   }
 
@@ -53,7 +55,7 @@ class CodeGen {
   }
 
  private:
-  RefHandle<IRNode> ir_node_;
+  IRNode* ir_node_ = nullptr;
   std::vector<BufferArg> buffer_args_;
 };
 

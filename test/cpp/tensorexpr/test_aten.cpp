@@ -12,6 +12,7 @@ namespace jit {
 using namespace torch::jit::tensorexpr;
 
 void testATen_cast_Float() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -39,6 +40,7 @@ void testATen_cast_Float() {
 }
 
 void testATennegInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -66,6 +68,7 @@ void testATennegInt() {
 }
 
 void testATennegFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -93,6 +96,7 @@ void testATennegFloat() {
 }
 
 void testATenaddInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -129,6 +133,7 @@ void testATenaddInt() {
 }
 
 void testATenaddFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -165,6 +170,7 @@ void testATenaddFloat() {
 }
 
 void testATensubInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -201,6 +207,7 @@ void testATensubInt() {
 }
 
 void testATensubFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -237,6 +244,7 @@ void testATensubFloat() {
 }
 
 void testATenlerp() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -274,6 +282,7 @@ void testATenlerp() {
 }
 
 void testATenaddcmulInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -316,6 +325,7 @@ void testATenaddcmulInt() {
 }
 
 void testATenaddcmulFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -358,6 +368,7 @@ void testATenaddcmulFloat() {
 }
 
 void testATenmulInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -389,6 +400,7 @@ void testATenmulInt() {
 }
 
 void testATenmulFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -420,6 +432,7 @@ void testATenmulFloat() {
 }
 
 void testATendivInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -451,6 +464,7 @@ void testATendivInt() {
 }
 
 void testATendivFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -482,6 +496,7 @@ void testATendivFloat() {
 }
 
 void testATenmaxInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -513,6 +528,7 @@ void testATenmaxInt() {
 }
 
 void testATenmaxFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -544,6 +560,7 @@ void testATenmaxFloat() {
 }
 
 void testATenminInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -575,6 +592,7 @@ void testATenminInt() {
 }
 
 void testATenminFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -606,6 +624,7 @@ void testATenminFloat() {
 }
 
 void testATen_sigmoid_backward() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -638,6 +657,7 @@ void testATen_sigmoid_backward() {
 }
 
 void testATen_tanh_backward() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -670,6 +690,7 @@ void testATen_tanh_backward() {
 }
 
 void testATenreciprocal() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -696,6 +717,7 @@ void testATenreciprocal() {
 }
 
 void testATenreluInt() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kInt32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kInt32, {Expr(kTotalSize)});
@@ -722,6 +744,7 @@ void testATenreluInt() {
 }
 
 void testATenreluFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -752,6 +775,7 @@ void testATenreluFloat() {
 }
 
 void testATenlogFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -778,6 +802,7 @@ void testATenlogFloat() {
 }
 
 void testATenlog10Float() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -804,6 +829,7 @@ void testATenlog10Float() {
 }
 
 void testATenlog2Float() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -830,6 +856,7 @@ void testATenlog2Float() {
 }
 
 void testATenexpFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -856,6 +883,7 @@ void testATenexpFloat() {
 }
 
 void testATenerfFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -882,6 +910,7 @@ void testATenerfFloat() {
 }
 
 void testATencosFloat() {
+  KernelScope kernel_scope;
   const int kTotalSize = 128;
   Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
   Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
@@ -908,6 +937,7 @@ void testATencosFloat() {
 }
 
 void testATeneqInt() {
+  KernelScope kernel_scope;
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -938,6 +968,7 @@ void testATeneqInt() {
 }
 
 void testATengeInt() {
+  KernelScope kernel_scope;
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -968,6 +999,7 @@ void testATengeInt() {
 }
 
 void testATengtInt() {
+  KernelScope kernel_scope;
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -998,6 +1030,7 @@ void testATengtInt() {
 }
 
 void testATenleInt() {
+  KernelScope kernel_scope;
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
@@ -1028,6 +1061,7 @@ void testATenleInt() {
 }
 
 void testATenltInt() {
+  KernelScope kernel_scope;
   constexpr int N = 128;
   Buffer a(Var("A", kHandle), kInt32, {N});
   Buffer b(Var("B", kHandle), kInt32, {N});
