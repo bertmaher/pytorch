@@ -30,7 +30,7 @@ class KernelScope {
  public:
   TORCH_API KernelScope();
   TORCH_API explicit KernelScope(KernelArena& kernel_arena);
-  TORCH_API ~KernelScope();
+  TORCH_API ~KernelScope() noexcept(false);
 
  private:
   KernelScope(const KernelScope&) = delete;

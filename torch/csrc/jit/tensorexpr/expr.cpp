@@ -47,7 +47,7 @@ KernelScope::KernelScope(KernelArena& kernel_arena) : owning_kernel_arena_(false
   GetKernelArenaStack().push_back(&kernel_arena);
 }
 
-KernelScope::~KernelScope() {
+KernelScope::~KernelScope() noexcept(false) {
   std::vector<KernelArena*>& kernel_arena_stack = GetKernelArenaStack();
   if (kernel_arena_ != kernel_arena_stack.back()) {
     throw std::runtime_error("Mismatch KernelScope and kernel");
