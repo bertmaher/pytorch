@@ -301,6 +301,7 @@ struct TensorExprKernel {
   std::vector<Tensor> tensor_outputs;
   std::unordered_map<int64_t, Tensor> tensors;
   std::unique_ptr<CodeGen> codegen;
+  Kernel kernel_arena;
 
   Expr constant(torch::jit::Value* v) {
     if (v->node()->kind() == prim::Constant) {
@@ -659,6 +660,7 @@ struct TensorExprKernel {
   }
 
   explicit TensorExprKernel(const Node* node) {
+    KernelScope kernel_scope(kernel_arena);
     auto subgraph = node->g(attr::Subgraph);
 
     // Bind inputs to buffers.
@@ -714,6 +716,7 @@ struct TensorExprKernel {
   }
 
   void run(Stack& stack) {
+    KernelScope kernel_scope(kernel_arena);
     // Set up arguments (inputs, then outputs) for kernel call.
     auto inputs = last(stack, buffer_args.size());
     for (int i = 0; i < buffer_args.size(); i++) {
