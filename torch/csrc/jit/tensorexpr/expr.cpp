@@ -7,17 +7,17 @@ namespace jit {
 namespace tensorexpr {
 
 Kernel::~Kernel() {
-  for (KernelObject* p : kernel_objects_) {
+  for (KernelScopedObject* p : kernel_objects_) {
     delete p;
   }
 }
 
-KernelObject::KernelObject() {
+KernelScopedObject::KernelScopedObject() {
   Kernel& kernel = Kernel::GetCurrentKernel();
   kernel.kernel_objects_.push_back(this);
 }
 
-KernelObject::~KernelObject() {}
+KernelScopedObject::~KernelScopedObject() {}
 
 Expr Expr::operator+(const Expr& other) const {
   return Add::make(*this, other);
@@ -32,7 +32,7 @@ Kernel& Kernel::GetCurrentKernel() {
   std::vector<Kernel*>& kernel_stack = GetKernelStack();
   if (kernel_stack.empty()) {
     throw std::runtime_error(
-        "A KernelScope must be bound before creating KernelObject");
+        "A KernelScope must be bound before creating KernelScopedObject");
   }
   return *kernel_stack.back();
 }

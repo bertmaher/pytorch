@@ -9,7 +9,8 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-class KernelObject;
+class KernelScopedObject;
+// An arena that manages all the underlying kernel-scoped objects.
 class Kernel {
  public:
   static Kernel& GetCurrentKernel();
@@ -19,10 +20,13 @@ class Kernel {
  private:
   Kernel(const Kernel&) = delete;
   Kernel& operator=(const Kernel&) = delete;
-  friend class KernelObject;
-  std::vector<KernelObject*> kernel_objects_;
+  friend class KernelScopedObject;
+  std::vector<KernelScopedObject*> kernel_objects_;  // owned
 };
 
+// A RAII convenience wrapper on top of a kernel.
+// It either creates a Kernel, or take another existing Kernel, and sets it as
+// the current Kernel, as long as this KernelScope object is alive. 
 class KernelScope {
  public:
   TORCH_API KernelScope();
@@ -33,21 +37,24 @@ class KernelScope {
   KernelScope(const KernelScope&) = delete;
   KernelScope& operator=(const KernelScope&) = delete;
   bool owning_kernel_ = false;
-  Kernel* kernel_ = nullptr;
+  Kernel* kernel_ = nullptr; // possibly owned, if owning_kernel_ == true
 };
 
-class TORCH_API KernelObject {
+// The base object managed by the Kernel.
+// The object must be created through "new", and when the Kernel is destroyed,
+// All its registered objects are destroyed through "delete".
+class TORCH_API KernelScopedObject {
  public:
-  TORCH_API KernelObject();
-  TORCH_API virtual ~KernelObject();
+  TORCH_API KernelScopedObject();
+  TORCH_API virtual ~KernelScopedObject();
 
  private:
-  KernelObject(const KernelObject&) = delete;
-  KernelObject& operator=(const KernelObject&) = delete;
+  KernelScopedObject(const KernelScopedObject&) = delete;
+  KernelScopedObject& operator=(const KernelScopedObject&) = delete;
 };
 
 // The commomn class between all IR nodes.
-class IRNode : public KernelObject {
+class IRNode : public KernelScopedObject {
  public:
   TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
   TORCH_API virtual ~IRNode() {}
