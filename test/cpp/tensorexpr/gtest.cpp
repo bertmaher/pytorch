@@ -15,7 +15,7 @@ TH_FORALL_TESTS(TENSOREXPR_GTEST)
 #ifdef ENABLE_LLVM
 #define TENSOREXPR_GTEST_LLVM(name)   \
   TEST(TensorExprTest, name##_LLVM) { \
-    test##name();              \
+    test##name();                     \
   }
 TH_FORALL_TESTS_LLVM(TENSOREXPR_GTEST_LLVM)
 #undef TENSOREXPR_GTEST_LLVM
@@ -24,7 +24,7 @@ TH_FORALL_TESTS_LLVM(TENSOREXPR_GTEST_LLVM)
 #ifdef USE_CUDA
 #define TENSOREXPR_GTEST_CUDA(name)   \
   TEST(TensorExprTest, name##_CUDA) { \
-    test##name();              \
+    test##name();                     \
   }
 TH_FORALL_TESTS_CUDA(TENSOREXPR_GTEST_CUDA)
 #undef TENSOREXPR_GTEST_CUDA
