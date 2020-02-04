@@ -82,6 +82,7 @@ bool isSupported(Node* node) {
     case aten::trunc:
     case aten::remainder:
 #endif
+    case prim::ConstantChunk:
       return true;
     default:
       return false;
@@ -322,6 +323,24 @@ struct TensorExprKernel {
   template <typename T>
   Expr broadcast(const T& t, const std::vector<Var>& axes) {
     return t.call(computeIndicesToBroadcast(axes, bufferSizes(t)));
+  }
+
+  template <typename T>
+  Expr chunk(const T& t, size_t chunk_idx, size_t dim, size_t chunks,
+             const std::vector<Var>& axes) {
+    auto sizes = bufferSizes(t);
+    size_t step = sizes[dim] / chunks;
+
+    std::vector<Expr> indices;
+    for (size_t i = 0; i < axes.size(); ++i) {
+      if (i == dim) {
+        indices.push_back(axes[i] + IntImm::make(chunk_idx * step));
+      } else {
+        indices.push_back(axes[i]);
+      }
+    }
+
+    return t.call(indices);
   }
 
   void promoteInputs(std::vector<Expr>& inputs) {
@@ -679,8 +698,27 @@ struct TensorExprKernel {
     for (auto const& n : subgraph->nodes()) {
       if (n->kind() == prim::Constant) {
         continue;
+      } else if (n->kind() == prim::ConstantChunk) {
+        // Need to know output index in order to know which chunk each output
+        // corresponds to
+        for (size_t i = 0; i < n->outputs().size(); ++i) {
+          auto& output = n->outputs()[i];
+          tensors.emplace(
+            output->unique(),
+            Compute(
+              "chunk",
+              texprDims(output),
+              [this, n, i](const std::vector<Var>& axes) {
+                int64_t dim = n->i(attr::dim);
+                int64_t chunks = n->i(attr::chunks);
+                return chunk(tensors.at(n->inputs()[0]->unique()), i, dim, chunks, axes);
+              }
+            )
+          );
+        }
+      } else {
+        tensors.emplace(n->output()->unique(), ComputeNode(n));
       }
-      tensors.emplace(n->output()->unique(), ComputeNode(n));
     }
 
     // Move output operands from `tensors` to `tensor_outputs`
@@ -697,6 +735,10 @@ struct TensorExprKernel {
       p.second.ComputeInline();
     }
     Stmt stmt = sch.Lower();
+
+#if TX_DEBUG
+    std::cerr << stmt << "\n";
+#endif
 
 #ifdef ENABLE_LLVM
     // Set up formal params (inputs, then outputs) for kernel.
