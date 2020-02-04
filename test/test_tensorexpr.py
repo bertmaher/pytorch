@@ -505,3 +505,20 @@ def test_multioutput():
     cp = bp + bp
     np.testing.assert_allclose(b.numpy(), bp)
     np.testing.assert_allclose(c.numpy(), cp)
+
+def test_chunk():
+    def easy(x):
+        y = x + 1
+        aaa, bbb = torch.chunk(y, 2)
+        return aaa + bbb
+
+    traced = torch.jit.trace(
+        easy, (torch.zeros(1024, 1024))
+    )
+
+    a = torch.zeros(1024, 1024)
+    x = traced(a)
+    npr = a.numpy()
+    npr2 = npr + 1
+    npr_a, npr_b = np.array_split(npr2, 2)
+    np.testing.assert_allclose(npr_a + npr_b, x.numpy())
