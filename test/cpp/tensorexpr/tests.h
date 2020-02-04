@@ -40,39 +40,6 @@ namespace jit {
   _(AsmjitIntSubTest)           \
   _(AsmjitIntMulTest)           \
   _(AsmjitIntDivTest)           \
-  _(LLVMIntImmTest)             \
-  _(LLVMFloatImmTest)           \
-  _(LLVMIntAddTest)             \
-  _(LLVMIntSubTest)             \
-  _(LLVMIntMulTest)             \
-  _(LLVMIntDivTest)             \
-  _(LLVMIntToFloatCastTest)     \
-  _(LLVMFloatToIntCastTest)     \
-  _(LLVMLetTest01)              \
-  _(LLVMLetTest02)              \
-  _(LLVMBufferTest)             \
-  _(LLVMBlockTest)              \
-  _(LLVMLoadStoreTest)          \
-  _(LLVMVecLoadStoreTest)       \
-  _(LLVMMemcpyTest)             \
-  _(LLVMBzeroTest)              \
-  _(LLVMElemwiseAdd)            \
-  _(LLVMElemwiseAddFloat)       \
-  _(LLVMElemwiseLog10Float)     \
-  _(LLVMElemwiseMaxInt)         \
-  _(LLVMElemwiseMinInt)         \
-  _(LLVMElemwiseMaxNumFloat)    \
-  _(LLVMElemwiseMaxNumNaNFloat) \
-  _(LLVMElemwiseMinNumFloat)    \
-  _(LLVMElemwiseMinNumNaNFloat) \
-  _(LLVMCompareSelectIntEQ)     \
-  _(LLVMCompareSelectFloatEQ)   \
-  _(LLVMStoreFloat)             \
-  _(LLVMSimpleMath01)           \
-  _(LLVMComputeMul)             \
-  _(LLVMBroadcastAdd)           \
-  _(LLVMDynamicShapeAdd)        \
-  _(LLVMBindDynamicShapeAdd)    \
   _(Cond01)                     \
   _(ATen_cast_Float)            \
   _(ATennegInt)                 \
@@ -109,12 +76,50 @@ namespace jit {
   _(ATenleInt)                  \
   _(ATenltInt)
 
+#define TH_FORALL_TESTS_LLVM(_) \
+  _(LLVMIntImmTest)             \
+  _(LLVMFloatImmTest)           \
+  _(LLVMIntAddTest)             \
+  _(LLVMIntSubTest)             \
+  _(LLVMIntMulTest)             \
+  _(LLVMIntDivTest)             \
+  _(LLVMIntToFloatCastTest)     \
+  _(LLVMFloatToIntCastTest)     \
+  _(LLVMLetTest01)              \
+  _(LLVMLetTest02)              \
+  _(LLVMBufferTest)             \
+  _(LLVMBlockTest)              \
+  _(LLVMLoadStoreTest)          \
+  _(LLVMVecLoadStoreTest)       \
+  _(LLVMMemcpyTest)             \
+  _(LLVMBzeroTest)              \
+  _(LLVMElemwiseAdd)            \
+  _(LLVMElemwiseAddFloat)       \
+  _(LLVMElemwiseLog10Float)     \
+  _(LLVMElemwiseMaxInt)         \
+  _(LLVMElemwiseMinInt)         \
+  _(LLVMElemwiseMaxNumFloat)    \
+  _(LLVMElemwiseMaxNumNaNFloat) \
+  _(LLVMElemwiseMinNumFloat)    \
+  _(LLVMElemwiseMinNumNaNFloat) \
+  _(LLVMCompareSelectIntEQ)     \
+  _(LLVMCompareSelectFloatEQ)   \
+  _(LLVMStoreFloat)             \
+  _(LLVMSimpleMath01)           \
+  _(LLVMComputeMul)             \
+  _(LLVMBroadcastAdd)           \
+  _(LLVMDynamicShapeAdd)        \
+  _(LLVMBindDynamicShapeAdd)
+
 #define TH_FORALL_TESTS_CUDA(_) \
   _(CudaTestVectorAdd01)        \
   _(CudaTestVectorAdd02)
 
 #define DECLARE_TENSOREXPR_TEST(name) void test##name();
 TH_FORALL_TESTS(DECLARE_TENSOREXPR_TEST)
+#ifdef ENABLE_LLVM
+TH_FORALL_TESTS_LLVM(DECLARE_TENSOREXPR_TEST)
+#endif
 #ifdef USE_CUDA
 TH_FORALL_TESTS_CUDA(DECLARE_TENSOREXPR_TEST)
 #endif
