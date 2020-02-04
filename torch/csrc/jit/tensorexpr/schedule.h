@@ -6,7 +6,6 @@
 #include <c10/util/Logging.h>
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
-#include "torch/csrc/jit/tensorexpr/refcount.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
 
 namespace torch {
@@ -486,7 +485,7 @@ class TORCH_API TensorExprNode
   NodeValue node_value_;
 };
 
-class TORCH_API ScheduleNode : public RefCounted {
+class TORCH_API ScheduleNode : public KernelScopedObject {
  public:
   // Section: user-facing functionalities.
   ~ScheduleNode();
@@ -632,29 +631,37 @@ Object* CloneObject(Object* object) {
   return static_cast<Object*>(new_object);
 }
 
-class TORCH_API Schedule : RefHandle<ScheduleNode> {
+class TORCH_API Schedule {
  public:
   static Schedule make(const std::vector<Tensor>& funcs) {
     return Schedule(new ScheduleNode(funcs));
   }
 
   explicit Schedule(const std::vector<Tensor>& funcs)
-      : BaseClass(new ScheduleNode(funcs)) {}
+      : node_(new ScheduleNode(funcs)) {}
 
   Stmt Lower() {
     return node()->Lower();
   }
 
-  Schedule(Schedule&& other) : BaseClass(std::move(other)) {}
+  Schedule(Schedule&& other) : node_(other.node_) {
+    other.node_ = nullptr;
+  }
 
  private:
   // TODO: temporarily disable the copy. We should decide whether the semantics
   // of this object.
   Schedule(const Schedule&) = delete;
   Schedule& operator=(const Schedule&) = delete;
+  Schedule(ScheduleNode* node) : node_(node) {}
+  ScheduleNode* node() {
+    return node_;
+  }
+  const ScheduleNode* node() const {
+    return node_;
+  }
 
-  using BaseClass = RefHandle<ScheduleNode>;
-  Schedule(ScheduleNode* node) : BaseClass(node) {}
+  ScheduleNode* node_ = nullptr;
 };
 
 } // namespace schedule
