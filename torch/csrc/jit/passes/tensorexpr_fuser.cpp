@@ -705,7 +705,7 @@ class TensorExprKernel {
             Node* n = v->node();
             int64_t dim = n->i(attr::dim);
             int64_t chunks = n->i(attr::chunks);
-            return chunk(tensors.at(n->inputs()[0]->unique()), v->offset(), dim, chunks, axes);
+            return chunk(tensors_.at(n->inputs()[0]->unique()), v->offset(), dim, chunks, axes);
           }
         );
       }
@@ -832,7 +832,7 @@ class TensorExprKernel {
       } else {
         for (torch::jit::Value* output : n->outputs()) {
           if (output->hasUses()) {
-            tensors.emplace(output->unique(), ComputeValue(output));
+            tensors_.emplace(output->unique(), ComputeValue(output));
           }
         }
       }
