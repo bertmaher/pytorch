@@ -8,6 +8,7 @@
 #include <torch/csrc/jit/passes/dead_code_elimination.h>
 #include <torch/csrc/jit/passes/utils/subgraph_utils.h>
 #include <torch/csrc/jit/tensorexpr/buffer.h>
+#include <torch/csrc/jit/tensorexpr/cuda_codegen.h>
 #include <torch/csrc/jit/tensorexpr/eval.h>
 #include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
@@ -303,13 +304,23 @@ std::vector<Expr> computeIndicesToBroadcast(
   return bcast;
 }
 
-struct TensorExprKernel {
-  std::vector<Buffer> buffer_args;
-  std::vector<Tensor> tensor_outputs;
-  std::unordered_map<int64_t, Tensor> tensors;
-  std::unique_ptr<CodeGen> codegen;
-  KernelArena kernel_arena;
+class TensorExprKernel {
+ private:
+  enum BackendType {
+    kUninitialized,
+    kSimpleIREval,
+    kLLVMCodeGen,
+    kCudaCodeGen,
+  };
+  std::vector<Buffer> buffer_args_;
+  std::vector<Tensor> tensor_outputs_;
+  std::unordered_map<int64_t, Tensor> tensors_;
+  std::unique_ptr<CodeGen> codegen_;
+  KernelArena kernel_arena_;
+  BackendType backend_type_ = BackendType::kUninitialized;
+  at::Device device_ = at::kCPU;
 
+ private:
   Expr constant(torch::jit::Value* v) {
     if (v->node()->kind() == prim::Constant) {
       const auto val = toIValue(v).value();
@@ -332,8 +343,12 @@ struct TensorExprKernel {
   }
 
   template <typename T>
-  Expr chunk(const T& t, size_t chunk_idx, size_t dim, size_t chunks,
-             const std::vector<Var>& axes) {
+  Expr chunk(
+      const T& t,
+      size_t chunk_idx,
+      size_t dim,
+      size_t chunks,
+      const std::vector<Var>& axes) {
     auto sizes = bufferSizes(t);
     size_t step = sizes[dim] / chunks;
 
@@ -375,8 +390,8 @@ struct TensorExprKernel {
   }
 
   Expr tensorOrConstant(torch::jit::Value* v, const std::vector<Var>& axes) {
-    auto ti = tensors.find(v->unique());
-    if (ti != tensors.end()) {
+    auto ti = tensors_.find(v->unique());
+    if (ti != tensors_.end()) {
       return broadcast(ti->second, axes);
     }
     return constant(v);
@@ -699,14 +714,107 @@ struct TensorExprKernel {
     }
   }
 
+  void LowerToBackend(BackendType backend_type) {
+    torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs_);
+
+    // Compute non-output tensors_ inline
+    for (auto& p : tensors_) {
+      p.second.ComputeInline();
+    }
+    if (backend_type == kCudaCodeGen) {
+      for (auto& output : tensor_outputs_) {
+        // TODO: implement the universal fused dispatching config.
+        if (output.args().size() < 2) {
+          throw std::runtime_error(
+              "Only tensors with more than 2D is supported in CudaCodeGen");
+        }
+        Var x = output.arg(0);
+        Var y = output.arg(1);
+        output.GPUExecConfig({x}, {y});
+      }
+    }
+
+    Stmt stmt = sch.Lower();
+
+    // Set up formal params (inputs, then outputs) for kernel.
+    std::vector<CodeGen::BufferArg> params(
+        buffer_args_.begin(), buffer_args_.end());
+    for (auto& o : tensor_outputs_) {
+      params.push_back(o);
+    }
+
+    // Generate code.
+    switch (backend_type_) {
+      case kCudaCodeGen:
+        codegen_ = std::make_unique<CudaCodeGen>(stmt, params);
+        break;
+      case kLLVMCodeGen:
+        codegen_ = std::make_unique<LLVMCodeGen>(stmt, params);
+        break;
+      case kSimpleIREval:
+        codegen_ = std::make_unique<SimpleIREvaluator>(stmt, params);
+        break;
+      default:
+        throw std::runtime_error("invalid backend type");
+    }
+  }
+
+  void PickAndCheckBackendType(const at::ArrayRef<IValue>& inputs) {
+    at::Device device = inputs[0].toTensor().device();
+    BackendType backend_type = BackendType::kUninitialized;
+    if (device.type() == at::kCUDA) {
+      backend_type = kCudaCodeGen;
+    } else if (device.type() == at::kCPU) {
+#ifdef ENABLE_LLVM
+      backend_type = kLLVMCodeGen;
+#else
+      backend_type = kSimpleIREval;
+      ;
+#endif
+    } else {
+      throw std::runtime_error("Invalid device type");
+    }
+
+    if (backend_type_ == kUninitialized) {
+      backend_type_ = backend_type;
+      device_ = device;
+      LowerToBackend(backend_type);
+    } else if (backend_type_ != backend_type) {
+      // TODO: if we have to support muliptole backends with the same subgraph,
+      // we need to add kernel caching.
+      throw std::runtime_error(
+          "Inconsistent backend_type: " + std::to_string(backend_type_) +
+          " vs " + std::to_string(backend_type));
+    }
+  }
+
+  void CodeGenRun(const std::vector<CodeGen::CallArg>& run_args) {
+    if (backend_type_ == kCudaCodeGen || backend_type_ == kSimpleIREval) {
+      codegen_->call(run_args);
+    } else if (backend_type_ == kLLVMCodeGen) {
+      for (int i = 0; i < buffer_args_.size(); i++) {
+        codegen_->bind(buffer_args_[i], run_args[i]);
+      }
+      int offset = buffer_args_.size();
+      for (int i = 0; i < tensor_outputs_.size(); i++) {
+        codegen_->bind(tensor_outputs_[i], run_args[i + offset]);
+      }
+      codegen_->run();
+    } else {
+      throw std::runtime_error(
+          "Invalid backend type: " + std::to_string(backend_type_));
+    }
+  }
+
+ public:
   explicit TensorExprKernel(const Node* node) {
-    KernelScope kernel_scope(kernel_arena);
+    KernelScope kernel_scope(kernel_arena_);
     auto subgraph = node->g(attr::Subgraph);
 
     // Bind inputs to buffers.
     for (auto const& input : subgraph->inputs()) {
       Buffer in_buffer = texprBuffer(input);
-      tensors.emplace(
+      tensors_.emplace(
           input->unique(),
           Compute(
               "input",
@@ -714,7 +822,7 @@ struct TensorExprKernel {
               [this, in_buffer](const std::vector<Var>& axes) {
                 return broadcast(in_buffer, axes);
               }));
-      buffer_args.push_back(std::move(in_buffer));
+      buffer_args_.push_back(std::move(in_buffer));
     }
 
     // Bind nodes to tensor compute expressions.
@@ -730,58 +838,36 @@ struct TensorExprKernel {
       }
     }
 
-    // Move output operands from `tensors` to `tensor_outputs`
+    // Move output operands from `tensors_` to `tensor_outputs_`
     for (const auto& output : subgraph->outputs()) {
-      CHECK(tensors.count(output->unique())) << "Output must be a tensor";
-      tensor_outputs.emplace_back(tensors.at(output->unique()));
-      tensors.erase(output->unique());
+      CHECK(tensors_.count(output->unique())) << "Output must be a tensor";
+      tensor_outputs_.emplace_back(tensors_.at(output->unique()));
+      tensors_.erase(output->unique());
     }
-
-    torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs);
-
-    // Compute non-output tensors inline
-    for (auto& p : tensors) {
-      p.second.ComputeInline();
-    }
-    Stmt stmt = sch.Lower();
-
-#if TX_DEBUG
-    std::cerr << stmt << "\n";
-#endif
-
-#ifdef ENABLE_LLVM
-    // Set up formal params (inputs, then outputs) for kernel.
-    std::vector<CodeGen::BufferArg> params(
-        buffer_args.begin(), buffer_args.end());
-    for (auto& o : tensor_outputs) {
-      params.push_back(o);
-    }
-
-    // Generate code.
-    codegen = std::make_unique<LLVMCodeGen>(stmt, params);
-#else
-    codegen = std::make_unique<SimpleIREvaluator>(stmt);
-#endif
   }
 
   void run(Stack& stack) {
-    KernelScope kernel_scope(kernel_arena);
+    KernelScope kernel_scope(kernel_arena_);
     // Set up arguments (inputs, then outputs) for kernel call.
-    auto inputs = last(stack, buffer_args.size());
-    for (int i = 0; i < buffer_args.size(); i++) {
-      codegen->bind(buffer_args[i], inputs[i].toTensor().data_ptr());
+    auto inputs = last(stack, buffer_args_.size());
+    PickAndCheckBackendType(inputs);
+
+    std::vector<CodeGen::CallArg> run_args;
+    for (int i = 0; i < buffer_args_.size(); i++) {
+      run_args.push_back(inputs[i].toTensor().data_ptr());
     }
     std::vector<at::Tensor> outputs;
-    for (auto& o : tensor_outputs) {
-      outputs.push_back(at::empty(bufferSizes(o), tensorType(o)));
-      codegen->bind(o, outputs.back().data_ptr());
+    for (auto& o : tensor_outputs_) {
+      outputs.push_back(at::empty(
+          bufferSizes(o), c10::TensorOptions(tensorType(o)).device(device_)));
+      run_args.push_back(outputs.back().data_ptr());
     }
 
     // Call the kernel.
-    codegen->run();
+    CodeGenRun(run_args);
 
     // Update the stack.
-    drop(stack, buffer_args.size());
+    drop(stack, buffer_args_.size());
     for (auto& o : outputs) {
       push_one(stack, std::move(o));
     }

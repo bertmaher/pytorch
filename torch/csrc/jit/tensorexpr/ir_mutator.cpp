@@ -198,6 +198,7 @@ Stmt IRMutator::mutate(const For* v) {
   Expr start = v->start();
   Expr stop = v->stop();
   Stmt body = v->body();
+  LoopOptions loop_options = v->loop_options();
   Expr var_new_expr = var.accept_mutator(this);
   Var var_new = Var(var_new_expr.AsNode<Variable>());
   Expr start_new = start.accept_mutator(this);
@@ -207,7 +208,7 @@ Stmt IRMutator::mutate(const For* v) {
       same_node(stop, stop_new) && same_node(body, body_new)) {
     return Stmt(v);
   }
-  return For::make(var_new, start_new, stop_new, body_new);
+  return For::make(var_new, start_new, stop_new, body_new, loop_options);
 }
 
 Stmt IRMutator::mutate(const Block* v) {

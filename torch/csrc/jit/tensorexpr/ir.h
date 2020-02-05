@@ -360,7 +360,7 @@ class LoopOptions {
 
   // GPU Thread Index
   bool is_gpu_thread_index() const {
-    return gpu_thread_index_ != -1;
+    return gpu_thread_index() != -1;
   }
 
   int gpu_thread_index() const {

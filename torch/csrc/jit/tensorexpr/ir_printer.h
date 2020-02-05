@@ -4,6 +4,7 @@
 
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_visitor.h"
+#include "torch/csrc/jit/tensorexpr/unique_name_manager.h"
 
 namespace torch {
 namespace jit {
@@ -57,12 +58,18 @@ class TORCH_API IRPrinter : public IRVisitor {
     IRPrinter* printer_ = nullptr;
   };
 
+ protected:
+  UniqueNameManager* name_manager() {
+    return &name_manager_;
+  }
+  
  private:
   std::ostream& raw_os() {
     return printer_os_;
   }
 
   PrinterStream printer_os_;
+  UniqueNameManager name_manager_;
 };
 
 TORCH_API std::ostream& operator<<(std::ostream& stream, const Expr&);

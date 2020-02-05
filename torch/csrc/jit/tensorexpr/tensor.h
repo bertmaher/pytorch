@@ -81,6 +81,9 @@ class TensorNode : public TensorOperationNode {
   const Var& arg(int index) const {
     return function_.arg(index);
   }
+  const std::vector<Var>& args() const {
+    return function_.args();
+  }
   Dtype dtype() const {
     return function_.body().dtype();
   }
@@ -178,6 +181,9 @@ class Tensor : public TensorOperation {
   }
   const Var& arg(int index) const {
     return node()->arg(index);
+  }
+  const std::vector<Var>& args() const {
+    return node()->args();
   }
   int output_index() const {
     return node()->output_index();
