@@ -150,6 +150,22 @@ Expr IRMutator::mutate(const Broadcast* v) {
   return Broadcast::make(value_new, lanes);
 }
 
+Expr IRMutator::mutate(const IfThenElse* v) {
+  Expr condition = v->condition();
+  Expr true_value = v->true_value();
+  Expr false_value = v->false_value();
+  Expr condition_new = condition.accept_mutator(this);
+  Expr true_value_new = true_value.accept_mutator(this);
+  Expr false_value_new = false_value.accept_mutator(this);
+  if (same_node(condition, condition_new) &&
+      same_node(true_value, true_value_new) &&
+      same_node(false_value, false_value_new)) {
+    return Expr(v);
+  }
+
+  return IfThenElse::make(condition_new, true_value_new, false_value_new);
+}
+
 Expr IRMutator::mutate(const Intrinsics* v) {
   const BaseCallNode* base = v;
   return this->mutate(base);

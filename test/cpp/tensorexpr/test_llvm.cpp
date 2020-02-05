@@ -153,6 +153,30 @@ void testLLVMLoadStoreTest() {
   EXPECT_EQ(b_buffer[0], 42);
 }
 
+void testLLVMIfThenElseTest() {
+  KernelScope kernel_scope;
+  Buffer a(Var("A", kHandle), kInt32, {1});
+  Buffer b(Var("B", kHandle), kInt32, {1});
+  Buffer c(Var("C", kHandle), kInt32, {1});
+  std::vector<int32_t> a_buffer = {42};
+  std::vector<int32_t> b_buffer = {-11};
+  std::vector<int32_t> c_buffer = {1};
+
+  auto store = Store::make(
+      b,
+      IntImm::make(0),
+      IfThenElse::make(
+        Load::make(c, IntImm::make(0), IntImm::make(1)), // cond
+        Load::make(a, IntImm::make(0), IntImm::make(1)), // then
+        IntImm::make(0)), // else
+      IntImm::make(1));
+  LLVMCodeGen cg(store, {a, b, c});
+  std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});
+  EXPECT_EQ(cg.value<int>(args), 0);
+  EXPECT_EQ(a_buffer[0], 42);
+  EXPECT_EQ(b_buffer[0], 42);
+}
+
 void testLLVMVecLoadStoreTest() {
   KernelScope kernel_scope;
   Buffer a(Var("A", kHandle), kInt32, {1});

@@ -24,6 +24,7 @@ class For;
 class Block;
 class Store;
 class Broadcast;
+class IfThenElse;
 class BaseCallNode;
 class Intrinsics;
 class FunctionCall;
@@ -53,6 +54,8 @@ class TORCH_API IRVisitor {
   TORCH_API virtual void visit(const Block* v);
   TORCH_API virtual void visit(const Store* v);
   TORCH_API virtual void visit(const Broadcast* v);
+  TORCH_API virtual void visit(const IfThenElse* v);
+
   // BaseCallNode is the base class for all call nodes.
   // For any visitors that only needs the common behavior, only override this
   // function is enough. This is because all derived class handlers will call

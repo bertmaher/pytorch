@@ -41,6 +41,8 @@ namespace jit {
   _(AsmjitIntMulTest)           \
   _(AsmjitIntDivTest)           \
   _(Cond01)                     \
+  _(IfThenElse01)               \
+  _(IfThenElse02)               \
   _(ATen_cast_Float)            \
   _(ATennegInt)                 \
   _(ATennegFloat)               \
@@ -109,7 +111,8 @@ namespace jit {
   _(LLVMComputeMul)             \
   _(LLVMBroadcastAdd)           \
   _(LLVMDynamicShapeAdd)        \
-  _(LLVMBindDynamicShapeAdd)
+  _(LLVMBindDynamicShapeAdd)    \
+  _(LLVMIfThenElseTest)
 
 #define TH_FORALL_TESTS_CUDA(_) \
   _(CudaTestVectorAdd01)        \

@@ -161,6 +161,10 @@ void IRPrinter::visit(const Broadcast* v) {
   os() << "Broadcast(" << v->value() << ", " << v->lanes() << ")";
 }
 
+void IRPrinter::visit(const IfThenElse* v) {
+  os() << "IfThenElse(" << v->condition() << ", " << v->true_value() << ", " << v->false_value() << ")";
+}
+
 void IRPrinter::visit(const BaseCallNode* v) {
   os() << v->func_name() << "(";
   for (int i = 0; i < v->nparams(); i++) {

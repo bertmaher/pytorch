@@ -606,6 +606,40 @@ class Broadcast : public ExprNode<Broadcast> {
   Expr value_;
   int lanes_;
 };
+class IfThenElse : public ExprNode<IfThenElse> {
+ public:
+  const Expr& condition() const {
+    return condition_;
+  }
+
+  // Lazily evaluated only if condition is true
+  const Expr& true_value() const {
+    return true_;
+  }
+
+  // Lazily evaluated only if condition is false
+  const Expr& false_value() const {
+    return false_;
+  }
+
+  static Expr make(const Expr& c, const Expr& t, const Expr& f) {
+    return Expr(new IfThenElse(c, t, f));
+  }
+
+ private:
+  IfThenElse(const Expr& c, const Expr& t, const Expr& f)
+      : ExprNodeBase(t.dtype()),
+        condition_(c),
+        true_(t),
+        false_(f) {
+    CHECK_EQ(c.dtype().scalar_type(), kInt32);
+    CHECK_EQ(c.dtype().lanes(), 1);
+    CHECK_EQ(t.dtype(), f.dtype());
+  }
+  Expr condition_;
+  Expr true_;
+  Expr false_;
+};
 
 class BaseCallNode : public BaseExprNode {
  public:

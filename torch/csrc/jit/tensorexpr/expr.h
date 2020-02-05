@@ -261,6 +261,9 @@ TORCH_API Expr pow(const Expr& v1, const Expr& v2);
 TORCH_API Expr fmod(const Expr& v1, const Expr& v2);
 TORCH_API Expr remainder(const Expr& v1, const Expr& v2);
 
+TORCH_API Expr ifThenElse(const Expr& c, const Expr& t, const Expr& f);
+
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch

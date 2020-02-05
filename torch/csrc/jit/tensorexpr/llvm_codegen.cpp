@@ -698,6 +698,33 @@ void LLVMCodeGen::visit(const Broadcast* v) {
   value_ = irb_.CreateVectorSplat(lanes, value_);
 }
 
+void LLVMCodeGen::visit(const IfThenElse* v) {
+  v->condition().accept(this);
+  llvm::Value* condition = value_;
+  llvm::Value* c = irb_.CreateICmpNE(condition, llvm::ConstantInt::get(int32Ty_, 0));
+
+  auto then_block = llvm::BasicBlock::Create(getContext(), "then", fn_);
+  auto else_block = llvm::BasicBlock::Create(getContext(), "else", fn_);
+  auto end_block = llvm::BasicBlock::Create(getContext(), "block", fn_);
+  irb_.CreateCondBr(c, then_block, else_block);
+
+  irb_.SetInsertPoint(then_block);
+  v->true_value().accept(this);
+  llvm::Value* then_val = value_;
+  irb_.CreateBr(end_block);
+
+  irb_.SetInsertPoint(else_block);
+  v->false_value().accept(this);
+  llvm::Value* else_val = value_;
+  irb_.CreateBr(end_block);
+
+  irb_.SetInsertPoint(end_block);
+  llvm::PHINode* phi = irb_.CreatePHI(then_val->getType(), 2);
+  phi->addIncoming(then_val, then_block);
+  phi->addIncoming(else_val, else_block);
+  value_ = phi;
+}
+
 void LLVMCodeGen::visit(const BaseCallNode* v) {
   LOG(FATAL) << "Unimplemented: BaseCall";
 }
