@@ -24,6 +24,7 @@ class For;
 class Block;
 class Store;
 class Broadcast;
+class IfThenElse;
 class Expr;
 class Stmt;
 class BaseCallNode;
@@ -52,6 +53,7 @@ class TORCH_API IRMutator {
   virtual Expr mutate(const Ramp* v);
   virtual Expr mutate(const Load* v);
   virtual Expr mutate(const Broadcast* v);
+  virtual Expr mutate(const IfThenElse* v);
   // BaseCallNode is the base class for all call nodes.
   // For any visitors that only needs the common behavior, only override this
   // function is enough. This is because all derived class handlers will call

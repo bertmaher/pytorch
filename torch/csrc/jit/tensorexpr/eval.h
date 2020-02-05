@@ -379,6 +379,15 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
+  TORCH_API void visit(const IfThenElse* v) override {
+    v->condition().accept(this);
+    if (value_.as<int>()) {
+      v->true_value().accept(this);
+    } else {
+      v->false_value().accept(this);
+    }
+  }
+
   TORCH_API void visit(const Load* v) override {
     const Variable* base_node = v->base_handle().node();
     auto iter = buffer_mapping_.find(base_node);

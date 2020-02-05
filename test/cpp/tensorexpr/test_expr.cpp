@@ -324,5 +324,31 @@ void testCond01() {
   ExpectAllNear(a_v, a_ref, 1e-5);
 }
 
+void testIfThenElse01() {
+  KernelScope kernel_scope;
+  Expr v = ifThenElse(Expr(1), Expr(1.0f), Expr(2.0f));
+
+  std::ostringstream oss;
+  oss << v;
+  ASSERT_EQ(oss.str(), "IfThenElse(1, 1, 2)");
+
+  SimpleIREvaluator eval(v);
+  eval();
+  ASSERT_EQ(eval.value().as<float>(), 1.0f);
+}
+
+void testIfThenElse02() {
+  KernelScope kernel_scope;
+  Expr v = ifThenElse(Expr(0), Expr(1.0f), Expr(2.0f));
+
+  std::ostringstream oss;
+  oss << v;
+  ASSERT_EQ(oss.str(), "IfThenElse(0, 1, 2)");
+
+  SimpleIREvaluator eval(v);
+  eval();
+  ASSERT_EQ(eval.value().as<float>(), 2.0f);
+}
+
 } // namespace jit
 } // namespace torch
