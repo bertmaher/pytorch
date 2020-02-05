@@ -246,14 +246,20 @@ std::vector<Expr> texprSizes(const c10::VaryingShape& shape) {
 
 std::vector<DimArg> texprDims(torch::jit::Value* v) {
   auto tt = v->type()->cast<TensorType>();
-  auto exprDims = texprSizes(tt->sizes());
-  return std::vector<DimArg>(exprDims.begin(), exprDims.end());
+  std::vector<DimArg> dimArgs;
+  int i = 0;
+  for (auto const& s : texprSizes(tt->sizes())) {
+    dimArgs.push_back({s, "i" + std::to_string(i++)});
+  }
+  return dimArgs;
 }
 
 Buffer texprBuffer(const torch::jit::Value* v) {
   auto tt = v->type()->cast<TensorType>();
   return Buffer(
-      v->debugName(), texprType(tt->scalarType()), texprSizes(tt->sizes()));
+      "t" + v->debugName(),
+      texprType(tt->scalarType()),
+      texprSizes(tt->sizes()));
 }
 
 template <typename T>
