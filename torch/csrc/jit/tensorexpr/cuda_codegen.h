@@ -22,11 +22,19 @@ namespace tensorexpr {
 // A class that overrides the underlying IRPrinter to produce Cuda C.
 class CudaPrinter : public IRPrinter {
  public:
-  CudaPrinter(std::ostream* os, UniqueNameManager* name_manager)
-      : IRPrinter(*os), os_(os), name_manager_(name_manager) {}
+  explicit CudaPrinter(std::ostream* os)
+      : IRPrinter(*os), os_(os) {}
 
-  void visit(const Variable* v) override {
-    os() << name_manager_->get_unique_name(v);
+  void visit(const Cast* v) {
+    auto dtype = v->dtype();
+    if (dtype == kFloat32) {
+      os() << "float"; 
+    } else {
+      os() << dtype;
+    }
+    os() << "(";
+    v->src_value().accept(this);
+    os() << ")";
   }
 
   void visit(const For* v);
@@ -43,16 +51,17 @@ class CudaPrinter : public IRPrinter {
     return gpu_thread_extents_;
   }
 
+  using IRPrinter::name_manager;
+
  private:
   std::ostream* os_ = nullptr;
-  UniqueNameManager* name_manager_ = nullptr;
   std::vector<Expr> gpu_block_extents_;
   std::vector<Expr> gpu_thread_extents_;
 };
 
 // Construct Cuda C from the buffer and tensor input, and invoke the kernel
 // when real arguments are provided.
-class CudaCodeGen : public CodeGen {
+class TORCH_API CudaCodeGen : public CodeGen {
  public:
   template <typename... Ts>
   CudaCodeGen(const Stmt& stmt, Ts... ts)
@@ -70,11 +79,17 @@ class CudaCodeGen : public CodeGen {
  private:
   TORCH_API void Initialize();
 
-  TORCH_API void call(const std::vector<CallArg>& args);
+  TORCH_API void call(const std::vector<CallArg>& args) override;
 
   void CompileToNVRTC(const std::string& code);
 
-  UniqueNameManager name_manager_;
+  UniqueNameManager* name_manager() {
+    if (!printer_) {
+      throw std::runtime_error("Null IRPrinter is not expected");
+    }
+    return printer_->name_manager();
+  }
+  
   std::ostringstream oss_;
   std::unique_ptr<CudaPrinter> printer_;
   CUfunction function_;

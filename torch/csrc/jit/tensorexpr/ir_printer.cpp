@@ -109,7 +109,7 @@ void IRPrinter::visit(const Cast* v) {
 }
 
 void IRPrinter::visit(const Variable* v) {
-  os() << v->name_hint();
+  os() << name_manager_.get_unique_name(v);
 }
 
 void IRPrinter::visit(const Let* v) {

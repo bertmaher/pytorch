@@ -15,6 +15,26 @@ def test_easy():
     np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
 
 
+# TODO: combine this with the test_easy
+def test_easy_cuda():
+    if not torch.cuda.is_available():
+        return
+
+    def easy(x, y):
+        aaa = torch.add(x, y)
+        return aaa
+
+    traced = torch.jit.trace(easy, (torch.rand(32, 16, device='cuda'), torch.rand(32, 16, device='cuda')))
+
+    a = torch.rand(32, 16, device='cuda')
+    b = torch.rand(32, 16, device='cuda')
+    x = traced(a, b)
+    a_cpu = a.cpu()
+    b_cpu = b.cpu()
+    x_cpu = x.cpu()
+    np.testing.assert_allclose(a_cpu.numpy() + b_cpu.numpy(), x_cpu.numpy())
+
+
 def test_three_arg():
     def easy(x, y, z):
         aaa = torch.add(x, y)

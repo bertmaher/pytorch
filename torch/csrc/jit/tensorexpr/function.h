@@ -52,6 +52,9 @@ class FunctionNode : public KernelScopedObject {
     CHECK_LT(index, ndim()) << "index out of upper bound";
     return args_[index];
   }
+  const std::vector<Var>& args() const {
+    return args_;
+  }
   const Expr& body() const {
     return body_;
   }
@@ -87,6 +90,9 @@ class Function {
   }
   const Var& arg(int index) const {
     return node()->arg(index);
+  }
+  const std::vector<Var>& args() const {
+    return node()->args();
   }
   const Expr& body() const {
     return node()->body();

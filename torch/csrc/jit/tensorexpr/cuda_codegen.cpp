@@ -90,7 +90,7 @@ void CudaPrinter::visit(const For* v) {
   const LoopOptions& loop_options = v->loop_options();
   if (loop_options.is_gpu_block_index()) {
     ScopedVarName var_name(
-        name_manager_, v->var().node(), loop_options.gpu_block_index_str());
+			   name_manager(), v->var().node(), loop_options.gpu_block_index_str());
     v->body().accept(this);
     int gpu_block_index = loop_options.gpu_block_index();
     if (gpu_block_extents_.size() <= gpu_block_index) {
@@ -104,7 +104,7 @@ void CudaPrinter::visit(const For* v) {
     gpu_block_extents_[gpu_block_index] = v->stop();
   } else if (loop_options.is_gpu_thread_index()) {
     ScopedVarName var_name(
-        name_manager_, v->var().node(), loop_options.gpu_thread_index_str());
+			   name_manager(), v->var().node(), loop_options.gpu_thread_index_str());
     v->body().accept(this);
     int gpu_thread_index = loop_options.gpu_thread_index();
     if (gpu_thread_extents_.size() <= gpu_thread_index) {
@@ -122,7 +122,7 @@ void CudaPrinter::visit(const For* v) {
 }
 
 void CudaCodeGen::Initialize() {
-  printer_.reset(new CudaPrinter(&oss_, &name_manager_));
+  printer_.reset(new CudaPrinter(&oss_));
   // TODO: handle multiple kernels.
   // TODO: handle dynamic dimension.
   // TODO: call nvrtc.
@@ -135,7 +135,7 @@ void CudaCodeGen::Initialize() {
     const BufferArg& buffer_arg = buffer_args[i];
     const Var& var = buffer_arg.var();
     Dtype dtype = buffer_arg.dtype();
-    oss_ << dtype.ToCppString() << "* " << name_manager_.get_unique_name(var);
+    oss_ << dtype.ToCppString() << "* " << name_manager()->get_unique_name(var);
   }
   oss_ << ") {";
 
