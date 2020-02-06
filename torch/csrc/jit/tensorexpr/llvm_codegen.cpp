@@ -40,6 +40,7 @@ static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
   JTMB.setCodeGenOptLevel(llvm::CodeGenOpt::Default);
   JTMB.setCPU(llvm::sys::getHostCPUName());
   JTMB.addFeatures(SubtargetFeatures.getFeatures());
+  JTMB.setCodeModel(llvm::CodeModel::Medium);
 
   return JTMB;
 #endif
