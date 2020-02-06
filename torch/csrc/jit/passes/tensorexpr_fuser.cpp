@@ -66,7 +66,6 @@ bool isSupported(Node* node) {
     case aten::max:
     case aten::clamp:
     case aten::log10:
-#ifndef ENABLE_LLVM
     case aten::log:
     case aten::log2:
     case aten::exp:
@@ -80,15 +79,14 @@ bool isSupported(Node* node) {
     case aten::cosh:
     case aten::sinh:
     case aten::tanh:
-    case aten::abs:
     case aten::sqrt:
     case aten::rsqrt:
+    case aten::abs:
     case aten::floor:
     case aten::ceil:
     case aten::round:
     case aten::trunc:
     case aten::remainder:
-#endif
     case prim::ConstantChunk:
     case aten::cat:
     case prim::ListConstruct:
