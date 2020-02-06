@@ -369,7 +369,6 @@ def test_int_output():
     res = traced(x, y, z)
     np.testing.assert_allclose(xn * yn * zn, res.numpy())
 
-
 def test_unary_ops():
     def test_sin(x, y):
         c = torch.sin(torch.add(x, y))
