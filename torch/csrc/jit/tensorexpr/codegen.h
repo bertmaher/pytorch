@@ -139,7 +139,7 @@ class CodeGen::CallArg {
 
 class RegisterCodeGenList {
  public:
-  static RegisterCodeGenList& GetInstance() {
+  TORCH_API static RegisterCodeGenList& GetInstance() {
     static RegisterCodeGenList codegen_list;
     return codegen_list;
   }
