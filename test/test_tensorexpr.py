@@ -15,26 +15,6 @@ def test_easy():
     np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
 
 
-# TODO: combine this with the test_easy
-def test_easy_cuda():
-    if not torch.cuda.is_available():
-        return
-
-    def easy(x, y):
-        aaa = torch.add(x, y)
-        return aaa
-
-    traced = torch.jit.trace(easy, (torch.rand(32, 16, device='cuda'), torch.rand(32, 16, device='cuda')))
-
-    a = torch.rand(32, 16, device='cuda')
-    b = torch.rand(32, 16, device='cuda')
-    x = traced(a, b)
-    a_cpu = a.cpu()
-    b_cpu = b.cpu()
-    x_cpu = x.cpu()
-    np.testing.assert_allclose(a_cpu.numpy() + b_cpu.numpy(), x_cpu.numpy())
-
-
 def test_three_arg():
     def easy(x, y, z):
         aaa = torch.add(x, y)
@@ -51,6 +31,24 @@ def test_three_arg():
     x = traced(a, b, c)
     npr = a.numpy() + b.numpy() + c.numpy()
     np.testing.assert_allclose(npr, x.numpy())
+
+
+def test_three_arg_cuda():
+    def test(x, y, z):
+        aaa = torch.add(x, y)
+        bbb = torch.add(aaa, z)
+        return bbb
+
+    traced = torch.jit.trace(
+        test, (torch.rand(32, 32, device='cuda'), torch.rand(32, 32, device='cuda'), torch.rand(32, 32, device='cuda'))
+    )
+
+    a = torch.rand(32, 32, device='cuda')
+    b = torch.rand(32, 32, device='cuda')
+    c = torch.rand(32, 32, device='cuda')
+    x = traced(a, b, c)
+    npr = a.cpu().numpy() + b.cpu().numpy() + c.cpu().numpy()
+    np.testing.assert_allclose(npr, x.cpu().numpy())
 
 
 def test_all_combos():
@@ -445,7 +443,7 @@ def test_unary_ops():
     rand_a = torch.rand(1024, dtype=float)
     rand_b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
@@ -484,10 +482,10 @@ def test_remainder():
         c = torch.remainder(torch.add(x, y), x)
         return c
 
-    a = torch.rand(1024, dtype=float) 
-    b = torch.rand(1024, dtype=float) 
+    a = torch.rand(1024, dtype=float)
+    b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
