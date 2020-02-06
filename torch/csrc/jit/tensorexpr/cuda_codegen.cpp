@@ -135,7 +135,8 @@ void CudaCodeGen::Initialize() {
     const BufferArg& buffer_arg = buffer_args[i];
     const Var& var = buffer_arg.var();
     Dtype dtype = buffer_arg.dtype();
-    oss_ << dtype.ToCppString() << "* " << name_manager()->get_unique_name(var);
+    oss_ << dtype.ToCppString() << (buffer_arg.isVar() ? " " : "* ")
+         << name_manager()->get_unique_name(var);
   }
   oss_ << ") {";
 
@@ -197,12 +198,24 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   }
 
   // Bind the buffer addresses into arguments
-  const std::vector<BufferArg> buffer_args = this->buffer_args();
+  auto const& buffer_args = this->buffer_args();
   std::vector<void*> args_data(buffer_args.size());
   std::vector<void*> ptr_to_args(buffer_args.size());
   for (int i = 0; i < buffer_args.size(); i++) {
-    args_data[i] = args[i].data();
-    ptr_to_args[i] = &args_data[i];
+    auto const& bufferArg = buffer_args[i];
+    if (bufferArg.isVar()) {
+      auto const& dtype = bufferArg.dtype();
+      if (dtype == kInt32) {
+        ptr_to_args[i] = args[i].intPtr();
+      } else if (dtype == kFloat32) {
+        ptr_to_args[i] = args[i].floatPtr();
+      } else {
+        LOG(FATAL) << "Unhandled dtype in argument";
+      }
+    } else {
+      args_data[i] = args[i].data();
+      ptr_to_args[i] = &args_data[i];
+    }
   }
 
   // Launch the kernels
