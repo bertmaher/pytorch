@@ -12,6 +12,7 @@
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
+#undef USE_CUDA
 #ifdef USE_CUDA
 #include <torch/csrc/jit/tensorexpr/cuda_codegen.h>
 #endif // USE_CUDA
@@ -800,8 +801,7 @@ class TensorExprKernel {
 #endif
 #ifdef ENABLE_LLVM
       case kLLVMCodeGen:
-        codegen_ =
-            std::make_unique<torch::jit::tensorexpr::LLVMCodeGen>(stmt, params);
+        codegen_ = std::make_unique<LLVMCodeGen>(stmt, params);
         break;
 #endif
       case kSimpleIREval:
@@ -842,20 +842,15 @@ class TensorExprKernel {
   }
 
   void CodeGenRun(const std::vector<CodeGen::CallArg>& run_args) {
-    if (backend_type_ == kCudaCodeGen || backend_type_ == kSimpleIREval) {
-      codegen_->call(run_args);
-    } else if (backend_type_ == kLLVMCodeGen) {
-      for (int i = 0; i < buffer_args_.size(); i++) {
-        codegen_->bind(buffer_args_[i], run_args[i]);
-      }
-      int offset = buffer_args_.size();
-      for (int i = 0; i < tensor_outputs_.size(); i++) {
-        codegen_->bind(tensor_outputs_[i], run_args[i + offset]);
-      }
-      codegen_->run();
-    } else {
-      throw std::runtime_error(
-          "Invalid backend type: " + std::to_string(backend_type_));
+    switch (backend_type_) {
+      case kSimpleIREval:
+      case kLLVMCodeGen:
+      case kCudaCodeGen:
+        codegen_->call(run_args);
+        break;
+      default:
+        throw std::runtime_error(
+            "Invalid backend type: " + std::to_string(backend_type_));
     }
   }
 

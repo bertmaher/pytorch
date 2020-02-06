@@ -67,7 +67,7 @@ LLVMCodeGen::LLVMCodeGen(
     const IRNode* node,
     const std::vector<BufferArg>& args,
     Dtype dtype)
-    : CodeGen(node),
+    : CodeGen(node, args),
       context_(std::make_unique<llvm::LLVMContext>()),
       irb_(getContext()),
       int32Ty_(llvm::Type::getInt32Ty(getContext())),
@@ -184,11 +184,15 @@ void LLVMCodeGen::emitKernel(
 #endif
 }
 
-void LLVMCodeGen::bind(const BufferArg& buf, const CallArg& data) {
-  args_.push_back(data.data());
-}
-
-void LLVMCodeGen::run() {
+void LLVMCodeGen::call(const std::vector<CallArg>& args) {
+  CHECK_EQ(args.size(), buffer_args().size())
+      << "args: " << args.size() << ", buffers: " << buffer_args().size();
+  for (size_t i = 0; i < buffer_args().size(); i++) {
+    auto const& bufferArg = buffer_args()[i];
+    auto const& callArg = args[i];
+    // FIXME: This is probably broken for floats.
+    args_.push_back(callArg.data());
+  }
   value<float>(args_);
   args_.clear();
 }

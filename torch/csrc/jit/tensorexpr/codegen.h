@@ -30,11 +30,12 @@ class CodeGen {
       : ir_node_(const_cast<BaseExprNode*>(expr.node())),
         buffer_args_({BufferArg(ts)...}) {}
 
- CodeGen(const Expr& expr, const std::vector<BufferArg>& buffer_args)
+  CodeGen(const Expr& expr, const std::vector<BufferArg>& buffer_args)
       : ir_node_(const_cast<BaseExprNode*>(expr.node())),
         buffer_args_(buffer_args) {}
 
-  CodeGen(const IRNode* node) : ir_node_(const_cast<IRNode*>(node)) {}
+  CodeGen(const IRNode* node, const std::vector<BufferArg>& buffer_args)
+      : ir_node_(const_cast<IRNode*>(node)), buffer_args_(buffer_args) {}
 
   virtual ~CodeGen() {}
 
@@ -54,18 +55,10 @@ class CodeGen {
     return buffer_args_;
   }
 
-  virtual void bind(const BufferArg& buf, const CallArg& data) {
-    LOG(FATAL) << "Unimplemented interface";
-  }
-
-  virtual void run() {
-    LOG(FATAL) << "Unimplemented interface";
-  }
-
   TORCH_API virtual void call(const std::vector<CallArg>& args) {
     LOG(FATAL) << "unimplemented call";
   }
-  
+
  private:
   IRNode* ir_node_ = nullptr;
   std::vector<BufferArg> buffer_args_;
