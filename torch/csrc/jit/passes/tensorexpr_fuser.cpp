@@ -8,11 +8,17 @@
 #include <torch/csrc/jit/passes/dead_code_elimination.h>
 #include <torch/csrc/jit/passes/utils/subgraph_utils.h>
 #include <torch/csrc/jit/tensorexpr/buffer.h>
-#include <torch/csrc/jit/tensorexpr/cuda_codegen.h>
 #include <torch/csrc/jit/tensorexpr/eval.h>
-#include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
+
+#ifdef USE_CUDA
+#include <torch/csrc/jit/tensorexpr/cuda_codegen.h>
+#endif // USE_CUDA
+
+#ifdef ENABLE_LLVM
+#include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
+#endif
 
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
@@ -699,18 +705,24 @@ class TensorExprKernel {
 
       case prim::ConstantChunk: {
         return Compute(
-          "prim_constantchunk",
-          texprDims(v),
-          [this, v](const std::vector<Var>& axes) {
-            Node* n = v->node();
-            int64_t dim = n->i(attr::dim);
-            int64_t chunks = n->i(attr::chunks);
-            return chunk(tensors_.at(n->inputs()[0]->unique()), v->offset(), dim, chunks, axes);
-          }
-        );
+            "prim_constantchunk",
+            texprDims(v),
+            [this, v](const std::vector<Var>& axes) {
+              Node* n = v->node();
+              int64_t dim = n->i(attr::dim);
+              int64_t chunks = n->i(attr::chunks);
+              return chunk(
+                  tensors_.at(n->inputs()[0]->unique()),
+                  v->offset(),
+                  dim,
+                  chunks,
+                  axes);
+            });
       }
 
-      default: { LOG(FATAL) << "Unhandled node kind"; }
+      default: {
+        LOG(FATAL) << "Unhandled node kind";
+      }
     }
   }
 
@@ -745,12 +757,17 @@ class TensorExprKernel {
 
     // Generate code.
     switch (backend_type_) {
+#ifdef USE_CUDA
       case kCudaCodeGen:
         codegen_ = std::make_unique<CudaCodeGen>(stmt, params);
         break;
+#endif
+#ifdef ENABLE_LLVM
       case kLLVMCodeGen:
-        codegen_ = std::make_unique<LLVMCodeGen>(stmt, params);
+        codegen_ =
+            std::make_unique<torch::jit::tensorexpr::LLVMCodeGen>(stmt, params);
         break;
+#endif
       case kSimpleIREval:
         codegen_ = std::make_unique<SimpleIREvaluator>(stmt, params);
         break;
