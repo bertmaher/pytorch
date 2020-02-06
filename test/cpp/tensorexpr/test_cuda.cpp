@@ -190,6 +190,10 @@ void testCudaDynamicShape2D() {
     cudaDeviceSynchronize();
 
     ExpectAllNear(cData, std::vector<float>(M * N, 3.0f), 1e-7);
+
+    cudaFree(aDev);
+    cudaFree(bDev);
+    cudaFree(cDev);
   };
   testWithSize(32, 32);
   testWithSize(1, 16);
