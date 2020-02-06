@@ -137,6 +137,65 @@ void testCudaTestVectorAdd02() {
   testCudaTestVectorAdd02_impl(1024, 128);
   testCudaTestVectorAdd02_impl(1030, 128);
 }
+
+void testCudaDynamicShape2D() {
+  KernelScope kernel_scope;
+  auto testWithSize = [](int32_t M, int32_t N) {
+    Var m("m", kInt32);
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {m, n});
+    Buffer b(Var("b", kHandle), kFloat32, {m, n});
+    Tensor c =
+        Compute("c", {{m, "m"}, {n, "n"}}, [&](const Var& i, const Var& j) {
+          return a(i, j) + b(i, j);
+        });
+    auto sch = Schedule::make({c});
+    Stmt s = sch.Lower();
+    CudaCodeGen cg(s, {a, b, c, m, n});
+
+    std::vector<float> aData(M * N, 1.0f);
+    std::vector<float> bData(M * N, 2.0f);
+    std::vector<float> cData(M * N, 0.0f);
+    float* aDev = nullptr;
+    float* bDev = nullptr;
+    float* cDev = nullptr;
+    cudaMalloc(&aDev, aData.size() * sizeof(aData[0]));
+    cudaMalloc(&bDev, bData.size() * sizeof(bData[0]));
+    cudaMalloc(&cDev, cData.size() * sizeof(cData[0]));
+    cudaMemcpy(
+        aDev,
+        aData.data(),
+        aData.size() * sizeof(aData[0]),
+        cudaMemcpyHostToDevice);
+    cudaMemcpy(
+        bDev,
+        bData.data(),
+        bData.size() * sizeof(aData[0]),
+        cudaMemcpyHostToDevice);
+    cudaMemcpy(
+        cDev,
+        cData.data(),
+        cData.size() * sizeof(aData[0]),
+        cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+
+    cg.call({aDev, bDev, cDev, M, N});
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(
+        cData.data(),
+        cDev,
+        cData.size() * sizeof(aData[0]),
+        cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+
+    ExpectAllNear(cData, std::vector<float>(M * N, 3.0f), 1e-7);
+  };
+  testWithSize(32, 32);
+  testWithSize(1, 16);
+  testWithSize(27, 13);
+}
+
 } // namespace jit
 } // namespace torch
 

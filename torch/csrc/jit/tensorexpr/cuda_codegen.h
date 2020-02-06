@@ -68,7 +68,14 @@ class TORCH_API CudaCodeGen : public CodeGen {
     Initialize();
   }
 
+  CudaCodeGen(const Stmt& stmt, const std::vector<BufferArg>& buffer_args)
+      : CodeGen(stmt, buffer_args) {
+    Initialize();
+  }
+
   ~CudaCodeGen() override {}
+
+  TORCH_API void call(const std::vector<CallArg>& args) override;
 
   template <typename... Ts>
   void operator()(const Ts&... ts) {
@@ -77,8 +84,6 @@ class TORCH_API CudaCodeGen : public CodeGen {
 
  private:
   TORCH_API void Initialize();
-
-  TORCH_API void call(const std::vector<CallArg>& args) override;
 
   void CompileToNVRTC(const std::string& code);
 
