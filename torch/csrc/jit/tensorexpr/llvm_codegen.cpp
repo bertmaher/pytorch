@@ -903,4 +903,6 @@ void LLVMCodeGen::optimize(llvm::Module& M) {
   PM.run(M);
 }
 
+RegisterCodeGen<LLVMCodeGen> reg("llvm_codegen");
+
 #endif // ENABLE_LLVM
