@@ -22,13 +22,12 @@ namespace tensorexpr {
 // A class that overrides the underlying IRPrinter to produce Cuda C.
 class CudaPrinter : public IRPrinter {
  public:
-  explicit CudaPrinter(std::ostream* os)
-      : IRPrinter(*os), os_(os) {}
+  explicit CudaPrinter(std::ostream* os) : IRPrinter(*os), os_(os) {}
 
   void visit(const Cast* v) {
     auto dtype = v->dtype();
     if (dtype == kFloat32) {
-      os() << "float"; 
+      os() << "float";
     } else {
       os() << dtype;
     }
@@ -89,7 +88,7 @@ class TORCH_API CudaCodeGen : public CodeGen {
     }
     return printer_->name_manager();
   }
-  
+
   std::ostringstream oss_;
   std::unique_ptr<CudaPrinter> printer_;
   CUfunction function_;

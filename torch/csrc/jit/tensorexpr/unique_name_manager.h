@@ -12,8 +12,8 @@ namespace tensorexpr {
 using VarNameMap = std::unordered_map<const Variable*, std::string>;
 
 // A manager to get unique names from vars.
-// It starts with the name hints of the var and append "_" + $counter until it hits a unique
-// name.
+// It starts with the name hints of the var and append "_" + $counter until it
+// hits a unique name.
 class TORCH_API UniqueNameManager {
  public:
   TORCH_API const std::string& get_unique_name(const Var& v);
@@ -26,7 +26,7 @@ class TORCH_API UniqueNameManager {
   std::unordered_map<std::string, int> unique_name_count_;
   std::unordered_set<std::string> all_unique_names_;
 };
-  
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
