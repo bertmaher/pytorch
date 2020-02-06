@@ -24,10 +24,12 @@ def test_easy_cuda():
         aaa = torch.add(x, y)
         return aaa
 
-    traced = torch.jit.trace(easy, (torch.rand(32, 16, device='cuda'), torch.rand(32, 16, device='cuda')))
+    traced = torch.jit.trace(
+        easy, (torch.rand(32, 16, device="cuda"), torch.rand(32, 16, device="cuda"))
+    )
 
-    a = torch.rand(32, 16, device='cuda')
-    b = torch.rand(32, 16, device='cuda')
+    a = torch.rand(32, 16, device="cuda")
+    b = torch.rand(32, 16, device="cuda")
     x = traced(a, b)
     a_cpu = a.cpu()
     b_cpu = b.cpu()
@@ -318,8 +320,8 @@ def test_min_max():
     a = 8.0 * torch.rand(1024)
     b = 8.0 * torch.rand(1024)
     np.testing.assert_allclose(
-        traced(a, b),
-        np.maximum(np.minimum(a.numpy(), b.numpy()), [4.0]))
+        traced(a, b), np.maximum(np.minimum(a.numpy(), b.numpy()), [4.0])
+    )
 
 
 def test_clamp():
@@ -329,9 +331,7 @@ def test_clamp():
     traced = torch.jit.trace(test, (torch.zeros(1024)))
     a = 20.0 * torch.rand(1024) - 10.0
     an = a.numpy()
-    np.testing.assert_allclose(
-        traced(a),
-        np.clip(an + 3.0, 0.0, 6.0))
+    np.testing.assert_allclose(traced(a), np.clip(an + 3.0, 0.0, 6.0))
 
 
 def test_reps():
@@ -368,6 +368,7 @@ def test_int_output():
     traced = torch.jit.trace(test, (x, y, z))
     res = traced(x, y, z)
     np.testing.assert_allclose(xn * yn * zn, res.numpy())
+
 
 def test_unary_ops():
     def test_sin(x, y):
@@ -410,6 +411,10 @@ def test_unary_ops():
         c = torch.sqrt(torch.add(x, y))
         return c
 
+    def test_rsqrt(x, y):
+        c = torch.rsqrt(torch.add(x, y))
+        return c
+
     def test_floor(x, y):
         c = torch.floor(torch.add(x, y))
         return c
@@ -424,6 +429,50 @@ def test_unary_ops():
 
     def test_abs(x, y):
         c = torch.abs(torch.add(x, y))
+        return c
+
+    def test_log(x, y):
+        c = torch.log(torch.add(x, y))
+        return c
+
+    def test_log2(x, y):
+        c = torch.log2(torch.add(x, y))
+        return c
+
+    def test_log10(x, y):
+        c = torch.log10(torch.add(x, y))
+        return c
+
+    def test_log1p(x, y):
+        c = torch.log1p(torch.add(x, y))
+        return c
+
+    def test_rqrt(x, y):
+        c = torch.rsqrt(torch.add(x, y))
+        return c
+
+    def test_erf(x, y):
+        c = torch.erf(torch.add(x, y))
+        return c
+
+    def test_exp(x, y):
+        c = torch.exp(torch.add(x, y))
+        return c
+
+    def test_expm1(x, y):
+        c = torch.expm1(torch.add(x, y))
+        return c
+
+    def test_erfc(x, y):
+        c = torch.erfc(torch.add(x, y))
+        return c
+
+    def test_frac(x, y):
+        c = torch.frac(torch.add(x, y))
+        return c
+
+    def test_lgamma(x, y):
+        c = torch.lgamma(torch.add(x, y))
         return c
 
     fns = {
@@ -441,11 +490,23 @@ def test_unary_ops():
         test_ceil,
         test_trunc,
         test_abs,
+        test_log,
+        test_log2,
+        test_log10,
+        test_log1p,
+        test_rsqrt,
+        test_exp,
+        test_expm1,
+        test_erf,
+        test_erfc,
+        test_frac,
+        test_lgamma,
     }
+
     rand_a = torch.rand(1024, dtype=float)
     rand_b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
@@ -461,6 +522,7 @@ def test_unary_ops():
         y = torch_fn(nans, rand_b)
         np.testing.assert_allclose(x.numpy(), y.numpy())
 
+
 def test_nans():
     def test_max(x, y):
         return torch.max(2 * x, 2 * y)
@@ -474,20 +536,21 @@ def test_nans():
     x = torch.tensor([np.nan])
     y = torch.tensor([1.0])
 
-    assert(not np.isnan(tmin(x, y).item()))
-    assert(np.isnan(tmin(y, x).item()))
-    assert(not np.isnan(tmax(x, y).item()))
-    assert(np.isnan(tmax(y, x).item()))
+    assert not np.isnan(tmin(x, y).item())
+    assert np.isnan(tmin(y, x).item())
+    assert not np.isnan(tmax(x, y).item())
+    assert np.isnan(tmax(y, x).item())
+
 
 def test_remainder():
     def run_remainder(x, y):
         c = torch.remainder(torch.add(x, y), x)
         return c
 
-    a = torch.rand(1024, dtype=float) 
-    b = torch.rand(1024, dtype=float) 
+    a = torch.rand(1024, dtype=float)
+    b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
@@ -509,15 +572,14 @@ def test_remainder():
     y = run_remainder(nans, a)
     np.testing.assert_allclose(x.numpy(), y.numpy())
 
+
 def test_multioutput():
     def easy(x):
         b = x + 1
         c = b + b
         return (b, c)
 
-    traced = torch.jit.trace(
-        easy, (torch.zeros(1024))
-    )
+    traced = torch.jit.trace(easy, (torch.zeros(1024)))
 
     a = torch.zeros(1024)
     b, c = traced(a)
@@ -526,15 +588,14 @@ def test_multioutput():
     np.testing.assert_allclose(b.numpy(), bp)
     np.testing.assert_allclose(c.numpy(), cp)
 
+
 def test_chunk():
     def easy(x):
         y = x + 1
         aaa, bbb = torch.chunk(y, 2)
         return aaa + bbb
 
-    traced = torch.jit.trace(
-        easy, (torch.zeros(1024, 1024))
-    )
+    traced = torch.jit.trace(easy, (torch.zeros(1024, 1024)))
 
     a = torch.zeros(1024, 1024)
     x = traced(a)
@@ -542,3 +603,21 @@ def test_chunk():
     npr2 = npr + 1
     npr_a, npr_b = np.array_split(npr2, 2)
     np.testing.assert_allclose(npr_a + npr_b, x.numpy())
+
+
+def test_cat():
+    def easy(x, y):
+        a = x + 1
+        b = y + 2
+        c = torch.cat([a, b], dim=1)
+        return c
+
+    traced = torch.jit.trace(easy, (torch.zeros(1024, 1024), torch.zeros(1024, 1024)))
+
+    a = torch.zeros(1024, 1024)
+    x = traced(a, a)
+    npr = a.numpy()
+    npr_x = npr + 1
+    npr_y = npr + 2
+    npr_c = np.concatenate((npr_x, npr_y), axis=1)
+    np.testing.assert_allclose(npr_c, x.numpy())

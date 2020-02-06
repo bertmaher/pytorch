@@ -91,7 +91,18 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
 
   ~SimpleIREvaluator() override {}
 
-  void bind(const BufferArg& buf, const CallArg& data) override {
+  TORCH_API void call(const std::vector<CallArg>& args) override {
+    CHECK_EQ(args.size(), buffer_args().size());
+    for (size_t i = 0; i < args.size(); i++) {
+      bind(buffer_args()[i], args[i]);
+    }
+    ir_node()->accept(this);
+    eval_context_.clear();
+    buffer_mapping_.clear();
+    internal_buffers_.clear();
+  }
+
+  void bind(const BufferArg& buf, const CallArg& data) {
     if (buf.isVar()) {
       if (buf.dtype() == kInt32) {
         eval_context_[buf.var().node()] = data.intData();
@@ -106,21 +117,10 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  void run() override {
-    ir_node()->accept(this);
-    eval_context_.clear();
-    buffer_mapping_.clear();
-    internal_buffers_.clear();
-  }
-
   template <typename... Ts>
   void operator()(const Ts&... ts) {
     std::vector<CallArg> args({CallArg(ts)...});
-    CHECK_EQ(args.size(), buffer_args().size());
-    for (size_t i = 0; i < args.size(); i++) {
-      bind(buffer_args()[i], args[i]);
-    }
-    run();
+    call(args);
   }
 
   TORCH_API void visit(const Add* v) override {
@@ -568,8 +568,12 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         return std::log2(v);
       case kLog10:
         return std::log10(v);
+      case kLog1p:
+        return std::log1p(v);
       case kErf:
         return std::erf(v);
+      case kErfc:
+        return std::erfc(v);
       case kSqrt:
         return std::sqrt(v);
       case kRsqrt:
@@ -582,6 +586,11 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         return std::round(v);
       case kTrunc:
         return std::trunc(v);
+      case kLgamma:
+        return std::lgamma(v);
+      case kFrac:
+        float intpart;
+        return std::modf(v, &intpart);
       default:
         throw std::runtime_error("invalid op_type: " + std::to_string(op_type));
     }
