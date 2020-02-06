@@ -234,6 +234,7 @@ private:
     case aten::ceil:
     case aten::trunc:
     case aten::sqrt:
+    case aten::rsqrt:
     case aten::remainder:
     case aten::mm:
     case aten::min:
@@ -259,6 +260,13 @@ private:
     case aten::rand_like:
     case aten::erf:
     case aten::erfc:
+    case aten::exp:
+    case aten::expm1:
+    case aten::log:
+    case aten::log2:
+    case aten::log10:
+    case aten::frac:
+    case aten::lgamma:    
       return checkInputs(n, no_exceptions);
     case aten::cat:
       // check that the dimension argument is constant

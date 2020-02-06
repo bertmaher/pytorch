@@ -410,6 +410,10 @@ def test_unary_ops():
         c = torch.sqrt(torch.add(x, y))
         return c
 
+    def test_rsqrt(x, y):
+        c = torch.rsqrt(torch.add(x, y))
+        return c        
+
     def test_floor(x, y):
         c = torch.floor(torch.add(x, y))
         return c
@@ -426,6 +430,50 @@ def test_unary_ops():
         c = torch.abs(torch.add(x, y))
         return c
 
+    def test_log(x, y):
+        c = torch.log(torch.add(x, y))
+        return c
+
+    def test_log2(x, y):
+        c = torch.log2(torch.add(x, y))
+        return c
+
+    def test_log10(x, y):
+        c = torch.log10(torch.add(x, y))
+        return c
+
+    def test_log1p(x, y):
+        c = torch.log1p(torch.add(x, y))
+        return c
+
+    def test_rqrt(x, y):
+        c = torch.rsqrt(torch.add(x, y))
+        return c
+
+    def test_erf(x, y):
+        c = torch.erf(torch.add(x, y))
+        return c
+
+    def test_exp(x, y):
+        c = torch.exp(torch.add(x, y))
+        return c
+
+    def test_expm1(x, y):
+        c = torch.expm1(torch.add(x, y))
+        return c
+
+    def test_erfc(x, y):
+        c = torch.erfc(torch.add(x, y))
+        return c
+
+    def test_frac(x, y):
+        c = torch.frac(torch.add(x, y))
+        return c
+
+    def test_lgamma(x, y):
+        c = torch.lgamma(torch.add(x, y))
+        return c        
+
     fns = {
         test_sin,
         test_asin,
@@ -441,6 +489,17 @@ def test_unary_ops():
         test_ceil,
         test_trunc,
         test_abs,
+        test_log,
+        test_log2,
+        test_log10,
+        test_log1p,
+        test_rsqrt,
+        test_exp,
+        test_expm1,
+        test_erf,
+        test_erfc,
+        test_frac,
+        test_lgamma,        
     }
     rand_a = torch.rand(1024, dtype=float)
     rand_b = torch.rand(1024, dtype=float)

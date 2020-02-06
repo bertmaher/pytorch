@@ -139,6 +139,10 @@ Expr exp(const Expr& v) {
   return Intrinsics::make(kExp, v);
 }
 
+Expr expm1(const Expr& v) {
+  return Intrinsics::make(kExpm1, v);
+}
+
 Expr fabs(const Expr& v) {
   return Intrinsics::make(kFabs, v);
 }
@@ -155,8 +159,16 @@ Expr log10(const Expr& v) {
   return Intrinsics::make(kLog10, v);
 }
 
+Expr log1p(const Expr& v) {
+  return Intrinsics::make(kLog1p, v);
+}
+
 Expr erf(const Expr& v) {
   return Intrinsics::make(kErf, v);
+}
+
+Expr erfc(const Expr& v) {
+  return Intrinsics::make(kErfc, v);
 }
 
 Expr sqrt(const Expr& v) {
@@ -181,6 +193,14 @@ Expr round(const Expr& v) {
 
 Expr trunc(const Expr& v) {
   return Intrinsics::make(kTrunc, v);
+}
+
+Expr frac(const Expr& v) {
+  return Intrinsics::make(kFrac, v);
+}
+
+Expr lgamma(const Expr& v) {
+  return Intrinsics::make(kLgamma, v);
 }
 
 Expr pow(const Expr& v1, const Expr& v2) {

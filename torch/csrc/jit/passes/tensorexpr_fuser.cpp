@@ -70,7 +70,9 @@ bool isSupported(Node* node) {
     case aten::log:
     case aten::log2:
     case aten::exp:
+    case aten::expm1:
     case aten::erf:
+    case aten::erfc:
     case aten::cos:
     case aten::sin:
     case aten::tan:
@@ -88,6 +90,8 @@ bool isSupported(Node* node) {
     case aten::round:
     case aten::trunc:
     case aten::remainder:
+    case aten::frac:
+    case aten::lgamma:    
 #endif
     case prim::ConstantChunk:
     case aten::cat:
@@ -716,6 +720,26 @@ class TensorExprKernel {
         return ComputeOneOperand(
             "aten_trunc", v, [](const Expr& a) { return trunc(a); });
       } break;
+
+      case aten::erfc: {
+        return ComputeOneOperand(
+            "aten_erfc", v, [](const Expr& a) { return erfc(a); });
+      } break;
+
+      case aten::frac: {
+        return ComputeOneOperand(
+            "aten_frac", v, [](const Expr& a) { return frac(a); });
+      } break;
+
+      case aten::lgamma: {
+        return ComputeOneOperand(
+            "aten_lgamma", v, [](const Expr& a) { return lgamma(a); });
+      } break;
+
+      case aten::expm1: {
+        return ComputeOneOperand(
+            "aten_expm1", v, [](const Expr& a) { return expm1(a); });
+      } break;            
 
       case prim::ConstantChunk: {
         return Compute(
