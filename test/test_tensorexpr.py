@@ -542,3 +542,22 @@ def test_chunk():
     npr2 = npr + 1
     npr_a, npr_b = np.array_split(npr2, 2)
     np.testing.assert_allclose(npr_a + npr_b, x.numpy())
+
+def test_cat():
+    def easy(x,y):
+        a = x + 1
+        b = y + 2
+        c = torch.cat([a,b], dim=1)
+        return c
+
+    traced = torch.jit.trace(
+        easy, (torch.zeros(1024, 1024), torch.zeros(1024, 1024))
+    )
+
+    a = torch.zeros(1024, 1024)
+    x = traced(a, a)
+    npr = a.numpy()
+    npr_x = npr + 1
+    npr_y = npr + 2
+    npr_c = np.concatenate((npr_x, npr_y), axis=1)
+    np.testing.assert_allclose(npr_c, x.numpy())

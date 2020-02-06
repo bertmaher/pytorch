@@ -90,6 +90,8 @@ bool isSupported(Node* node) {
     case aten::remainder:
 #endif
     case prim::ConstantChunk:
+    case aten::cat:
+    case prim::ListConstruct:
       return true;
     default:
       return false;
@@ -151,28 +153,34 @@ c10::optional<Node*> tryMerge(
 
   if (!consumer->hasAttribute(attr::Subgraph) &&
       consumer->kind() != getTensorExprSymbol()) {
+    // Don't initiate a fusion group from prim::ListConstruct
+    REQ(consumer->kind() != prim::ListConstruct);
+
+    // Don't initiate a fusion group just for a constant operand
+    REQ(producer->kind() != prim::Constant);
+
     consumer =
         SubgraphUtils::createSingletonSubgraph(consumer, getTensorExprSymbol());
-
-    // createSingletonSubgraph pre-emptively folds constants into the subgraph,
-    // so there's nothing more for us to do.
-    if (producer->kind() == prim::Constant) {
-      return consumer;
-    }
   }
 
-  if (producer->kind() == prim::Constant) {
-    auto& subgraph = consumer->g(attr::Subgraph);
-    Node* in_const = subgraph->createClone(
-        producer, [](torch::jit::Value*) -> torch::jit::Value* {
-          throw std::runtime_error("unexpected input");
-        });
-
-    subgraph->setInsertPoint(producer);
-    subgraph->insertNode(in_const);
+  if (producer->kind() == aten::cat) {
+    REQ(producer->inputs()[0]->node()->kind() == prim::ListConstruct);
+    REQ(producer->inputs()[0]->uses().size() == 1);
+    REQ(producer->inputs()[1]->node()->kind() == prim::Constant);
+    Node* listconstruct = producer->inputs()[0]->node();
+    Node* constant = producer->inputs()[1]->node();
+    SubgraphUtils::mergeNodeIntoSubgraph(producer, consumer);
+    SubgraphUtils::mergeNodeIntoSubgraph(constant, consumer);
+    SubgraphUtils::mergeNodeIntoSubgraph(listconstruct, consumer);
   } else {
+    if (consumer->kind() == aten::cat) {
+      REQ(consumer->inputs()[0]->node()->kind() == prim::ListConstruct);
+      REQ(consumer->inputs()[0]->uses().size() == 1);
+      REQ(consumer->inputs()[1]->node()->kind() == prim::Constant);
+    }
     SubgraphUtils::mergeNodeIntoSubgraph(producer, consumer);
   }
+
   return consumer;
 }
 #undef REQ
@@ -343,18 +351,18 @@ class TensorExprKernel {
     return Expr();
   }
 
-  template <typename T>
-  Expr broadcast(const T& t, const std::vector<Var>& axes) {
+  template <typename T, typename T1>
+  Expr broadcast(const T& t, const std::vector<T1>& axes) {
     return t.call(computeIndicesToBroadcast(axes, bufferSizes(t)));
   }
 
-  template <typename T>
+  template <typename T, typename T1>
   Expr chunk(
       const T& t,
       size_t chunk_idx,
       size_t dim,
       size_t chunks,
-      const std::vector<Var>& axes) {
+      const std::vector<T1>& axes) {
     auto sizes = bufferSizes(t);
     size_t step = sizes[dim] / chunks;
 
@@ -395,7 +403,8 @@ class TensorExprKernel {
     return e;
   }
 
-  Expr tensorOrConstant(torch::jit::Value* v, const std::vector<Var>& axes) {
+  template <typename T>
+  Expr tensorOrConstant(torch::jit::Value* v, const std::vector<T>& axes) {
     auto ti = tensors_.find(v->unique());
     if (ti != tensors_.end()) {
       return broadcast(ti->second, axes);
@@ -720,9 +729,36 @@ class TensorExprKernel {
             });
       }
 
-      default: {
-        LOG(FATAL) << "Unhandled node kind";
+      case aten::cat: {
+        return Compute(
+          "aten_cat",
+          texprDims(v),
+          [this, v](const std::vector<Var>& axes) {
+            Node* n = v->node();
+            auto inputs = n->inputs()[0]->node()->inputs();
+            size_t dim = n->inputs()[1]->node()->i(attr::value);
+
+            std::vector<Expr> new_axes(axes.begin(), axes.end());
+            Expr load = tensorOrConstant(inputs[0], new_axes);
+            size_t offset = bufferSizes(tensors_.at(inputs[0]->unique()))[dim];
+            new_axes[dim] = new_axes[dim] - IntImm::make(offset);
+
+            for (int ii = 1; ii < inputs.size(); ++ii) {
+              load = ifThenElse(
+                CompareSelect::make(axes[dim], IntImm::make(offset), kLT),
+                load,
+                tensorOrConstant(inputs[ii], new_axes)
+              );
+              offset += bufferSizes(tensors_.at(inputs[ii]->unique()))[dim];
+              new_axes[dim] = new_axes[dim] - IntImm::make(offset);
+            }
+
+            return load;
+          }
+        );
       }
+
+      default: { LOG(FATAL) << "Unhandled node kind"; }
     }
   }
 
@@ -844,7 +880,7 @@ class TensorExprKernel {
 
     // Bind nodes to tensor compute expressions.
     for (auto const& n : subgraph->nodes()) {
-      if (n->kind() == prim::Constant) {
+      if (n->kind() == prim::Constant || n->kind() == prim::ListConstruct) {
         continue;
       } else {
         for (torch::jit::Value* output : n->outputs()) {
