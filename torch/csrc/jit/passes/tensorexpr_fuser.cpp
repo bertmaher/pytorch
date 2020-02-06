@@ -89,8 +89,11 @@ bool isSupported(Node* node) {
     case aten::round:
     case aten::trunc:
     case aten::remainder:
+#ifndef ENABLE_LLVM    
     case aten::frac:
     case aten::lgamma:    
+    case aten::sigmoid:    
+    case aten::reciprocal:
 #endif
     case prim::ConstantChunk:
     case aten::cat:
@@ -591,6 +594,18 @@ class TensorExprKernel {
             [](const Expr& in, const Expr& min, const Expr& max) {
               return Max::make(Min::make(in, max, false), min, false);
             });
+      } break;
+
+      case aten::sigmoid: {
+        return Compute("aten_sigmoid", texprDims(v), [](const Expr& a) {
+          return Expr(1.0f) / exp(a);
+        });
+      } break;
+
+      case aten::reciprocal: {
+        return Compute("aten_reciprocal", texprDims(v), [](const Expr& a) {
+          return Expr(1.0f) / cast<float>(a);
+        });
       } break;
 
       case aten::log: {

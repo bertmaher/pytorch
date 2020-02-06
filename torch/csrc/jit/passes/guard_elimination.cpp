@@ -266,7 +266,8 @@ private:
     case aten::log2:
     case aten::log10:
     case aten::frac:
-    case aten::lgamma:    
+    case aten::lgamma: 
+    case aten::reciprocal:   
       return checkInputs(n, no_exceptions);
     case aten::cat:
       // check that the dimension argument is constant

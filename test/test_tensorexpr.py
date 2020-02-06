@@ -474,6 +474,14 @@ def test_unary_ops():
         c = torch.lgamma(torch.add(x, y))
         return c        
 
+    def test_sigmoid(x, y):
+        c = torch.sigmoid(torch.add(x, y))
+        return c
+
+    def test_reciprocal(x, y):
+        c = torch.reciprocal(torch.add(x, y))
+        return c
+
     fns = {
         test_sin,
         test_asin,
@@ -500,6 +508,8 @@ def test_unary_ops():
         test_erfc,
         test_frac,
         test_lgamma,        
+        test_sigmoid,
+        test_reciprocal,
     }
     rand_a = torch.rand(1024, dtype=float)
     rand_b = torch.rand(1024, dtype=float)
