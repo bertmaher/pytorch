@@ -757,28 +757,84 @@ void LLVMCodeGen::visit(const BaseCallNode* v) {
   LOG(FATAL) << "Unimplemented: BaseCall";
 }
 
+static void applyMathFunctionAttributes(llvm::Function *f) {
+  f->addFnAttr(llvm::Attribute::ReadNone);
+  f->addFnAttr(llvm::Attribute::NoFree);
+  f->addFnAttr(llvm::Attribute::NoUnwind);
+  f->addFnAttr(llvm::Attribute::Speculatable);
+  f->addFnAttr(llvm::Attribute::WillReturn);
+}
+
 void LLVMCodeGen::visit(const Intrinsics* v) {
   llvm::FunctionType* call_ty = nullptr;
   llvm::Value* call_fn = nullptr;
+
   switch (v->op_type()) {
-    case kLog10: {
-      auto callee = module_->getOrInsertFunction(
-          "log10_float",
-          llvm::FunctionType::get(floatTy_, {floatTy_}, false),
-          {});
-      call_ty = callee.getFunctionType();
-      call_fn = callee.getCallee();
-      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::ReadNone);
-      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::NoFree);
-      llvm::cast<llvm::Function>(call_fn)->addFnAttr(llvm::Attribute::NoUnwind);
-      llvm::cast<llvm::Function>(call_fn)->addFnAttr(
-          llvm::Attribute::Speculatable);
-      llvm::cast<llvm::Function>(call_fn)->addFnAttr(
-          llvm::Attribute::WillReturn);
-    } break;
-    default: {
-      LOG(FATAL) << "Unimplemented: Intrinsics";
-    } break;
+#define UNARY_INTRIN_CASE(enum, intrin)                         \
+  case enum: {                                                  \
+      v->params().front().accept(this);                         \
+      value_ = irb_.CreateUnaryIntrinsic(intrin, value_);       \
+      return;                                                   \
+  } break;
+  UNARY_INTRIN_CASE(kLog10, llvm::Intrinsic::log10)
+  UNARY_INTRIN_CASE(kLog, llvm::Intrinsic::log2)
+  UNARY_INTRIN_CASE(kLog2, llvm::Intrinsic::log2)
+  UNARY_INTRIN_CASE(kExp, llvm::Intrinsic::exp)
+  UNARY_INTRIN_CASE(kCos, llvm::Intrinsic::cos)
+  UNARY_INTRIN_CASE(kSin, llvm::Intrinsic::sin)
+  UNARY_INTRIN_CASE(kSqrt, llvm::Intrinsic::sqrt)
+  UNARY_INTRIN_CASE(kFabs, llvm::Intrinsic::fabs)
+  UNARY_INTRIN_CASE(kFloor, llvm::Intrinsic::floor)
+  UNARY_INTRIN_CASE(kCeil, llvm::Intrinsic::ceil)
+  UNARY_INTRIN_CASE(kTrunc, llvm::Intrinsic::trunc)
+  UNARY_INTRIN_CASE(kRound, llvm::Intrinsic::round)
+#undef UNARY_INTRIN_CASE
+
+  case kRsqrt: {
+    v->params().front().accept(this);
+    value_ = irb_.CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, value_);
+    llvm::Value* constant = llvm::ConstantFP::get(floatTy_, 1.0);
+    if (v->dtype().lanes() > 1) {
+      constant = irb_.CreateVectorSplat(v->dtype().lanes(), constant);
+    }
+    value_ = irb_.CreateFDiv(constant, value_);
+    return;
+  } break;
+
+#define UNARY_MATH_CASE(enum, name, type)                       \
+  case enum: {                                                  \
+      auto callee = module_->getOrInsertFunction(               \
+          name,                                                 \
+          llvm::FunctionType::get(type, {type}, false),         \
+          {});                                                  \
+      call_ty = callee.getFunctionType();                       \
+      call_fn = callee.getCallee();                             \
+      applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn)); \
+  } break;
+    UNARY_MATH_CASE(kErf,   "erff",   floatTy_)
+    UNARY_MATH_CASE(kTan,   "tanf",   floatTy_)
+    UNARY_MATH_CASE(kAcos,  "acosf",  floatTy_)
+    UNARY_MATH_CASE(kAsin,  "asinf",  floatTy_)
+    UNARY_MATH_CASE(kAtan,  "atanf",  floatTy_)
+    UNARY_MATH_CASE(kCosh,  "coshf",  floatTy_)
+    UNARY_MATH_CASE(kSinh,  "sinhf",  floatTy_)
+    UNARY_MATH_CASE(kTanh,  "tanhf",  floatTy_)
+#undef UNARY_MATH_CASE
+
+#define BINARY_MATH_CASE(enum, name, type)                       \
+  case enum: {                                                  \
+      auto callee = module_->getOrInsertFunction(               \
+          name,                                                 \
+          llvm::FunctionType::get(type, {type, type}, false),         \
+          {});                                                  \
+      call_ty = callee.getFunctionType();                       \
+      call_fn = callee.getCallee();                             \
+      applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn)); \
+  } break;
+    BINARY_MATH_CASE(kRemainder, "remainderf", floatTy_)
+#undef BINARY_MATH_CASE
+
+    default: { LOG(FATAL) << "Unimplemented: Intrinsics"; } break;
   }
 
   std::vector<llvm::Value*> params;
