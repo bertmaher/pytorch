@@ -906,11 +906,7 @@ void testLLVMBindDynamicShapeAdd() {
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
     LLVMCodeGen cg(s, {a, b, c, n});
-    cg.bind(a, aData);
-    cg.bind(b, bData);
-    cg.bind(c, cData);
-    cg.bind(n, size);
-    cg.run();
+    cg.call({aData, bData, cData, size});
     ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
   };
   testWithSize(1);
@@ -932,11 +928,7 @@ void testLLVMTensorDynamicShapeAdd() {
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
-    cg.bind(a, aData);
-    cg.bind(b, bData);
-    cg.bind(c, cData);
-    cg.bind(n, size);
-    cg.run();
+    cg.call({aData, bData, cData, size});
     ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
   };
   testWithSize(1);
