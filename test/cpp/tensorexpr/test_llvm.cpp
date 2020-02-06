@@ -881,10 +881,7 @@ void testLLVMDynamicShapeAdd() {
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
     LLVMCodeGen cg(s, {a, b, c, n});
-    // FIXME: int to pointer cast is pretty gross but this API is just for
-    // testing anyways.
-    std::vector<void*> args(
-        {aData.data(), bData.data(), cData.data(), (void*)(intptr_t)size});
+    std::vector<void*> args({aData.data(), bData.data(), cData.data(), &size});
     cg.value<float>(args);
     ExpectAllNear(cData, std::vector<float>(size, 3.0f), 1e-7);
   };
