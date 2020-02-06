@@ -34,6 +34,7 @@ namespace jit {
   _(ScheduleInlineFunc01)       \
   _(ScheduleFuserStyle)         \
   _(ScheduleFuserThreeArg)      \
+  _(ScheduleDynamicShape2D)     \
   _(TypeTest01)                 \
   _(AsmjitIntImmTest)           \
   _(AsmjitIntAddTest)           \
@@ -113,6 +114,7 @@ namespace jit {
   _(LLVMDynamicShapeAdd)        \
   _(LLVMBindDynamicShapeAdd)    \
   _(LLVMTensorDynamicShapeAdd)  \
+  _(LLVMDynamicShape2D)         \
   _(LLVMIfThenElseTest)
 
 #define TH_FORALL_TESTS_CUDA(_) \
