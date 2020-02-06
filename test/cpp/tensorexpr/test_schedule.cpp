@@ -455,5 +455,31 @@ void testScheduleFuserThreeArg() {
     ASSERT_EQ(g_data[i], 10.0f);
   }
 }
+
+void testScheduleDynamicShape2D() {
+  KernelScope kernel_scope;
+  auto testWithSize = [](int32_t M, int32_t N) {
+    Var m("m", kInt32);
+    Var n("n", kInt32);
+    Buffer a(Var("a", kHandle), kFloat32, {m, n});
+    Buffer b(Var("b", kHandle), kFloat32, {m, n});
+    Tensor c =
+        Compute("c", {{m, "m"}, {n, "n"}}, [&](const Var& i, const Var& j) {
+          return a(i, j) + b(i, j);
+        });
+    auto sch = Schedule::make({c});
+    Stmt s = sch.Lower();
+    SimpleIREvaluator cg(s, {a, b, c, m, n});
+    std::vector<float> aData(M * N, 1.0f);
+    std::vector<float> bData(M * N, 2.0f);
+    std::vector<float> cData(M * N, 0.0f);
+    cg.call({aData, bData, cData, M, N});
+    ExpectAllNear(cData, std::vector<float>(M * N, 3.0f), 1e-7);
+  };
+  testWithSize(1, 8);
+  testWithSize(16, 32);
+  testWithSize(37, 11);
+}
+
 } // namespace jit
 } // namespace torch
