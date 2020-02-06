@@ -121,6 +121,14 @@ class CodeGen::CallArg {
     return fval_;
   }
 
+  int* intPtr() const {
+    return const_cast<int*>(&ival_);
+  }
+
+  float* floatPtr() const {
+    return const_cast<float*>(&fval_);
+  }
+
  private:
   union {
     void* ptr_;

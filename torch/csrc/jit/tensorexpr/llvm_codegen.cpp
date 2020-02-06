@@ -144,8 +144,15 @@ void LLVMCodeGen::emitWrapper(const std::vector<llvm::Type*>& params) {
   for (size_t i = 0; i < params.size(); i++) {
     auto argp = irb_.CreateGEP(
         wrapper->arg_begin(), llvm::ConstantInt::getSigned(int32Ty_, i));
-    auto arg = irb_.CreatePointerCast(irb_.CreateLoad(argp), params[i]);
-    wrappedArgs.push_back(arg);
+    if (params[i]->isPointerTy()) {
+      auto arg = irb_.CreatePointerCast(irb_.CreateLoad(argp), params[i]);
+      wrappedArgs.push_back(arg);
+    } else {
+      auto p = irb_.CreatePointerCast(
+          irb_.CreateLoad(argp), params[i]->getPointerTo());
+      auto arg = irb_.CreateLoad(p);
+      wrappedArgs.push_back(arg);
+    }
   }
   auto cc = irb_.CreateCall(fn_, wrappedArgs);
   irb_.CreateRet(cc);
@@ -184,14 +191,30 @@ void LLVMCodeGen::emitKernel(
 #endif
 }
 
+static void* argToPtr(
+    const CodeGen::BufferArg& bufferArg,
+    const CodeGen::CallArg& callArg) {
+  if (!bufferArg.isVar()) {
+    return callArg.data();
+  }
+  if (bufferArg.dtype() == kInt32) {
+    return callArg.intPtr();
+  }
+  if (bufferArg.dtype() == kFloat32) {
+    return callArg.floatPtr();
+  }
+  LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var().name_hint()
+             << "dtype=" << bufferArg.var().dtype();
+  return nullptr;
+}
+
 void LLVMCodeGen::call(const std::vector<CallArg>& args) {
   CHECK_EQ(args.size(), buffer_args().size())
       << "args: " << args.size() << ", buffers: " << buffer_args().size();
   for (size_t i = 0; i < buffer_args().size(); i++) {
     auto const& bufferArg = buffer_args()[i];
     auto const& callArg = args[i];
-    // FIXME: This is probably broken for floats.
-    args_.push_back(callArg.data());
+    args_.push_back(argToPtr(bufferArg, callArg));
   }
   value<float>(args_);
   args_.clear();

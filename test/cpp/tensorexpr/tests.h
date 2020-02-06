@@ -112,6 +112,7 @@ namespace jit {
   _(LLVMBroadcastAdd)           \
   _(LLVMDynamicShapeAdd)        \
   _(LLVMBindDynamicShapeAdd)    \
+  _(LLVMTensorDynamicShapeAdd)  \
   _(LLVMIfThenElseTest)
 
 #define TH_FORALL_TESTS_CUDA(_) \
