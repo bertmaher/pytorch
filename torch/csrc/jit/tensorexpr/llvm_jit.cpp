@@ -19,16 +19,73 @@ class TORCH_API PytorchLLVMJITImpl {
 
  public:
   PytorchLLVMJITImpl() : LLJ(cantFail(LLJITBuilder().create())) {
-    // Handle type-overloaded std:: functions
-    using ffptr = float (*)(float);
-
     // Handle platform-specific symbol mangling
     MangleAndInterner Mangle(LLJ->getExecutionSession(), LLJ->getDataLayout());
 
     // Register implementations of intrinsics
     cantFail(LLJ->defineAbsolute(
-        *Mangle("log10_float"),
-        {llvm::pointerToJITTargetAddress(ffptr(&std::log10)), {}}));
+        *Mangle("log10f"),
+        {llvm::pointerToJITTargetAddress(&log10f), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("logf"),
+        {llvm::pointerToJITTargetAddress(&logf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("log2f"),
+        {llvm::pointerToJITTargetAddress(&log2f), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("expf"),
+        {llvm::pointerToJITTargetAddress(&expf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("erff"),
+        {llvm::pointerToJITTargetAddress(&erff), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("cosf"),
+        {llvm::pointerToJITTargetAddress(&cosf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("sinf"),
+        {llvm::pointerToJITTargetAddress(&sinf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("tanf"),
+        {llvm::pointerToJITTargetAddress(&tanf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("acosf"),
+        {llvm::pointerToJITTargetAddress(&acosf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("asinf"),
+        {llvm::pointerToJITTargetAddress(&asinf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("atanf"),
+        {llvm::pointerToJITTargetAddress(&atanf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("coshf"),
+        {llvm::pointerToJITTargetAddress(&coshf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("sinhf"),
+        {llvm::pointerToJITTargetAddress(&sinhf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("tanhf"),
+        {llvm::pointerToJITTargetAddress(&tanhf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("sqrtf"),
+        {llvm::pointerToJITTargetAddress(&sqrtf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("fabsf"),
+        {llvm::pointerToJITTargetAddress(&fabsf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("floorf"),
+        {llvm::pointerToJITTargetAddress(&floorf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("ceilf"),
+        {llvm::pointerToJITTargetAddress(&ceilf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("roundf"),
+        {llvm::pointerToJITTargetAddress(&roundf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("truncf"),
+        {llvm::pointerToJITTargetAddress(&truncf), {}}));
+    cantFail(LLJ->defineAbsolute(
+        *Mangle("remainderf"),
+        {llvm::pointerToJITTargetAddress(&remainderf), {}}));
   }
 
   Error addModule(ThreadSafeModule M) {
