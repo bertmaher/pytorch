@@ -42,7 +42,8 @@ KernelScope::KernelScope() : owning_kernel_arena_(true) {
   GetKernelArenaStack().push_back(kernel_arena_);
 }
 
-KernelScope::KernelScope(KernelArena& kernel_arena) : owning_kernel_arena_(false) {
+KernelScope::KernelScope(KernelArena& kernel_arena)
+    : owning_kernel_arena_(false) {
   kernel_arena_ = &kernel_arena;
   GetKernelArenaStack().push_back(&kernel_arena);
 }

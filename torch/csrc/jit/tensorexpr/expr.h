@@ -36,7 +36,8 @@ class KernelScope {
   KernelScope(const KernelScope&) = delete;
   KernelScope& operator=(const KernelScope&) = delete;
   bool owning_kernel_arena_ = false;
-  KernelArena* kernel_arena_ = nullptr; // possibly owned, if owning_kernel_arena_ == true
+  KernelArena* kernel_arena_ =
+      nullptr; // possibly owned, if owning_kernel_arena_ == true
 };
 
 // The base object managed by the Kernel.
@@ -262,7 +263,6 @@ TORCH_API Expr fmod(const Expr& v1, const Expr& v2);
 TORCH_API Expr remainder(const Expr& v1, const Expr& v2);
 
 TORCH_API Expr ifThenElse(const Expr& c, const Expr& t, const Expr& f);
-
 
 } // namespace tensorexpr
 } // namespace jit

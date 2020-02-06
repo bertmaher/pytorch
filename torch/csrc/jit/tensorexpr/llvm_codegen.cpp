@@ -728,7 +728,8 @@ void LLVMCodeGen::visit(const Broadcast* v) {
 void LLVMCodeGen::visit(const IfThenElse* v) {
   v->condition().accept(this);
   llvm::Value* condition = value_;
-  llvm::Value* c = irb_.CreateICmpNE(condition, llvm::ConstantInt::get(int32Ty_, 0));
+  llvm::Value* c =
+      irb_.CreateICmpNE(condition, llvm::ConstantInt::get(int32Ty_, 0));
 
   auto then_block = llvm::BasicBlock::Create(getContext(), "then", fn_);
   auto else_block = llvm::BasicBlock::Create(getContext(), "else", fn_);
@@ -775,7 +776,9 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
       llvm::cast<llvm::Function>(call_fn)->addFnAttr(
           llvm::Attribute::WillReturn);
     } break;
-    default: { LOG(FATAL) << "Unimplemented: Intrinsics"; } break;
+    default: {
+      LOG(FATAL) << "Unimplemented: Intrinsics";
+    } break;
   }
 
   std::vector<llvm::Value*> params;

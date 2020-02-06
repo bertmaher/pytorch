@@ -628,10 +628,7 @@ class IfThenElse : public ExprNode<IfThenElse> {
 
  private:
   IfThenElse(const Expr& c, const Expr& t, const Expr& f)
-      : ExprNodeBase(t.dtype()),
-        condition_(c),
-        true_(t),
-        false_(f) {
+      : ExprNodeBase(t.dtype()), condition_(c), true_(t), false_(f) {
     CHECK_EQ(c.dtype().scalar_type(), kInt32);
     CHECK_EQ(c.dtype().lanes(), 1);
     CHECK_EQ(t.dtype(), f.dtype());

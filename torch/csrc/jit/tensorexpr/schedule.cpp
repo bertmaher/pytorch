@@ -580,7 +580,8 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     CHECK(node->first_child() == nullptr);
     TensorExprOp* expr_op = node->tensor_expr_op();
     Stmt stmt = expr_op->ElementStmt();
-    // TODO: the predicate should be hoisted to as high as possible in the acestor chain.
+    // TODO: the predicate should be hoisted to as high as possible in the
+    // acestor chain.
     const std::vector<Expr>& predicates = expr_op->predicates();
     for (int i = 0; i < predicates.size(); i++) {
       stmt = Cond::make(predicates[i], stmt, Stmt());

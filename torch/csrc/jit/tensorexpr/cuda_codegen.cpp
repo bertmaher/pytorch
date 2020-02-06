@@ -90,7 +90,7 @@ void CudaPrinter::visit(const For* v) {
   const LoopOptions& loop_options = v->loop_options();
   if (loop_options.is_gpu_block_index()) {
     ScopedVarName var_name(
-			   name_manager(), v->var().node(), loop_options.gpu_block_index_str());
+        name_manager(), v->var().node(), loop_options.gpu_block_index_str());
     v->body().accept(this);
     int gpu_block_index = loop_options.gpu_block_index();
     if (gpu_block_extents_.size() <= gpu_block_index) {
@@ -104,7 +104,7 @@ void CudaPrinter::visit(const For* v) {
     gpu_block_extents_[gpu_block_index] = v->stop();
   } else if (loop_options.is_gpu_thread_index()) {
     ScopedVarName var_name(
-			   name_manager(), v->var().node(), loop_options.gpu_thread_index_str());
+        name_manager(), v->var().node(), loop_options.gpu_thread_index_str());
     v->body().accept(this);
     int gpu_thread_index = loop_options.gpu_thread_index();
     if (gpu_thread_extents_.size() <= gpu_thread_index) {

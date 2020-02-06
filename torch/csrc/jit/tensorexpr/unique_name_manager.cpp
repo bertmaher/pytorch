@@ -30,8 +30,7 @@ const std::string& UniqueNameManager::get_unique_name(const Variable* v) {
     }
     if (all_unique_names_.count(unique_name) == 0) {
       all_unique_names_.insert(unique_name);
-      auto result =
-	  unique_name_mapping_.insert(std::make_pair(v, unique_name));
+      auto result = unique_name_mapping_.insert(std::make_pair(v, unique_name));
       return result.first->second;
     }
   }
