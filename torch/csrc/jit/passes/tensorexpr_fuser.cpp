@@ -125,6 +125,11 @@ c10::optional<Node*> tryMerge(
       consumer->kind().toQualString(),
       ":\n");
 
+  // Only handle complete tensor types
+  for (torch::jit::Value* output : consumer->outputs()) {
+    REQ(output->isCompleteTensor());
+  }
+
   // Symbolic checks
   REQ(canHandle(producer, aliasDb));
   REQ(
