@@ -1,5 +1,7 @@
 #include "torch/csrc/jit/tensorexpr/codegen.h"
 
+#include <sstream>
+
 namespace torch {
 namespace jit {
 namespace tensorexpr {
@@ -8,7 +10,19 @@ RegisterCodeGenList::StmtFactoryMethod RegisterCodeGenList::
     FindStmtFactoryMethod(const std::string& name) {
   auto iter = stmt_factory_methods_.find(name);
   if (iter == stmt_factory_methods_.end()) {
-    throw std::runtime_error("Invalid codegen name: " + name);
+    std::ostringstream oss;
+    oss << "Invalid stmt codegen name: " << name << ". ";
+    oss << "Existing codegen names: [";
+    int index = 0;
+    for (const auto& entry : stmt_factory_methods_) {
+      if (index != 0) {
+	oss << ", ";
+      }
+      oss << entry.first;
+      index++;
+    }
+    oss << "]";
+    throw std::runtime_error(oss.str());
   }
   return iter->second;
 }
@@ -17,7 +31,7 @@ RegisterCodeGenList::ExprFactoryMethod RegisterCodeGenList::
     FindExprFactoryMethod(const std::string& name) {
   auto iter = expr_factory_methods_.find(name);
   if (iter == expr_factory_methods_.end()) {
-    throw std::runtime_error("Invalid codegen name: " + name);
+    throw std::runtime_error("Invalid expr codegen name: " + name);
   }
   return iter->second;
 }
