@@ -91,9 +91,11 @@ bool isSupported(Node* node) {
     case aten::remainder:
 #ifndef ENABLE_LLVM    
     case aten::frac:
+    case aten::neg:
     case aten::lgamma:    
     case aten::sigmoid:    
     case aten::reciprocal:
+    case aten::relu:
 #endif
     case prim::ConstantChunk:
     case aten::cat:
@@ -607,6 +609,19 @@ class TensorExprKernel {
           return Expr(1.0f) / cast<float>(a);
         });
       } break;
+
+      case aten::neg: {
+        return Compute("aten_neg", texprDims(v), [](const Expr& a) {
+          return Expr(-0) - a;
+        });
+      } break;      
+    
+      case aten::relu: {
+        return Compute("aten_relu", texprDims(v), [](const Expr& a) {
+          Expr zero_cond = CompareSelect::make(a, Expr(0), kLT);
+          return ifThenElse(zero_cond, Expr(0.0f), cast<float>(a));
+        });
+      } break;      
 
       case aten::log: {
         return ComputeOneOperand(
