@@ -289,6 +289,8 @@ void CudaCodeGen::CompileToNVRTC(const std::string& code) {
       nvrtc().cuModuleGetFunction(&function_, module, name.c_str()));
 }
 
+RegisterCodeGen<CudaCodeGen> reg("cuda_codegen");
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
