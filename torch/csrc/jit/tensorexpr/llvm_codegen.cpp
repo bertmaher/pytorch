@@ -825,7 +825,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
   case enum: {                                                  \
       auto callee = module_->getOrInsertFunction(               \
           name,                                                 \
-          llvm::FunctionType::get(type, {type}, false),         \
+          llvm::FunctionType::get(type, {type, type}, false),         \
           {});                                                  \
       call_ty = callee.getFunctionType();                       \
       call_fn = callee.getCallee();                             \
