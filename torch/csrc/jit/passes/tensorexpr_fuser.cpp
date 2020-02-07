@@ -120,6 +120,9 @@ c10::optional<Node*> tryMerge(
     REQ(output->isCompleteTensor());
   }
 
+  // Only fuse within a block
+  REQ(consumer->owningBlock() == producer->owningBlock());
+
   // Symbolic checks
   REQ(canHandle(producer, aliasDb));
   REQ(
@@ -182,9 +185,8 @@ c10::optional<Node*> tryMerge(
 
 std::pair<graph_node_list::iterator, bool> scanNode(
     Node* consumer,
-    AliasDb& aliasDb,
-    torch::jit::Block* block) {
-  auto inputs = sortReverseTopological(consumer->inputs(), block);
+    AliasDb& aliasDb) {
+  auto inputs = sortReverseTopological(consumer->inputs(), consumer->owningBlock());
   for (auto input : inputs) {
     if (auto group = tryMerge(consumer, input->node(), aliasDb)) {
       // we successfully merged, so the new group's `inputs` may have
@@ -204,13 +206,37 @@ void fuseTensorExprs(std::shared_ptr<Graph>& graph) {
   AliasDb aliasDb(graph);
   auto block = graph->block();
 
+  std::vector<std::pair<graph_node_list_iterator,
+                        graph_node_list_iterator>> worklist;
+  std::unordered_set<torch::jit::Block*> visited_blocks;
+
   bool any_changed = true;
   while (any_changed) {
     any_changed = false;
-    for (auto it = block->nodes().rbegin(); it != block->nodes().rend();) {
-      bool changed;
-      std::tie(it, changed) = scanNode(*it, aliasDb, block);
-      any_changed |= changed;
+    worklist.push_back({block->nodes().rbegin(), block->nodes().rend()});
+
+    while (worklist.size()) {
+      auto& it = worklist.back().first;
+      auto end = worklist.back().second;
+
+      if (it->blocks().size()) {
+        Node* n = *it;
+        ++it;
+        for (auto b : n->blocks()) {
+          if (!visited_blocks.count(b)) {
+            worklist.push_back({b->nodes().rbegin(), b->nodes().rend()});
+            visited_blocks.insert(b);
+          }
+        }
+      } else {
+        bool changed;
+        std::tie(it, changed) = scanNode(*it, aliasDb);
+        any_changed |= changed;
+      }
+
+      if (it == end) {
+        worklist.pop_back();
+      }
     }
   }
 
@@ -672,7 +698,10 @@ class TensorExprKernel {
 
       case aten::tanh: {
         return ComputeOneOperand(
-            "aten_tanh", v, [](const Expr& a) { return tanh(a); });
+            "aten_tanh", v, [](const Expr& a) {
+              //return (Expr(-.67436811832e-5f)+(Expr(.2468149110712040f)+(Expr(.583691066395175e-1f)+Expr(.3357335044280075e-1f)*a)*a)*a)/(Expr(.2464845986383725f)+(Expr(.609347197060491e-1f)+(Expr(.1086202599228572f)+Expr(.2874707922475963e-1f)*a)*a)*a);
+              return tanh(a);
+              });
       } break;
 
       case aten::sqrt: {

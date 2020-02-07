@@ -677,3 +677,21 @@ def test_scalar():
         xn, yn, zn = [t.numpy() for t in (x, y, z)]
         np.testing.assert_allclose(r.numpy(), xn + yn * a + zn * b)
         assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
+
+# FIXME: Blocked on profiling executor changes
+# def test_loop():
+#    @torch.jit.script
+#    def test(x, y, z):
+#    # type: (Tensor, Tensor, int) -> Tensor
+#        b = y
+#        for i in range(0, z):
+#            a = x + y
+#            b = b + y
+#        return b
+#    
+#    llvm = LLVMCodeGenExecuted()
+#    interp = SimpleIREvalExecuted()
+#    x, y, z = (torch.zeros(32, 32), torch.ones(32, 32), 4)
+#    test(x, y, z)
+#    r = test(x, y, z)
+#    assert llvm.elapsed_value == 1 or interp.elapsed_value() == 1
