@@ -296,10 +296,10 @@ class Let : public ExprNode<Let> {
   Expr body_;
 };
 
-class Block : public StmtNode<Block> {
+class Block : public ExprNode<Block> {
  public:
-  static Stmt make(const std::vector<Stmt>& stmts) {
-    std::vector<Stmt> valid_stmts;
+  static Expr make(const std::vector<Expr>& stmts) {
+    std::vector<Expr> valid_stmts;
     for (size_t i = 0; i < stmts.size(); i++) {
       if (stmts[i].empty()) {
         continue;
@@ -307,20 +307,20 @@ class Block : public StmtNode<Block> {
       valid_stmts.push_back(stmts[i]);
     }
     if (valid_stmts.empty()) {
-      return Stmt();
+      return Expr();
     }
-    return Stmt(new Block(valid_stmts));
+    return Expr(new Block(valid_stmts));
   }
   int nstmts() const {
     return stmts_.size();
   }
-  const Stmt& stmt(int index) const {
+  const Expr& stmt(int index) const {
     return stmts_[index];
   }
 
  private:
-  explicit Block(const std::vector<Stmt>& stmts) : stmts_(stmts) {}
-  std::vector<Stmt> stmts_;
+  explicit Block(const std::vector<Expr>& stmts) : stmts_(stmts) {}
+  std::vector<Expr> stmts_;
 };
 
 class LoopOptions {
@@ -402,7 +402,7 @@ class LoopOptions {
   int gpu_thread_index_ = -1;
 };
 
-class For : public StmtNode<For> {
+class For : public ExprNode<For> {
  public:
   const Var& var() const {
     return var_;
@@ -413,42 +413,42 @@ class For : public StmtNode<For> {
   const Expr& stop() const {
     return stop_;
   }
-  const Stmt& body() const {
+  const Expr& body() const {
     return body_;
   }
-  static Stmt make(
+  static Expr make(
       const Var& var,
       const Expr& start,
       const Expr& stop,
-      const Stmt& body) {
+      const Expr& body) {
     if (body.empty()) {
-      return Stmt();
+      return Expr();
     }
-    return Stmt(new For(var, start, stop, body));
+    return Expr(new For(var, start, stop, body));
   }
-  static Stmt make(
+  static Expr make(
       const Var& var,
       const Expr& start,
       const Expr& stop,
-      const Stmt& body,
+      const Expr& body,
       const LoopOptions& loop_options) {
     if (body.empty()) {
-      return Stmt();
+      return Expr();
     }
-    return Stmt(new For(var, start, stop, body, loop_options));
+    return Expr(new For(var, start, stop, body, loop_options));
   }
   const LoopOptions loop_options() const {
     return loop_options_;
   }
 
  private:
-  For(const Var& var, const Expr& start, const Expr& stop, const Stmt& body)
+  For(const Var& var, const Expr& start, const Expr& stop, const Expr& body)
       : var_(var), start_(start), stop_(stop), body_(body) {}
 
   For(const Var& var,
       const Expr& start,
       const Expr& stop,
-      const Stmt& body,
+      const Expr& body,
       const LoopOptions& loop_options)
       : var_(var),
         start_(start),
@@ -459,7 +459,7 @@ class For : public StmtNode<For> {
   Var var_;
   Expr start_;
   Expr stop_;
-  Stmt body_;
+  Expr body_;
   LoopOptions loop_options_;
 };
 
@@ -529,7 +529,7 @@ class TORCH_API Load : public ExprNode<Load> {
   Expr mask_;
 };
 
-class TORCH_API Store : public StmtNode<Store> {
+class TORCH_API Store : public ExprNode<Store> {
  public:
   const Var& base_handle() const {
     return base_handle_;
@@ -544,20 +544,20 @@ class TORCH_API Store : public StmtNode<Store> {
     return mask_;
   }
 
-  static Stmt make(
+  static Expr make(
       const Buffer& buffer,
       const Expr& index,
       const Expr& value,
       const Expr& mask) {
-    return Stmt(new Store(buffer, index, value, mask));
+    return Expr(new Store(buffer, index, value, mask));
   }
 
-  static Stmt make(
+  static Expr make(
       const Var& base_handle,
       const Expr& index,
       const Expr& value,
       const Expr& mask) {
-    return Stmt(new Store(base_handle, index, value, mask));
+    return Expr(new Store(base_handle, index, value, mask));
   }
 
  private:
@@ -840,13 +840,13 @@ class FunctionCall;
 // Allocate a buffer of given shapes and dtypes and bind it with the given
 // buffer var. The life span is at most through the current program, until it is
 // explicitly freed. An unfreed memory is likely considered an error.
-class Allocate : public StmtNode<Allocate> {
+class Allocate : public ExprNode<Allocate> {
  public:
-  static Stmt make(
+  static Expr make(
       const Var& buffer_var,
       Dtype dtype,
       const std::vector<Expr>& dims) {
-    return Stmt(new Allocate(buffer_var, dtype, dims));
+    return Expr(new Allocate(buffer_var, dtype, dims));
   }
 
   const Var& buffer_var() const {
@@ -872,10 +872,10 @@ class Allocate : public StmtNode<Allocate> {
 };
 
 // Free the specific buffer. It is an error.
-class Free : public StmtNode<Free> {
+class Free : public ExprNode<Free> {
  public:
-  static Stmt make(const Var& buffer_var) {
-    return Stmt(new Free(buffer_var));
+  static Expr make(const Var& buffer_var) {
+    return Expr(new Free(buffer_var));
   }
 
   const Var& buffer_var() const {
@@ -888,34 +888,34 @@ class Free : public StmtNode<Free> {
   Var buffer_var_;
 };
 
-class Cond : public StmtNode<Cond> {
+class Cond : public ExprNode<Cond> {
  public:
-  static Stmt make(
+  static Expr make(
       const Expr& condition,
-      const Stmt& true_stmt,
-      const Stmt& false_stmt) {
-    return Stmt(new Cond(condition, true_stmt, false_stmt));
+      const Expr& true_stmt,
+      const Expr& false_stmt) {
+    return Expr(new Cond(condition, true_stmt, false_stmt));
   }
 
   const Expr& condition() const {
     return condition_;
   }
 
-  const Stmt& true_stmt() const {
+  const Expr& true_stmt() const {
     return true_stmt_;
   }
 
-  const Stmt& false_stmt() const {
+  const Expr& false_stmt() const {
     return false_stmt_;
   }
 
  private:
-  Cond(const Expr& condition, const Stmt& true_stmt, const Stmt& false_stmt)
+  Cond(const Expr& condition, const Expr& true_stmt, const Expr& false_stmt)
       : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {}
 
   Expr condition_;
-  Stmt true_stmt_;
-  Stmt false_stmt_;
+  Expr true_stmt_;
+  Expr false_stmt_;
 };
 
 } // namespace tensorexpr

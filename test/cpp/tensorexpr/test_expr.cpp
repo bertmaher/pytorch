@@ -96,12 +96,12 @@ void testExprVectorAdd01() {
       Ramp::make(index * kVectorSize, 1, kVectorSize),
       Broadcast::make(1, kVectorSize));
   Expr value = load_a + load_b;
-  Stmt store_c = Store::make(
+  Expr store_c = Store::make(
       c_buf,
       Ramp::make(index * kVectorSize, 1, kVectorSize),
       value,
       Broadcast::make(1, kVectorSize));
-  Stmt stmt = For::make(index, 0, kVectorCount, store_c);
+  Expr stmt = For::make(index, 0, kVectorCount, store_c);
 
   EXPECT_EQ(load_a.dtype(), Dtype(kFloat32, kVectorSize));
   EXPECT_EQ(load_b.dtype(), Dtype(kFloat32, kVectorSize));
@@ -288,7 +288,7 @@ void testExprDynamicShapeAdd() {
     Buffer b(Var("b", kHandle), kFloat32, {n});
     Buffer c(Var("c", kHandle), kFloat32, {n});
     Var i("i", kInt32);
-    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
+    Expr s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
@@ -306,11 +306,11 @@ void testCond01() {
   PaddedBuffer<float> a_v(N);
   Buffer a_buf("a", kFloat32, {N});
   Var index = Var("index", kInt32);
-  Stmt assign_x2 = Store::make(a_buf.data(), index, cast<float>(index) * 2, 1);
-  Stmt assign_x3 = Store::make(a_buf.data(), index, cast<float>(index) * 3, 1);
+  Expr assign_x2 = Store::make(a_buf.data(), index, cast<float>(index) * 2, 1);
+  Expr assign_x3 = Store::make(a_buf.data(), index, cast<float>(index) * 3, 1);
   Expr even_cond = CompareSelect::make(Mod::make(index, 2), 0, kEQ);
-  Stmt assign = Cond::make(even_cond, assign_x2, assign_x3);
-  Stmt for_stmt = For::make(index, 0, N, assign);
+  Expr assign = Cond::make(even_cond, assign_x2, assign_x3);
+  Expr for_stmt = For::make(index, 0, N, assign);
   SimpleIREvaluator(for_stmt, a_buf)(a_v);
 
   PaddedBuffer<float> a_ref(N);

@@ -774,7 +774,7 @@ class TensorExprKernel {
       }
     }
 
-    Stmt stmt = sch.Lower();
+    Expr stmt = sch.Lower();
 
     // Set up formal params (inputs, then outputs) for kernel.
     std::vector<CodeGen::BufferArg> params(

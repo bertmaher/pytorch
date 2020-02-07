@@ -26,7 +26,7 @@ class Store;
 class Broadcast;
 class IfThenElse;
 class Expr;
-class Stmt;
+class Expr;
 class BaseCallNode;
 class Intrinsics;
 class FunctionCall;
@@ -64,13 +64,13 @@ class TORCH_API IRMutator {
   virtual Expr mutate(const Intrinsics* v);
   virtual Expr mutate(const FunctionCall* v);
 
-  virtual Stmt mutate(const For* v);
-  virtual Stmt mutate(const Block* v);
-  virtual Stmt mutate(const Store* v);
+  virtual Expr mutate(const For* v);
+  virtual Expr mutate(const Block* v);
+  virtual Expr mutate(const Store* v);
 
-  virtual Stmt mutate(const Allocate* v);
-  virtual Stmt mutate(const Free* v);
-  virtual Stmt mutate(const Cond* v);
+  virtual Expr mutate(const Allocate* v);
+  virtual Expr mutate(const Free* v);
+  virtual Expr mutate(const Cond* v);
 };
 
 } // namespace tensorexpr

@@ -8,10 +8,6 @@ void IRPrinter::print(Expr expr) {
   expr.accept(this);
 }
 
-void IRPrinter::print(Stmt stmt) {
-  stmt.accept(this);
-}
-
 // TODO: change whether to include the parenthesis to the parent expression,
 // we need to look at the operator precedence to make the output simpler.
 #define BINARY_ACCEPT(os, v, op_str) \
@@ -196,8 +192,8 @@ void IRPrinter::visit(const Free* v) {
 
 void IRPrinter::visit(const Cond* v) {
   const Expr& cond = v->condition();
-  const Stmt& true_stmt = v->true_stmt();
-  const Stmt& false_stmt = v->false_stmt();
+  const Expr& true_stmt = v->true_stmt();
+  const Expr& false_stmt = v->false_stmt();
   if (true_stmt.empty()) {
     os() << "if(!" << cond << ") {" << std::endl;
     os() << false_stmt << std::endl;
@@ -222,18 +218,6 @@ std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
   } else {
     IRPrinter p(stream);
     p.print(expr);
-  }
-  return stream;
-}
-
-std::ostream& operator<<(std::ostream& stream, const Stmt& stmt) {
-  IRPrinter::PrinterStream* printer_stream =
-      dynamic_cast<IRPrinter::PrinterStream*>(&stream);
-  if (printer_stream != nullptr) {
-    stmt.accept(printer_stream->printer());
-  } else {
-    IRPrinter p(stream);
-    p.print(stmt);
   }
   return stream;
 }

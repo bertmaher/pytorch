@@ -50,15 +50,6 @@ static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
 }
 
 LLVMCodeGen::LLVMCodeGen(
-    const Stmt& stmt,
-    const std::vector<BufferArg>& args,
-    Dtype dtype)
-    : LLVMCodeGen(stmt.node(), args, dtype) {}
-
-LLVMCodeGen::LLVMCodeGen(const Stmt& stmt)
-    : LLVMCodeGen(stmt, std::vector<BufferArg>()) {}
-
-LLVMCodeGen::LLVMCodeGen(
     const Expr& expr,
     const std::vector<BufferArg>& args,
     Dtype dtype)

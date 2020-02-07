@@ -130,8 +130,8 @@ void IRVisitor::visit(const Free* v) {
 
 void IRVisitor::visit(const Cond* v) {
   Expr condition = v->condition();
-  Stmt true_stmt = v->true_stmt();
-  Stmt false_stmt = v->false_stmt();
+  Expr true_stmt = v->true_stmt();
+  Expr false_stmt = v->false_stmt();
   condition.accept(this);
   true_stmt.accept(this);
   false_stmt.accept(this);

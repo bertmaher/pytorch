@@ -463,9 +463,9 @@ class FunctionInliner : public IRMutator {
   }
 
   // Remove the buffer write the inlined function.
-  Stmt mutate(const Store* v) override {
+  Expr mutate(const Store* v) override {
     if (func_var_set_.count(v->base_handle().node()) > 0) {
-      return Stmt();
+      return Expr();
     } else {
       return IRMutator::mutate(v);
     }
@@ -476,12 +476,12 @@ class FunctionInliner : public IRMutator {
   std::unordered_set<const Variable*> func_var_set_;
 };
 
-static Stmt InjectInlines(
-    const Stmt& stmt,
+static Expr InjectInlines(
+    const Expr& stmt,
     const std::vector<Function>& inlined_funcs) {
   FunctionInliner inliner(inlined_funcs);
-  Stmt stmt_old = stmt;
-  Stmt stmt_new = stmt_old.accept_mutator(&inliner);
+  Expr stmt_old = stmt;
+  Expr stmt_new = stmt_old.accept_mutator(&inliner);
   return stmt_new;
 }
 
@@ -503,15 +503,15 @@ ScheduleObject* ScheduleNode::LookUpCloneScheduleObject(
 }
 
 // TODO: change to a stack-based version without recursion
-Stmt ScheduleNode::Lower(TensorExprNode* node) {
+Expr ScheduleNode::Lower(TensorExprNode* node) {
   if (node == nullptr) {
-    return Stmt();
+    return Expr();
   }
   if (node->next_sibling() != nullptr) {
-    std::vector<Stmt> siblings;
+    std::vector<Expr> siblings;
     TensorExprNode* n = node;
     while (n != nullptr) {
-      Stmt stmt = LowerNoSibling(n);
+      Expr stmt = LowerNoSibling(n);
       siblings.push_back(stmt);
       n = n->next_sibling();
     }
@@ -520,8 +520,8 @@ Stmt ScheduleNode::Lower(TensorExprNode* node) {
   return LowerNoSibling(node);
 }
 
-Stmt ScheduleNode::Lower() {
-  Stmt core_stmt = Lower(root_node_);
+Expr ScheduleNode::Lower() {
+  Expr core_stmt = Lower(root_node_);
 
   // Inject inlines
   core_stmt = InjectInlines(core_stmt, inlined_functions_);
@@ -544,8 +544,8 @@ Stmt ScheduleNode::Lower() {
   for (size_t i = 0; i < output_tensors_.size(); i++) {
     output_tensors_set.insert(output_tensors_[i].node());
   }
-  std::vector<Stmt> allocs;
-  std::vector<Stmt> frees;
+  std::vector<Expr> allocs;
+  std::vector<Expr> frees;
   for (size_t i = 0; i < internal_tensors_.size(); i++) {
     const Tensor& tensor = internal_tensors_[i];
     if (inlined_func_set.count(tensor.function().node()) > 0) {
@@ -556,22 +556,22 @@ Stmt ScheduleNode::Lower() {
       // No need to allocate memory if the tensors are given as input/output.
       continue;
     }
-    Stmt alloc =
+    Expr alloc =
         Allocate::make(tensor.buffer_var(), tensor.dtype(), tensor.dims());
     allocs.push_back(alloc);
-    Stmt free = Free::make(tensor.buffer_var());
+    Expr free = Free::make(tensor.buffer_var());
     frees.push_back(free);
   }
   std::reverse(frees.begin(), frees.end());
-  Stmt alloc_block = Block::make(allocs);
-  Stmt free_block = Block::make(frees);
-  Stmt combined_stmt = Block::make({alloc_block, core_stmt, free_block});
+  Expr alloc_block = Block::make(allocs);
+  Expr free_block = Block::make(frees);
+  Expr combined_stmt = Block::make({alloc_block, core_stmt, free_block});
   return combined_stmt;
 }
 
-Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
+Expr ScheduleNode::LowerNoSibling(TensorExprNode* node) {
   if (node == nullptr) {
-    return Stmt();
+    return Expr();
   }
   if (node->is_empty_value()) {
     return Lower(node->first_child());
@@ -579,28 +579,28 @@ Stmt ScheduleNode::LowerNoSibling(TensorExprNode* node) {
   if (node->is_tensor_expr_op()) {
     CHECK(node->first_child() == nullptr);
     TensorExprOp* expr_op = node->tensor_expr_op();
-    Stmt stmt = expr_op->ElementStmt();
+    Expr stmt = expr_op->ElementExpr();
     // TODO: the predicate should be hoisted to as high as possible in the
     // acestor chain.
     const std::vector<Expr>& predicates = expr_op->predicates();
     for (int i = 0; i < predicates.size(); i++) {
-      stmt = Cond::make(predicates[i], stmt, Stmt());
+      stmt = Cond::make(predicates[i], stmt, Expr());
     }
     return stmt;
   } else if (node->is_loop_axis()) {
     CHECK(node->first_child() != nullptr);
     LoopAxis* loop_axis = node->loop_axis();
-    Stmt body = Lower(node->first_child());
+    Expr body = Lower(node->first_child());
     const Var& var = loop_axis->var();
     const Range& range = loop_axis->range();
-    Stmt for_stmt = For::make(
+    Expr for_stmt = For::make(
         var, range.start(), range.stop(), body, loop_axis->loop_options());
     return for_stmt;
   } else if (node->is_empty_value()) {
     return Lower(node->first_child());
   } else {
     LOG(FATAL) << "Unsupported node type";
-    return Stmt();
+    return Expr();
   }
 }
 
@@ -806,12 +806,6 @@ Expr SplitAxisWithTail::combined_loop_index(int output_group) {
   return combined_index;
 }
 
-Stmt SplitAxisWithTail::ConvertToNewArgs(Stmt* stmt, int output_group) {
-  Expr combined_index = combined_loop_index(output_group);
-  Stmt new_stmt = Substitute(stmt, {{input(0)->var(), combined_index}});
-  return new_stmt;
-}
-
 Expr SplitAxisWithTail::ConvertToNewArgs(Expr* expr, int output_group) {
   Expr combined_index = combined_loop_index(output_group);
   Expr new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
@@ -826,12 +820,6 @@ Expr SplitAxisWithMask::combined_loop_index(int output_group) {
   LoopAxis* inner = this->output(0, 1);
   Expr combined_index = outer->var() * inner->range().stop() + inner->var();
   return combined_index;
-}
-
-Stmt SplitAxisWithMask::ConvertToNewArgs(Stmt* stmt, int output_group) {
-  Expr combined_index = combined_loop_index(output_group);
-  Stmt new_stmt = Substitute(stmt, {{input(0)->var(), combined_index}});
-  return new_stmt;
 }
 
 Expr SplitAxisWithMask::ConvertToNewArgs(Expr* expr, int output_group) {

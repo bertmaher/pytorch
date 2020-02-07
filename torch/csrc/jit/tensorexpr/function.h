@@ -61,7 +61,7 @@ class FunctionNode : public KernelScopedObject {
   const Var& func_var() const {
     return func_var_;
   }
-  Stmt ElementStmt();
+  Expr ElementExpr();
 
  private:
   Var func_var_;
@@ -101,8 +101,8 @@ class Function {
     return node()->func_var();
   }
 
-  Stmt ElementStmt() {
-    return node()->ElementStmt();
+  Expr ElementExpr() {
+    return node()->ElementExpr();
   }
 
   const FunctionNode* node() const {

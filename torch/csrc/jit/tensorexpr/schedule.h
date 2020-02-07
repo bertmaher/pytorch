@@ -164,12 +164,7 @@ class TORCH_API LoopAxisTransform
  public:
   LoopAxisTransform() {}
 
-  // One Stmt for each output group
-  virtual Stmt ConvertToNewArgs(Stmt* stmt, int group_index) {
-    LOG(FATAL) << "unmiplemented";
-    return Stmt();
-  }
-
+  // One Expr for each output group
   virtual Expr ConvertToNewArgs(Expr* stmt, int group_index) {
     LOG(FATAL) << "unmiplemented";
     return Expr();
@@ -272,7 +267,6 @@ class SplitAxisWithTail
  public:
   using BaseClass = Cloneable<SplitAxisWithTail, SplitAxisTransform>;
   void CloneFrom(const SplitAxisWithTail* other);
-  Stmt ConvertToNewArgs(Stmt* stmt, int output_group) override;
   Expr ConvertToNewArgs(Expr* stmt, int output_group) override;
   SplitAxisWithTail() {}
 
@@ -287,7 +281,6 @@ class SplitAxisWithMask
  public:
   using BaseClass = Cloneable<SplitAxisWithMask, SplitAxisTransform>;
   void CloneFrom(const SplitAxisWithMask* other);
-  Stmt ConvertToNewArgs(Stmt* stmt, int output_group) override;
   Expr ConvertToNewArgs(Expr* stmt, int output_group) override;
   SplitAxisWithMask() {}
   const Expr& predicate() const {
@@ -331,7 +324,7 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
     this->predicates_ = other->predicates_;
   }
 
-  Stmt ElementStmt() const {
+  Expr ElementExpr() const {
     return this->element_stmt_;
   }
 
@@ -358,13 +351,13 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
   friend class ScheduleNode;
   TensorExprOp() {}
   explicit TensorExprOp(const Function& func)
-      : func_(func), element_stmt_(func_.ElementStmt()) {}
+      : func_(func), element_stmt_(func_.ElementExpr()) {}
 
   // TODO: this needs more work.
   // The ancestor-axes mark the region to evaluate expression.
   // We still need to know the buffer this writes to.
   Function func_;
-  Stmt element_stmt_;
+  Expr element_stmt_;
   std::vector<Expr> predicates_;
 };
 
@@ -552,7 +545,7 @@ class TORCH_API ScheduleNode : public KernelScopedObject {
       const std::vector<Var>& blockIdx,
       const std::vector<Var>& threadIdx);
 
-  Stmt Lower();
+  Expr Lower();
 
   using CloneMap = std::unordered_map<ScheduleObject*, ScheduleObject*>;
   CloneMap& clone_map() {
@@ -595,8 +588,8 @@ class TORCH_API ScheduleNode : public KernelScopedObject {
   explicit ScheduleNode(const std::vector<Tensor>& funcs);
   ScheduleObject* CloneScheduleObject(ScheduleObject* object);
   ScheduleObject* LookUpCloneScheduleObject(ScheduleObject* object);
-  Stmt Lower(TensorExprNode* node);
-  Stmt LowerNoSibling(TensorExprNode* node);
+  Expr Lower(TensorExprNode* node);
+  Expr LowerNoSibling(TensorExprNode* node);
 
   std::vector<Tensor> output_tensors_;
   std::vector<Tensor> internal_tensors_;
@@ -640,7 +633,7 @@ class TORCH_API Schedule {
   explicit Schedule(const std::vector<Tensor>& funcs)
       : node_(new ScheduleNode(funcs)) {}
 
-  Stmt Lower() {
+  Expr Lower() {
     return node()->Lower();
   }
 

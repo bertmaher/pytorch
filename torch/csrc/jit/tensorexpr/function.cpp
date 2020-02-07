@@ -93,7 +93,7 @@ Tensor Compute(
   return Tensor(func, 0);
 }
 
-Stmt FunctionNode::ElementStmt() {
+Expr FunctionNode::ElementExpr() {
   std::vector<Expr> strides(dims_.size());
   for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
@@ -119,7 +119,7 @@ Stmt FunctionNode::ElementStmt() {
 
   Expr mask = 1;
 
-  Stmt update_stmt = Store::make(func_var(), total_index, body(), mask);
+  Expr update_stmt = Store::make(func_var(), total_index, body(), mask);
   return update_stmt;
 }
 

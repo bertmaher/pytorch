@@ -40,7 +40,7 @@ void testCudaTestVectorAdd01() {
   const Var& b_id = c.arg(1);
   const Var& t_id = c.arg(2);
   c.GPUExecConfig({b_id}, {t_id});
-  Stmt stmt = sch.Lower();
+  Expr stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
   const int N = block_count * block_size * num_iter;
   PaddedBuffer<float> a_v(N);
@@ -95,7 +95,7 @@ static void testCudaTestVectorAdd02_impl(int N, int block_size) {
   Var n_inner;
   c.SplitWithMask(n, block_size, true, &n_outer, &n_inner);
   c.GPUExecConfig({n_outer}, {n_inner});
-  Stmt stmt = sch.Lower();
+  Expr stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
   PaddedBuffer<float> a_v(N);
   PaddedBuffer<float> b_v(N);

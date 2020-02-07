@@ -17,21 +17,12 @@ class CodeGen {
   class CallArg;
 
   template <typename... Ts>
-  CodeGen(const Stmt& stmt, Ts... ts)
-      : ir_node_(const_cast<BaseStmtNode*>(stmt.node())),
+  CodeGen(const Expr& stmt, Ts... ts)
+      : ir_node_(const_cast<BaseExprNode*>(stmt.node())),
         buffer_args_({BufferArg(ts)...}) {}
 
-  CodeGen(const Stmt& stmt, const std::vector<BufferArg>& buffer_args)
-      : ir_node_(const_cast<BaseStmtNode*>(stmt.node())),
-        buffer_args_(buffer_args) {}
-
-  template <typename... Ts>
-  CodeGen(const Expr& expr, Ts... ts)
-      : ir_node_(const_cast<BaseExprNode*>(expr.node())),
-        buffer_args_({BufferArg(ts)...}) {}
-
-  CodeGen(const Expr& expr, const std::vector<BufferArg>& buffer_args)
-      : ir_node_(const_cast<BaseExprNode*>(expr.node())),
+  CodeGen(const Expr& stmt, const std::vector<BufferArg>& buffer_args)
+      : ir_node_(const_cast<BaseExprNode*>(stmt.node())),
         buffer_args_(buffer_args) {}
 
   CodeGen(const IRNode* node, const std::vector<BufferArg>& buffer_args)
@@ -144,30 +135,22 @@ class RegisterCodeGenList {
     return codegen_list;
   }
 
-  using StmtFactoryMethod = std::function<std::unique_ptr<CodeGen>(
-      const Stmt& stmt,
-      const std::vector<CodeGen::BufferArg>&)>;
   using ExprFactoryMethod = std::function<std::unique_ptr<CodeGen>(
       const Expr& expr,
       const std::vector<CodeGen::BufferArg>&)>;
 
-  TORCH_API StmtFactoryMethod FindStmtFactoryMethod(const std::string& name);
   TORCH_API ExprFactoryMethod FindExprFactoryMethod(const std::string& name);
 
  private:
   template <class CodeGenType>
   friend class RegisterCodeGen;
   RegisterCodeGenList() {}
-  TORCH_API void AddStmtFactoryMethod(
-      const std::string& name,
-      StmtFactoryMethod stmt_factory_method);
   TORCH_API void AddExprFactoryMethod(
       const std::string& name,
-      ExprFactoryMethod expr_factory_method);
+      ExprFactoryMethod stmt_factory_method);
   RegisterCodeGenList(const RegisterCodeGenList&) = delete;
   RegisterCodeGenList& operator=(const RegisterCodeGenList&) = delete;
 
-  std::unordered_map<std::string, StmtFactoryMethod> stmt_factory_methods_;
   std::unordered_map<std::string, ExprFactoryMethod> expr_factory_methods_;
 };
 
@@ -176,9 +159,9 @@ class RegisterCodeGen {
  public:
   explicit RegisterCodeGen(const std::string& name) {
     RegisterCodeGenList& codegen_list = RegisterCodeGenList::GetInstance();
-    codegen_list.AddStmtFactoryMethod(
+    codegen_list.AddExprFactoryMethod(
         name,
-        [](const Stmt& stmt, const std::vector<CodeGen::BufferArg>& params) {
+        [](const Expr& stmt, const std::vector<CodeGen::BufferArg>& params) {
           std::unique_ptr<CodeGen> method(new CodeGenType(stmt, params));
           return method;
         });
@@ -194,7 +177,7 @@ class RegisterCodeGen {
 
 TORCH_API std::unique_ptr<CodeGen> CreateCodeGen(
     const std::string& name,
-    const Stmt& stmt,
+    const Expr& stmt,
     const std::vector<CodeGen::BufferArg>& params);
 
 TORCH_API std::unique_ptr<CodeGen> CreateCodeGen(
