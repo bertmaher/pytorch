@@ -753,7 +753,9 @@ class TensorExprKernel {
             });
       }
 
-      default: { LOG(FATAL) << "Unhandled node kind"; }
+      default: {
+        LOG(FATAL) << "Unhandled node kind";
+      }
     }
   }
 
@@ -767,8 +769,8 @@ class TensorExprKernel {
         for (int i = 1; i < tensor.ndim(); i++) {
           total_count = total_count * tensor.dim(i);
         }
-	// Flatten the index for GPU kernels.
-	// TODO: move this to fusing axis when it is ready.
+        // Flatten the index for GPU kernels.
+        // TODO: move this to fusing axis when it is ready.
         Tensor new_out = Compute(
             tensor.function().func_var().name_hint() + "_flat",
             {total_count},

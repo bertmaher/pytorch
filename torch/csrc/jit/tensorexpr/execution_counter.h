@@ -18,7 +18,7 @@ In the code to be instrumented:
 // worker.cpp
 DEFINE_TRIGGER(useful_work_done);  // this defines a trigger "useful_work_done"
 void run() {
-  USE_TRIGGER(useful_work_done);   // this triggers toward the underlying counter
+  USE_TRIGGER(useful_work_done);   // this triggers the underlying counter
                                    // in  "useful_work_done"
 }
 
