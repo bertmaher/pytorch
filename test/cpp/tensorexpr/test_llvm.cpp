@@ -1,15 +1,15 @@
 #ifdef ENABLE_LLVM
 #include "test/cpp/tensorexpr/test_base.h"
 
+#include "test/cpp/tensorexpr/padded_buffer.h"
+#include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/function.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/ir_printer.h"
 #include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
 #include "torch/csrc/jit/tensorexpr/schedule.h"
 #include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "torch/csrc/jit/tensorexpr/buffer.h"
-#include "torch/csrc/jit/tensorexpr/eval.h"
-#include "torch/csrc/jit/tensorexpr/function.h"
-#include "test/cpp/tensorexpr/padded_buffer.h"
 
 #include <numeric>
 
@@ -166,9 +166,9 @@ void testLLVMIfThenElseTest() {
       b,
       IntImm::make(0),
       IfThenElse::make(
-        Load::make(c, IntImm::make(0), IntImm::make(1)), // cond
-        Load::make(a, IntImm::make(0), IntImm::make(1)), // then
-        IntImm::make(0)), // else
+          Load::make(c, IntImm::make(0), IntImm::make(1)), // cond
+          Load::make(a, IntImm::make(0), IntImm::make(1)), // then
+          IntImm::make(0)), // else
       IntImm::make(1));
   LLVMCodeGen cg(store, {a, b, c});
   std::vector<void*> args({a_buffer.data(), b_buffer.data(), c_buffer.data()});

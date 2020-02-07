@@ -2,6 +2,41 @@ import numpy as np
 import torch
 
 
+class ExecutionCounter(object):
+    def __init__(self, name):
+        self.name = name
+        self.start_value = torch._C._jit_get_trigger_value(self.name)
+
+    def elapsed_value(self):
+        value = torch._C._jit_get_trigger_value(self.name)
+        return value - self.start_value
+
+
+class CudaCodeGenCreated(ExecutionCounter):
+    def __init__(self):
+        super(CudaCodeGenCreated, self).__init__("cuda_codegen_created")
+
+
+class CudaCodeGenExecuted(ExecutionCounter):
+    def __init__(self):
+        super(CudaCodeGenExecuted, self).__init__("cuda_codegen_executed")
+
+
+class LLVMCodeGenCreated(ExecutionCounter):
+    def __init__(self):
+        super(LLVMCodeGenCreated, self).__init__("llvm_codegen_created")
+
+
+class LLVMCodeGenExecuted(ExecutionCounter):
+    def __init__(self):
+        super(LLVMCodeGenExecuted, self).__init__("llvm_codegen_executed")
+
+
+class SimpleIREvalExecuted(ExecutionCounter):
+    def __init__(self):
+        super(SimpleIREvalExecuted, self).__init__("simple_ir_eval_executed")
+
+
 def test_easy():
     def easy(x, y):
         aaa = torch.add(x, y)
@@ -15,27 +50,9 @@ def test_easy():
     np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
 
 
-# TODO: combine this with the test_easy
-def test_easy_cuda():
-    if not torch.cuda.is_available():
-        return
-
-    def easy(x, y):
-        aaa = torch.add(x, y)
-        return aaa
-
-    traced = torch.jit.trace(easy, (torch.rand(32, 16, device='cuda'), torch.rand(32, 16, device='cuda')))
-
-    a = torch.rand(32, 16, device='cuda')
-    b = torch.rand(32, 16, device='cuda')
-    x = traced(a, b)
-    a_cpu = a.cpu()
-    b_cpu = b.cpu()
-    x_cpu = x.cpu()
-    np.testing.assert_allclose(a_cpu.numpy() + b_cpu.numpy(), x_cpu.numpy())
-
-
 def test_three_arg():
+    llvm_executed = LLVMCodeGenExecuted()
+    simple_ir_eval_executed = SimpleIREvalExecuted()
     def easy(x, y, z):
         aaa = torch.add(x, y)
         bbb = torch.add(aaa, z)
@@ -51,6 +68,32 @@ def test_three_arg():
     x = traced(a, b, c)
     npr = a.numpy() + b.numpy() + c.numpy()
     np.testing.assert_allclose(npr, x.numpy())
+    assert(llvm_executed.elapsed_value() >= 1 or simple_ir_eval_executed.elapsed_value() >= 1)
+
+
+def test_three_arg_cuda():
+    cuda_cg_executed = CudaCodeGenExecuted()
+    cuda_cg_created = CudaCodeGenCreated()
+    def test(x, y, z):
+        aaa = torch.add(x, y)
+        bbb = torch.add(aaa, z)
+        return bbb
+
+    traced = torch.jit.trace(
+        test, (torch.rand(32, 32, device='cuda'), torch.rand(32, 32, device='cuda'), torch.rand(32, 32, device='cuda'))
+    )
+
+    a = torch.rand(32, 32, device='cuda')
+    b = torch.rand(32, 32, device='cuda')
+    c = torch.rand(32, 32, device='cuda')
+    x = traced(a, b, c)
+    npr = a.cpu().numpy() + b.cpu().numpy() + c.cpu().numpy()
+    np.testing.assert_allclose(npr, x.cpu().numpy())
+    assert(cuda_cg_executed.elapsed_value() >= 1)
+    assert(cuda_cg_created.elapsed_value() >= 1)
+    
+
+test_three_arg_cuda()
 
 
 def test_all_combos():
@@ -563,10 +606,10 @@ def test_remainder():
         c = torch.remainder(torch.add(x, y), x)
         return c
 
-    a = torch.rand(1024, dtype=float) 
-    b = torch.rand(1024, dtype=float) 
+    a = torch.rand(1024, dtype=float)
+    b = torch.rand(1024, dtype=float)
     zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float) 
+    cc = np.array(1024, dtype=float)
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 

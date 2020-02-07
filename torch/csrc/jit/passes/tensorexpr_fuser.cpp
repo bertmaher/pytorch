@@ -12,14 +12,6 @@
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
 
-#ifdef USE_CUDA
-#include <torch/csrc/jit/tensorexpr/cuda_codegen.h>
-#endif // USE_CUDA
-
-#ifdef ENABLE_LLVM
-#include <torch/csrc/jit/tensorexpr/llvm_codegen.h>
-#endif
-
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
 
@@ -789,31 +781,28 @@ class TensorExprKernel {
 
       case aten::cat: {
         return Compute(
-          "aten_cat",
-          texprDims(v),
-          [this, v](const std::vector<Var>& axes) {
-            Node* n = v->node();
-            auto inputs = n->inputs()[0]->node()->inputs();
-            size_t dim = n->inputs()[1]->node()->i(attr::value);
+            "aten_cat", texprDims(v), [this, v](const std::vector<Var>& axes) {
+              Node* n = v->node();
+              auto inputs = n->inputs()[0]->node()->inputs();
+              size_t dim = n->inputs()[1]->node()->i(attr::value);
 
-            std::vector<Expr> new_axes(axes.begin(), axes.end());
-            Expr load = tensorOrConstant(inputs[0], new_axes);
-            size_t offset = bufferSizes(tensors_.at(inputs[0]->unique()))[dim];
-            new_axes[dim] = new_axes[dim] - IntImm::make(offset);
-
-            for (int ii = 1; ii < inputs.size(); ++ii) {
-              load = ifThenElse(
-                CompareSelect::make(axes[dim], IntImm::make(offset), kLT),
-                load,
-                tensorOrConstant(inputs[ii], new_axes)
-              );
-              offset += bufferSizes(tensors_.at(inputs[ii]->unique()))[dim];
+              std::vector<Expr> new_axes(axes.begin(), axes.end());
+              Expr load = tensorOrConstant(inputs[0], new_axes);
+              size_t offset =
+                  bufferSizes(tensors_.at(inputs[0]->unique()))[dim];
               new_axes[dim] = new_axes[dim] - IntImm::make(offset);
-            }
 
-            return load;
-          }
-        );
+              for (int ii = 1; ii < inputs.size(); ++ii) {
+                load = ifThenElse(
+                    CompareSelect::make(axes[dim], IntImm::make(offset), kLT),
+                    load,
+                    tensorOrConstant(inputs[ii], new_axes));
+                offset += bufferSizes(tensors_.at(inputs[ii]->unique()))[dim];
+                new_axes[dim] = new_axes[dim] - IntImm::make(offset);
+              }
+
+              return load;
+            });
       }
 
       default: { LOG(FATAL) << "Unhandled node kind"; }
@@ -850,23 +839,23 @@ class TensorExprKernel {
     }
 
     // Generate code.
+    std::string codegen_name;
     switch (backend_type_) {
-#ifdef USE_CUDA
       case kCudaCodeGen:
-        codegen_ = std::make_unique<CudaCodeGen>(stmt, params);
+        codegen_name = "cuda_codegen";
         break;
-#endif
-#ifdef ENABLE_LLVM
       case kLLVMCodeGen:
-        codegen_ = std::make_unique<LLVMCodeGen>(stmt, params);
+        codegen_name = "llvm_codegen";
         break;
-#endif
       case kSimpleIREval:
-        codegen_ = std::make_unique<SimpleIREvaluator>(stmt, params);
+        codegen_name = "simple_ir_eval";
         break;
       default:
-        throw std::runtime_error("invalid backend type");
+        throw std::runtime_error(
+            "invalid backend type: " +
+            std::to_string(static_cast<int>(backend_type_)));
     }
+    codegen_ = CreateCodeGen(codegen_name, stmt, params);
   }
 
   void PickAndCheckBackendType(const at::ArrayRef<IValue>& inputs) {

@@ -13,10 +13,14 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 #include "torch/csrc/jit/tensorexpr/buffer.h"
+#include "torch/csrc/jit/tensorexpr/execution_counter.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
 #include "torch/csrc/jit/tensorexpr/types.h"
 
 using namespace torch::jit::tensorexpr;
+
+DEFINE_TRIGGER(llvm_codegen_created);
+DEFINE_TRIGGER(llvm_codegen_executed);
 
 static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
 #if 0
@@ -111,6 +115,8 @@ LLVMCodeGen::LLVMCodeGen(
       llvm::orc::ThreadSafeModule(std::move(module_), context_)));
   auto sym = jit_->findSymbol("wrapper");
   kernelAddress_ = cantFail(sym.getAddress());
+
+  USE_TRIGGER(llvm_codegen_created);
 }
 
 llvm::LLVMContext& LLVMCodeGen::getContext() {
@@ -218,6 +224,7 @@ void LLVMCodeGen::call(const std::vector<CallArg>& args) {
   }
   value<float>(args_);
   args_.clear();
+  USE_TRIGGER(llvm_codegen_executed);
 }
 
 // TODO: The binary ops are copypasta.
@@ -902,5 +909,7 @@ void LLVMCodeGen::optimize(llvm::Module& M) {
   FPM.doFinalization();
   PM.run(M);
 }
+
+RegisterCodeGen<LLVMCodeGen> reg("llvm_codegen");
 
 #endif // ENABLE_LLVM

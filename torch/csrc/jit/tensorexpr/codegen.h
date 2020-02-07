@@ -137,6 +137,71 @@ class CodeGen::CallArg {
   };
 };
 
+class RegisterCodeGenList {
+ public:
+  TORCH_API static RegisterCodeGenList& GetInstance() {
+    static RegisterCodeGenList codegen_list;
+    return codegen_list;
+  }
+
+  using StmtFactoryMethod = std::function<std::unique_ptr<CodeGen>(
+      const Stmt& stmt,
+      const std::vector<CodeGen::BufferArg>&)>;
+  using ExprFactoryMethod = std::function<std::unique_ptr<CodeGen>(
+      const Expr& expr,
+      const std::vector<CodeGen::BufferArg>&)>;
+
+  TORCH_API StmtFactoryMethod FindStmtFactoryMethod(const std::string& name);
+  TORCH_API ExprFactoryMethod FindExprFactoryMethod(const std::string& name);
+
+ private:
+  template <class CodeGenType>
+  friend class RegisterCodeGen;
+  RegisterCodeGenList() {}
+  TORCH_API void AddStmtFactoryMethod(
+      const std::string& name,
+      StmtFactoryMethod stmt_factory_method);
+  TORCH_API void AddExprFactoryMethod(
+      const std::string& name,
+      ExprFactoryMethod expr_factory_method);
+  RegisterCodeGenList(const RegisterCodeGenList&) = delete;
+  RegisterCodeGenList& operator=(const RegisterCodeGenList&) = delete;
+
+  std::unordered_map<std::string, StmtFactoryMethod> stmt_factory_methods_;
+  std::unordered_map<std::string, ExprFactoryMethod> expr_factory_methods_;
+};
+
+template <class CodeGenType>
+class RegisterCodeGen {
+ public:
+  explicit RegisterCodeGen(const std::string& name) {
+    RegisterCodeGenList& codegen_list = RegisterCodeGenList::GetInstance();
+    codegen_list.AddStmtFactoryMethod(
+        name,
+        [](const Stmt& stmt, const std::vector<CodeGen::BufferArg>& params) {
+          std::unique_ptr<CodeGen> method(new CodeGenType(stmt, params));
+          return method;
+        });
+#if 0
+    // TODO: decide whether we need this Expr version.
+    codegen_list.AddExprFactoryMethod(name, [](const Expr& expr, const std::vector<CodeGen::BufferArg>& params) {
+	std::unique_ptr<CodeGen> method(new CodeGenType(expr, params));
+	return method;
+      });
+#endif
+  }
+};
+
+TORCH_API std::unique_ptr<CodeGen> CreateCodeGen(
+    const std::string& name,
+    const Stmt& stmt,
+    const std::vector<CodeGen::BufferArg>& params);
+
+TORCH_API std::unique_ptr<CodeGen> CreateCodeGen(
+    const std::string& name,
+    const Expr& expr,
+    const std::vector<CodeGen::BufferArg>& params);
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch

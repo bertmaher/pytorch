@@ -1,10 +1,15 @@
 #include "torch/csrc/jit/tensorexpr/cuda_codegen.h"
 
+#include "torch/csrc/jit/tensorexpr/execution_counter.h"
+
 #define DEBUG_PRINT 0
 
 namespace torch {
 namespace jit {
 namespace tensorexpr {
+
+DEFINE_TRIGGER(cuda_codegen_created);
+DEFINE_TRIGGER(cuda_codegen_executed);
 
 // A RAII wrapper to manage a variable and name pair in the look-up table.
 // TODO: move this to a more shared place.
@@ -135,7 +140,8 @@ void CudaCodeGen::Initialize() {
     const BufferArg& buffer_arg = buffer_args[i];
     const Var& var = buffer_arg.var();
     Dtype dtype = buffer_arg.dtype();
-    oss_ << dtype.ToCppString() << "* " << name_manager()->get_unique_name(var);
+    oss_ << dtype.ToCppString() << (buffer_arg.isVar() ? " " : "* ")
+         << name_manager()->get_unique_name(var);
   }
   oss_ << ") {";
 
@@ -175,6 +181,7 @@ void CudaCodeGen::Initialize() {
 #endif
 
   CompileToNVRTC(oss_.str());
+  USE_TRIGGER(cuda_codegen_created);
 }
 
 void CudaCodeGen::call(const std::vector<CallArg>& args) {
@@ -197,12 +204,24 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   }
 
   // Bind the buffer addresses into arguments
-  const std::vector<BufferArg> buffer_args = this->buffer_args();
+  auto const& buffer_args = this->buffer_args();
   std::vector<void*> args_data(buffer_args.size());
   std::vector<void*> ptr_to_args(buffer_args.size());
   for (int i = 0; i < buffer_args.size(); i++) {
-    args_data[i] = args[i].data();
-    ptr_to_args[i] = &args_data[i];
+    auto const& bufferArg = buffer_args[i];
+    if (bufferArg.isVar()) {
+      auto const& dtype = bufferArg.dtype();
+      if (dtype == kInt32) {
+        ptr_to_args[i] = args[i].intPtr();
+      } else if (dtype == kFloat32) {
+        ptr_to_args[i] = args[i].floatPtr();
+      } else {
+        LOG(FATAL) << "Unhandled dtype in argument";
+      }
+    } else {
+      args_data[i] = args[i].data();
+      ptr_to_args[i] = &args_data[i];
+    }
   }
 
   // Launch the kernels
@@ -219,6 +238,7 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
       stream,
       ptr_to_args.data(),
       nullptr));
+  USE_TRIGGER(cuda_codegen_executed);
 }
 
 void CudaCodeGen::CompileToNVRTC(const std::string& code) {
@@ -288,6 +308,8 @@ void CudaCodeGen::CompileToNVRTC(const std::string& code) {
   AT_CUDA_DRIVER_CHECK(
       nvrtc().cuModuleGetFunction(&function_, module, name.c_str()));
 }
+
+RegisterCodeGen<CudaCodeGen> reg("cuda_codegen");
 
 } // namespace tensorexpr
 } // namespace jit
