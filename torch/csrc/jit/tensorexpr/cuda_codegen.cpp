@@ -1,10 +1,15 @@
 #include "torch/csrc/jit/tensorexpr/cuda_codegen.h"
 
+#include "torch/csrc/jit/tensorexpr/execution_counter.h"
+
 #define DEBUG_PRINT 0
 
 namespace torch {
 namespace jit {
 namespace tensorexpr {
+
+DEFINE_TRIGGER(cuda_codegen_created);
+DEFINE_TRIGGER(cuda_codegen_executed);
 
 // A RAII wrapper to manage a variable and name pair in the look-up table.
 // TODO: move this to a more shared place.
@@ -176,6 +181,7 @@ void CudaCodeGen::Initialize() {
 #endif
 
   CompileToNVRTC(oss_.str());
+  USE_TRIGGER(cuda_codegen_created);
 }
 
 void CudaCodeGen::call(const std::vector<CallArg>& args) {
@@ -232,6 +238,7 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
       stream,
       ptr_to_args.data(),
       nullptr));
+  USE_TRIGGER(cuda_codegen_executed);
 }
 
 void CudaCodeGen::CompileToNVRTC(const std::string& code) {
