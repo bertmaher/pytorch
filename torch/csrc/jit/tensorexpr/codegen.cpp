@@ -16,7 +16,7 @@ RegisterCodeGenList::StmtFactoryMethod RegisterCodeGenList::
     int index = 0;
     for (const auto& entry : stmt_factory_methods_) {
       if (index != 0) {
-	oss << ", ";
+        oss << ", ";
       }
       oss << entry.first;
       index++;
