@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+import pytest
+from test_jit import RUN_CUDA
 
 
 class ExecutionCounter(object):
@@ -71,6 +73,7 @@ def test_three_arg():
     assert(llvm_executed.elapsed_value() >= 1 or simple_ir_eval_executed.elapsed_value() >= 1)
 
 
+@pytest.mark.skip(not RUN_CUDA, "requires CUDA")
 def test_three_arg_cuda():
     cuda_cg_executed = CudaCodeGenExecuted()
     cuda_cg_created = CudaCodeGenCreated()
@@ -91,9 +94,6 @@ def test_three_arg_cuda():
     np.testing.assert_allclose(npr, x.cpu().numpy())
     assert(cuda_cg_executed.elapsed_value() >= 1)
     assert(cuda_cg_created.elapsed_value() >= 1)
-    
-
-test_three_arg_cuda()
 
 
 def test_all_combos():
@@ -573,7 +573,8 @@ def test_unary_ops():
 
     for torch_fn in fns:
         # random floats
-        traced = torch.jit.trace(torch_fn, (torch.zeros(1024, dtype=torch.float), torch.zeros(1024, dtype=torch.float)))
+        traced = torch.jit.trace(torch_fn, (torch.zeros(1024, dtype=torch.float), 
+                                                torch.zeros(1024, dtype=torch.float)))
         x = traced(rand_a, rand_b)
         y = torch_fn(rand_a, rand_b)
         np.testing.assert_allclose(x.numpy(), y.numpy(), 1e-7, 1e-6)
