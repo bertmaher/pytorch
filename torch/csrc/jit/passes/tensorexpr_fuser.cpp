@@ -255,6 +255,7 @@ std::vector<Expr> texprSizes(const c10::VaryingShape& shape) {
 }
 
 std::vector<DimArg> texprDims(torch::jit::Value* v) {
+  CHECK(v->type()->kind() == TypeKind::TensorType);
   auto tt = v->type()->cast<TensorType>();
   std::vector<DimArg> dimArgs;
   int i = 0;
@@ -265,6 +266,7 @@ std::vector<DimArg> texprDims(torch::jit::Value* v) {
 }
 
 Buffer texprBuffer(const torch::jit::Value* v) {
+  CHECK(v->type()->kind() == TypeKind::TensorType);
   auto tt = v->type()->cast<TensorType>();
   return Buffer(
       "t" + v->debugName(),
@@ -321,9 +323,10 @@ class TensorExprKernel {
     kLLVMCodeGen,
     kCudaCodeGen,
   };
-  std::vector<Buffer> buffer_args_;
+  std::vector<CodeGen::BufferArg> buffer_args_;
   std::vector<Tensor> tensor_outputs_;
   std::unordered_map<int64_t, Tensor> tensors_;
+  std::unordered_map<int64_t, Var> scalars_;
   std::unique_ptr<CodeGen> codegen_;
   KernelArena kernel_arena_;
   BackendType backend_type_ = BackendType::kUninitialized;
@@ -341,9 +344,8 @@ class TensorExprKernel {
         LOG(FATAL) << "Unhandled constant datatype";
       }
     }
-
-    LOG(FATAL) << "Not a constant!";
-    return Expr();
+    CHECK(scalars_.count(v->unique())) << "Couldn't find scalar value";
+    return scalars_.at(v->unique());
   }
 
   template <typename T, typename T1>
@@ -390,6 +392,7 @@ class TensorExprKernel {
   }
 
   Expr demoteOutput(const Expr& e, torch::jit::Value* v) {
+    CHECK(v->type()->kind() == TypeKind::TensorType);
     auto tt = v->type()->cast<TensorType>()->scalarType();
     if (e.dtype() == kFloat32 && tt == at::ScalarType::Int) {
       return cast<int>(e);
@@ -804,7 +807,14 @@ class TensorExprKernel {
   }
 
   void PickAndCheckBackendType(const at::ArrayRef<IValue>& inputs) {
-    at::Device device = inputs[0].toTensor().device();
+    at::Device device = [&inputs]() {
+      for (auto const& input : inputs) {
+        if (input.isTensor()) {
+          return input.toTensor().device();
+        }
+      }
+      throw std::runtime_error("No tensor inputs");
+    }();
     BackendType backend_type = BackendType::kUninitialized;
     if (device.type() == at::kCUDA) {
       backend_type = kCudaCodeGen;
@@ -845,6 +855,41 @@ class TensorExprKernel {
     }
   }
 
+  void bindInput(torch::jit::Value* input) {
+    auto const& t = input->type();
+    switch (t->kind()) {
+      case TypeKind::TensorType: {
+        Buffer in_buffer = texprBuffer(input);
+        tensors_.emplace(
+            input->unique(),
+            Compute(
+                "input",
+                texprDims(input),
+                [this, in_buffer](const std::vector<Var>& axes) {
+                  return broadcast(in_buffer, axes);
+                }));
+        buffer_args_.push_back(std::move(in_buffer));
+        break;
+      }
+      case TypeKind::FloatType: {
+        Var v("v" + input->debugName(), kFloat32);
+        buffer_args_.push_back(v);
+        scalars_.emplace(input->unique(), v);
+        break;
+      }
+      case TypeKind::IntType: {
+        Var v("v" + input->debugName(), kInt32);
+        buffer_args_.push_back(v);
+        scalars_.emplace(input->unique(), v);
+        break;
+      }
+      default: {
+        LOG(FATAL) << "Unhandled input type: " << *t;
+        break;
+      }
+    }
+  }
+
  public:
   explicit TensorExprKernel(const Node* node) {
     KernelScope kernel_scope(kernel_arena_);
@@ -852,16 +897,7 @@ class TensorExprKernel {
 
     // Bind inputs to buffers.
     for (auto const& input : subgraph->inputs()) {
-      Buffer in_buffer = texprBuffer(input);
-      tensors_.emplace(
-          input->unique(),
-          Compute(
-              "input",
-              texprDims(input),
-              [this, in_buffer](const std::vector<Var>& axes) {
-                return broadcast(in_buffer, axes);
-              }));
-      buffer_args_.push_back(std::move(in_buffer));
+      bindInput(input);
     }
 
     // Bind nodes to tensor compute expressions.
@@ -893,7 +929,18 @@ class TensorExprKernel {
 
     std::vector<CodeGen::CallArg> run_args;
     for (int i = 0; i < buffer_args_.size(); i++) {
-      run_args.push_back(inputs[i].toTensor().data_ptr());
+      if (buffer_args_[i].isVar()) {
+        auto const& dtype = buffer_args_[i].dtype();
+        if (dtype == kInt32) {
+          run_args.push_back((int32_t)inputs[i].toInt());
+        } else if (dtype == kFloat32) {
+          run_args.push_back((float)inputs[i].toDouble());
+        } else {
+          LOG(FATAL) << "Unhandled dtype";
+        }
+      } else {
+        run_args.push_back(inputs[i].toTensor().data_ptr());
+      }
     }
     std::vector<at::Tensor> outputs;
     for (auto& o : tensor_outputs_) {
