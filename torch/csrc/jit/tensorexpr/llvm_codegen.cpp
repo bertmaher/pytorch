@@ -784,7 +784,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
       return;                                                   \
   } break;
   UNARY_INTRIN_CASE(kLog10, llvm::Intrinsic::log10)
-  UNARY_INTRIN_CASE(kLog, llvm::Intrinsic::log2)
+  UNARY_INTRIN_CASE(kLog, llvm::Intrinsic::log)
   UNARY_INTRIN_CASE(kLog2, llvm::Intrinsic::log2)
   UNARY_INTRIN_CASE(kExp, llvm::Intrinsic::exp)
   UNARY_INTRIN_CASE(kCos, llvm::Intrinsic::cos)
