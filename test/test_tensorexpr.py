@@ -95,7 +95,7 @@ def test_three_arg_cuda():
     np.testing.assert_allclose(npr, x.cpu().numpy())
     assert(cuda_cg_executed.elapsed_value() >= 1)
     assert(cuda_cg_created.elapsed_value() >= 1)
-    
+
 
 def test_broadcast_cuda():
     if not torch.cuda.is_available():
@@ -643,3 +643,24 @@ def test_cat():
     npr_y = npr + 2
     npr_c = np.concatenate((npr_x, npr_y), axis=1)
     np.testing.assert_allclose(npr_c, x.numpy())
+
+
+def test_scalar():
+    @torch.jit.script
+    def test_float(x, y, z, a: float, b: float):
+        return torch.add(torch.add(x, y, alpha=a), z, alpha=b)
+
+    @torch.jit.script
+    def test_int(x, y, z, a: int, b: int):
+        return torch.add(torch.add(x, y, alpha=a), z, alpha=b)
+
+    for test in (test_float, test_int):
+        llvm = LLVMCodeGenExecuted()
+        interp = SimpleIREvalExecuted()
+        x, y, z = [torch.rand(4) for i in range(3)]
+        a, b = 1, 2
+        test(x, y, z, a, b)
+        r = test(x, y, z, a, b)
+        xn, yn, zn = [t.numpy() for t in (x, y, z)]
+        np.testing.assert_allclose(r.numpy(), xn + yn * a + zn * b)
+        assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
