@@ -755,22 +755,53 @@ class TensorExprKernel {
   }
 
   void LowerToBackend(BackendType backend_type) {
-    torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs_);
+    std::vector<Tensor> tensor_outputs(tensor_outputs_);
+
+    if (backend_type == BackendType::kCudaCodeGen) {
+      for (int i = 0; i < tensor_outputs_.size(); i++) {
+        const Tensor& tensor = tensor_outputs_[i];
+        Expr total_count = tensor.dim(0);
+        for (int i = 1; i < tensor.ndim(); i++) {
+          total_count = total_count * tensor.dim(i);
+        }
+	// Flatten the index for GPU kernels.
+	// TODO: move this to fusing axis when it is ready.
+        Tensor new_out = Compute(
+            tensor.function().func_var().name_hint() + "_flat",
+            {total_count},
+            [tensor](const Var& index) -> Expr {
+              std::vector<Expr> dims;
+              Expr value = index;
+              for (int i = tensor.ndim() - 1; i >= 0; i--) {
+                Expr idx = value;
+                if (i > 0) {
+                  idx = Mod::make(value, tensor.dim(i));
+                }
+                dims.push_back(idx);
+                value = value / tensor.dim(i);
+              }
+              std::reverse(dims.begin(), dims.end());
+              return tensor.call(dims);
+            });
+        tensor_outputs[i] = new_out;
+      }
+    }
+
+    torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs);
 
     // Compute non-output tensors_ inline
     for (auto& p : tensors_) {
       p.second.ComputeInline();
     }
     if (backend_type == kCudaCodeGen) {
-      for (auto& output : tensor_outputs_) {
-        // TODO: implement the universal fused dispatching config.
-        if (output.args().size() < 2) {
-          throw std::runtime_error(
-              "Only tensors with more than 2D is supported in CudaCodeGen");
-        }
-        Var x = output.arg(0);
-        Var y = output.arg(1);
-        output.GPUExecConfig({x}, {y});
+      for (int i = 0; i < tensor_outputs_.size(); i++) {
+        tensor_outputs_[i].ComputeInline();
+        Tensor tensor = tensor_outputs[i];
+        Var index = tensor.arg(0);
+        Var outer;
+        Var inner;
+        tensor.SplitWithMask(index, 1024, true, &outer, &inner);
+        tensor.GPUExecConfig({outer}, {inner});
       }
     }
 
@@ -779,7 +810,7 @@ class TensorExprKernel {
     // Set up formal params (inputs, then outputs) for kernel.
     std::vector<CodeGen::BufferArg> params(
         buffer_args_.begin(), buffer_args_.end());
-    for (auto& o : tensor_outputs_) {
+    for (auto& o : tensor_outputs) {
       params.push_back(o);
     }
 

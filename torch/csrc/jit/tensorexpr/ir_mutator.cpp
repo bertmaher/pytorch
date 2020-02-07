@@ -29,12 +29,14 @@ static Expr mutate_binary_op(
       return Mul::make(lhs_new, rhs_new);
     case IRNodeType::kDiv:
       return Div::make(lhs_new, rhs_new);
+    case IRNodeType::kMod:
+      return Mod::make(lhs_new, rhs_new);
     case IRNodeType::kMax:
       return Max::make(lhs_new, rhs_new, option);
     case IRNodeType::kMin:
       return Min::make(lhs_new, rhs_new, option);
     default:
-      LOG(FATAL) << "unsupported expr_type" << static_cast<int>(expr_type);
+      LOG(FATAL) << "unsupported expr_type: " << static_cast<int>(expr_type);
       return Expr();
   }
 }
