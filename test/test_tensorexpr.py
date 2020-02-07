@@ -2,6 +2,41 @@ import numpy as np
 import torch
 
 
+class ExecutionCounter(object):
+    def __init__(self, name):
+        self.name = name
+        self.start_value = torch._C._jit_get_trigger_value(self.name)
+
+    def elapsed_value(self):
+        value = torch._C._jit_get_trigger_value(self.name)
+        return value - self.start_value
+
+
+class CudaCodeGenCreated(ExecutionCounter):
+    def __init__(self):
+        super(CudaCodeGenCreated, self).__init__("cuda_codegen_created")
+
+
+class CudaCodeGenExecuted(ExecutionCounter):
+    def __init__(self):
+        super(CudaCodeGenExecuted, self).__init__("cuda_codegen_executed")
+
+
+class LLVMCodeGenCreated(ExecutionCounter):
+    def __init__(self):
+        super(LLVMCodeGenCreated, self).__init__("llvm_codegen_created")
+
+
+class LLVMCodeGenExecuted(ExecutionCounter):
+    def __init__(self):
+        super(LLVMCodeGenExecuted, self).__init__("llvm_codegen_executed")
+
+
+class SimpleIREvalExecuted(ExecutionCounter):
+    def __init__(self):
+        super(SimpleIREvalExecuted, self).__init__("simple_ir_eval_executed")
+
+
 def test_easy():
     def easy(x, y):
         aaa = torch.add(x, y)
@@ -16,6 +51,8 @@ def test_easy():
 
 
 def test_three_arg():
+    llvm_executed = LLVMCodeGenExecuted()
+    simple_ir_eval_executed = SimpleIREvalExecuted()
     def easy(x, y, z):
         aaa = torch.add(x, y)
         bbb = torch.add(aaa, z)
@@ -31,9 +68,12 @@ def test_three_arg():
     x = traced(a, b, c)
     npr = a.numpy() + b.numpy() + c.numpy()
     np.testing.assert_allclose(npr, x.numpy())
+    assert(llvm_executed.elapsed_value() >= 1 or simple_ir_eval_executed.elapsed_value() >= 1)
 
 
 def test_three_arg_cuda():
+    cuda_cg_executed = CudaCodeGenExecuted()
+    cuda_cg_created = CudaCodeGenCreated()
     def test(x, y, z):
         aaa = torch.add(x, y)
         bbb = torch.add(aaa, z)
@@ -49,6 +89,11 @@ def test_three_arg_cuda():
     x = traced(a, b, c)
     npr = a.cpu().numpy() + b.cpu().numpy() + c.cpu().numpy()
     np.testing.assert_allclose(npr, x.cpu().numpy())
+    assert(cuda_cg_executed.elapsed_value() >= 1)
+    assert(cuda_cg_created.elapsed_value() >= 1)
+    
+
+test_three_arg_cuda()
 
 
 def test_all_combos():
