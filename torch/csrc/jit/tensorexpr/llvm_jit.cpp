@@ -19,6 +19,11 @@ class TORCH_API PytorchLLVMJITImpl {
 
  public:
   PytorchLLVMJITImpl() : LLJ(cantFail(LLJITBuilder().create())) {
+    auto ProcSymbolsGenerator =
+        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+                LLJ->getDataLayout().getGlobalPrefix()));
+    LLJ->getMainJITDylib().setGenerator(std::move(ProcSymbolsGenerator));
+
     // Handle platform-specific symbol mangling
     MangleAndInterner Mangle(LLJ->getExecutionSession(), LLJ->getDataLayout());
 
