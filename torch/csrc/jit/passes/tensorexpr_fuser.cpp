@@ -599,29 +599,29 @@ class TensorExprKernel {
       } break;
 
       case aten::sigmoid: {
-        return Compute("aten_sigmoid", texprDims(v), [](const Expr& a) {
-          return Expr(1.0f) / exp(a);
+        return ComputeOneOperand("aten_sigmoid", v, [](const Expr& a) {
+          return Expr(1.0f) / (Expr(1.0f) + exp(Expr(-0.0f) - cast<float>(a)));
         });
       } break;
 
       case aten::reciprocal: {
-        return Compute("aten_reciprocal", texprDims(v), [](const Expr& a) {
+        return ComputeOneOperand("aten_reciprocal", v, [](const Expr& a) {
           return Expr(1.0f) / cast<float>(a);
         });
       } break;
 
       case aten::neg: {
-        return Compute("aten_neg", texprDims(v), [](const Expr& a) {
-          return Expr(-0) - a;
+        return ComputeOneOperand("aten_neg", v, [](const Expr& a) {
+          return Expr(-0) - cast<float>(a);
         });
-      } break;      
-    
+      } break;
+
       case aten::relu: {
-        return Compute("aten_relu", texprDims(v), [](const Expr& a) {
-          Expr zero_cond = CompareSelect::make(a, Expr(0), kLT);
+        return ComputeOneOperand("aten_relu", v, [](const Expr& a) {
+          Expr zero_cond = CompareSelect::make(cast<float>(a), Expr(0.0f), kLT);
           return ifThenElse(zero_cond, Expr(0.0f), cast<float>(a));
         });
-      } break;      
+      } break;
 
       case aten::log: {
         return ComputeOneOperand(

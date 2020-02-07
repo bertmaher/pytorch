@@ -521,19 +521,19 @@ def test_unary_ops():
         test_neg,
         test_relu,
     }
-    rand_a = torch.rand(1024, dtype=float)
-    rand_b = torch.rand(1024, dtype=float)
-    zeros = torch.zeros(1024, dtype=float)
+    rand_a = torch.rand(1024, dtype=torch.float)
+    rand_b = torch.rand(1024, dtype=torch.float)
+    zeros = torch.zeros(1024, dtype=torch.float)
     cc = np.array(1024, dtype=float) 
     cc.fill(np.nan)
     nans = torch.from_numpy(cc)
 
     for torch_fn in fns:
         # random floats
-        traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
+        traced = torch.jit.trace(torch_fn, (torch.zeros(1024, dtype=torch.float), torch.zeros(1024, dtype=torch.float)))
         x = traced(rand_a, rand_b)
         y = torch_fn(rand_a, rand_b)
-        np.testing.assert_allclose(x.numpy(), y.numpy())
+        np.testing.assert_allclose(x.numpy(), y.numpy(), 1e-7, 1e-6)
         # nans
         traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
         x = traced(nans, rand_b)

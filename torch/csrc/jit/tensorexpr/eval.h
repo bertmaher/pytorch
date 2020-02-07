@@ -560,6 +560,8 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         return std::tanh(v);
       case kExp:
         return std::exp(v);
+      case kExpm1:
+        return std::expm1(v);
       case kFabs:
         return std::fabs(v);
       case kLog:
