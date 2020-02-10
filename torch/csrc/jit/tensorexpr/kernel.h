@@ -1,5 +1,6 @@
 #pragma once
 
+#include <torch/csrc/jit/fuser/tensor_desc.h>
 #include <torch/csrc/jit/ir.h>
 #include <torch/csrc/jit/tensorexpr/codegen.h>
 #include <torch/csrc/jit/tensorexpr/tensor.h>
@@ -7,6 +8,8 @@
 namespace torch {
 namespace jit {
 namespace tensorexpr {
+
+using TensorDesc = torch::jit::fuser::TensorDesc;
 
 template <typename T>
 inline std::vector<int64_t> bufferSizes(const T& t) {
@@ -42,7 +45,11 @@ inline std::vector<Expr> computeIndicesToBroadcast(
 
 class TensorExprKernel {
  public:
-  explicit TensorExprKernel(const Node* node);
+  explicit TensorExprKernel(
+      const Graph& graph,
+      const std::vector<
+          std::pair<const Value*, const c10::optional<TensorDesc>>>& inputs,
+      const std::vector<std::pair<const Value*, const TensorDesc>>& outputs);
 
   void run(Stack& stack);
 
@@ -54,7 +61,7 @@ class TensorExprKernel {
     kCudaCodeGen,
   };
 
-  Expr constant(torch::jit::Value* v);
+  Expr constant(const torch::jit::Value* v);
 
   template <typename T, typename T1>
   Expr broadcast(const T& t, const std::vector<T1>& axes) {
@@ -85,10 +92,12 @@ class TensorExprKernel {
 
   void promoteInputs(std::vector<Expr>& inputs);
 
-  Expr demoteOutput(const Expr& e, torch::jit::Value* v);
+  Expr demoteOutput(const Expr& e, const torch::jit::Value* v);
 
   template <typename T>
-  Expr tensorOrConstant(torch::jit::Value* v, const std::vector<T>& axes) {
+  Expr tensorOrConstant(
+      const torch::jit::Value* v,
+      const std::vector<T>& axes) {
     auto ti = tensors_.find(v->unique());
     if (ti != tensors_.end()) {
       return broadcast(ti->second, axes);
@@ -98,25 +107,25 @@ class TensorExprKernel {
 
   Tensor ComputeOneOperand(
       const std::string& name,
-      torch::jit::Value* v,
+      const torch::jit::Value* v,
       std::function<Expr(const Expr&)> inner_expr);
 
   Tensor ComputeTwoOperand(
       const std::string& name,
-      torch::jit::Value* v,
+      const torch::jit::Value* v,
       std::function<Expr(const Expr&, const Expr&)> inner_expr);
 
   Tensor ComputeTwoOperandWithAlpha(
       const std::string& name,
-      torch::jit::Value* v,
+      const torch::jit::Value* v,
       std::function<Expr(const Expr&, const Expr&)> inner_expr);
 
   Tensor ComputeThreeOperand(
       const std::string& name,
-      torch::jit::Value* v,
+      const torch::jit::Value* v,
       std::function<Expr(const Expr&, const Expr&, const Expr&)> inner_expr);
 
-  Tensor ComputeValue(torch::jit::Value* v);
+  Tensor ComputeValue(const torch::jit::Value* v);
 
   void LowerToBackend(BackendType backend_type);
 
@@ -124,7 +133,7 @@ class TensorExprKernel {
 
   void CodeGenRun(const std::vector<CodeGen::CallArg>& run_args);
 
-  void bindInput(torch::jit::Value* input);
+  void bindInput(const torch::jit::Value* input);
 
  private:
   std::vector<CodeGen::BufferArg> buffer_args_;

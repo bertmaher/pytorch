@@ -80,12 +80,12 @@ bool isSupported(Node* node) {
     case prim::ConstantChunk:
     case aten::cat:
     case prim::ListConstruct:
-#ifndef ENABLE_LLVM    
+#ifndef ENABLE_LLVM
     case aten::expm1:
     case aten::frac:
     case aten::neg:
-    case aten::lgamma:    
-    case aten::sigmoid:    
+    case aten::lgamma:
+    case aten::sigmoid:
     case aten::reciprocal:
     case aten::relu:
 #endif
@@ -252,7 +252,10 @@ void fuseTensorExprs(std::shared_ptr<Graph>& graph) {
 }
 
 Operation createTensorExprOp(const Node* node) {
-  auto kernel = std::make_shared<TensorExprKernel>(node);
+  std::vector<std::pair<const Value*, const c10::optional<TensorDesc>>> inputs;
+  std::vector<std::pair<const Value*, const TensorDesc>> outputs;
+  auto kernel = std::make_shared<TensorExprKernel>(
+      *node->g(attr::Subgraph), inputs, outputs);
   return [kernel](Stack& stack) {
     RECORD_FUNCTION("TensorExpr", std::vector<c10::IValue>());
     kernel->run(stack);

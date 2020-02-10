@@ -16,7 +16,7 @@ namespace detail {
 bool cpu_fuser_enabled = false;
 
 // TODO: DO-NOT-SUBMIT-TO-MASTER: change this to true when moving to master.
-bool gpu_fuser_enabled = false;
+bool gpu_fuser_enabled = true;
 
 } // namespace detail
 

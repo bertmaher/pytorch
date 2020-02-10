@@ -12,6 +12,7 @@
 #include <torch/csrc/jit/operator.h>
 #include <torch/csrc/jit/passes/canonicalize.h>
 #include <torch/csrc/jit/passes/shape_analysis.h>
+#include <torch/csrc/jit/tensorexpr/kernel.h>
 
 #include <atomic>
 #include <iostream>
@@ -198,6 +199,55 @@ int64_t registerFusion(const Node* fusion_group) {
   return key;
 }
 
+namespace {
+
+class TensorExprFusedKernel : public ::torch::jit::fuser::FusedKernel {
+ public:
+  TensorExprFusedKernel(
+      int16_t device,
+      std::string name,
+      std::string code,
+      std::vector<TensorDesc> input_desc,
+      std::vector<TensorDesc> output_desc,
+      std::vector<PartitionDesc> chunk_desc,
+      std::vector<PartitionDesc> concat_desc,
+      bool has_random)
+      : FusedKernel(
+            name,
+            code,
+            input_desc,
+            output_desc,
+            chunk_desc,
+            concat_desc,
+            has_random) {}
+
+  at::Backend backend() const override {
+    return at::Backend::CUDA;
+  }
+
+  void launch_raw(const uint32_t numel, std::vector<void*>& arguments) {}
+};
+
+static std::shared_ptr<FusedKernel> createTexprKernel(
+    int16_t device,
+    std::string name,
+    const Graph& graph,
+    const std::vector<std::pair<const Value*, const c10::optional<TensorDesc>>>&
+        inputs,
+    const std::vector<std::pair<const Value*, const TensorDesc>>& outputs,
+    const bool use_cuda,
+    std::vector<TensorDesc> input_desc,
+    std::vector<TensorDesc> output_desc,
+    std::vector<PartitionDesc> chunk_desc,
+    std::vector<PartitionDesc> concat_desc,
+    bool has_random) {
+  std::cerr << "Graph at point of createTexprKernel:\n" << graph << std::endl;
+  tensorexpr::TensorExprKernel kernel(graph, inputs, outputs);
+  return std::shared_ptr<FusedKernel>();
+}
+
+} // namespace
+
 std::shared_ptr<FusedKernel> compileKernel(
     const KernelSpec& spec,
     const ArgSpec& arg_spec,
@@ -281,6 +331,21 @@ std::shared_ptr<FusedKernel> compileKernel(
 
   const bool use_cuda = device.is_cuda();
   const std::string name = "kernel_" + c10::to_string(next_kernel_id++);
+
+  return createTexprKernel(
+      device.index(),
+      name,
+      *graph,
+      flat_inputs,
+      flat_outputs,
+      use_cuda,
+      input_desc,
+      output_desc,
+      chunk_desc,
+      concat_desc,
+      spec.hasRandom());
+
+#if 0
   std::string code =
       generateKernel(name, *graph, flat_inputs, flat_outputs, use_cuda);
   const FusedKernelConstructor& kernel_ctor =
@@ -294,6 +359,7 @@ std::shared_ptr<FusedKernel> compileKernel(
       chunk_desc,
       concat_desc,
       spec.hasRandom());
+#endif
 }
 
 } // namespace fuser
