@@ -35,9 +35,7 @@ class ScopedVarName {
 
   ~ScopedVarName() {
     auto iter = mapping_->find(var_);
-    if (iter == mapping_->end()) {
-      throw std::runtime_error("Invalid var entry: " + var_->name_hint());
-    }
+    TORCH_CHECK(iter != mapping_->end(), "Invalid var entry");
     mapping_->erase(var_);
   }
 

@@ -485,7 +485,7 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
     }
 
     default: {
-      LOG(FATAL) << "Unhandled node kind";
+      throw std::runtime_error("Unhandled node kind");
     }
   }
 }
