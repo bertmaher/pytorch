@@ -15,6 +15,7 @@
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/execution_counter.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
+#include "torch/csrc/jit/tensorexpr/ir_printer.h"
 #include "torch/csrc/jit/tensorexpr/types.h"
 
 using namespace torch::jit::tensorexpr;
@@ -817,6 +818,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn)); \
   } break;
       UNARY_MATH_CASE(kErf, "erff", floatTy_)
+      UNARY_MATH_CASE(kErfc, "erfcf", floatTy_)
       UNARY_MATH_CASE(kTan, "tanf", floatTy_)
       UNARY_MATH_CASE(kAcos, "acosf", floatTy_)
       UNARY_MATH_CASE(kAsin, "asinf", floatTy_)
@@ -838,7 +840,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
 #undef BINARY_MATH_CASE
 
     default: {
-      LOG(FATAL) << "Unimplemented: Intrinsics";
+      LOG(FATAL) << "Unimplemented: Intrinsics: " << Expr(v);
     } break;
   }
 
