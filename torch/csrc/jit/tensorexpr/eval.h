@@ -127,29 +127,29 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     call(args);
   }
 
-  TORCH_API void visit(const Add* v) override {
+  TORCH_API void postorder_visit(const Add* v) override {
     visit_binary_op(v);
   }
-  TORCH_API void visit(const Sub* v) override {
+  TORCH_API void postorder_visit(const Sub* v) override {
     visit_binary_op(v);
   }
-  TORCH_API void visit(const Mul* v) override {
+  TORCH_API void postorder_visit(const Mul* v) override {
     visit_binary_op(v);
   }
-  TORCH_API void visit(const Div* v) override {
+  TORCH_API void postorder_visit(const Div* v) override {
     visit_binary_op(v);
   }
-  TORCH_API void visit(const Mod* v) override {
+  TORCH_API void postorder_visit(const Mod* v) override {
     visit_binary_op(v);
   }
-  TORCH_API void visit(const Max* v) override {
+  TORCH_API void postorder_visit(const Max* v) override {
     visit_binary_op(v, v->propagate_nans());
   }
-  TORCH_API void visit(const Min* v) override {
+  TORCH_API void postorder_visit(const Min* v) override {
     visit_binary_op(v, v->propagate_nans());
   }
 
-  void visit(const CompareSelect* v) override {
+  void postorder_visit(const CompareSelect* v) override {
     visit_compare_select_op(v, v->compare_select_op());
   }
 
@@ -282,14 +282,14 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  TORCH_API void visit(const IntImm* v) override {
+  TORCH_API void postorder_visit(const IntImm* v) override {
     value_ = Value(v->value());
   }
-  TORCH_API void visit(const FloatImm* v) override {
+  TORCH_API void postorder_visit(const FloatImm* v) override {
     value_ = Value(v->value());
   }
 
-  TORCH_API void visit(const Let* v) override {
+  TORCH_API void postorder_visit(const Let* v) override {
     const Variable* var = v->var().AsNode<Variable>();
     CHECK(var != nullptr);
     v->value().accept(this);
@@ -305,14 +305,14 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     eval_context_.erase(var);
   }
 
-  TORCH_API void visit(const Variable* v) override {
+  TORCH_API void postorder_visit(const Variable* v) override {
     auto iter = eval_context_.find(v);
     CHECK(iter != eval_context_.end())
         << "var must be defined in the context before";
     value_ = iter->second;
   }
 
-  TORCH_API void visit(const Cast* v) override {
+  TORCH_API void postorder_visit(const Cast* v) override {
     const Expr& src_value = v->src_value();
     src_value.accept(this);
     Dtype dst_dtype = v->dtype();
@@ -337,7 +337,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  TORCH_API void visit(const For* v) override {
+  TORCH_API void postorder_visit(const For* v) override {
     const BaseExprNode* var_node = v->var().node();
     v->start().accept(this);
     int start = value_.as<int>();
@@ -353,7 +353,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     eval_context_.erase(var_node);
   }
 
-  TORCH_API void visit(const Ramp* v) override {
+  TORCH_API void postorder_visit(const Ramp* v) override {
     v->base().accept(this);
     int base = value().as<int>();
     v->stride().accept(this);
@@ -368,7 +368,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     value_ = Value(values);
   }
 
-  TORCH_API void visit(const Broadcast* v) override {
+  TORCH_API void postorder_visit(const Broadcast* v) override {
     v->value().accept(this);
     Value value = this->value();
     int lanes = v->lanes();
@@ -383,7 +383,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  TORCH_API void visit(const IfThenElse* v) override {
+  TORCH_API void postorder_visit(const IfThenElse* v) override {
     v->condition().accept(this);
     if (value_.as<int>()) {
       v->true_value().accept(this);
@@ -392,7 +392,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  TORCH_API void visit(const Load* v) override {
+  TORCH_API void postorder_visit(const Load* v) override {
     const Variable* base_node = v->base_handle().node();
     auto iter = buffer_mapping_.find(base_node);
     CHECK(iter != buffer_mapping_.end())
@@ -427,7 +427,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  TORCH_API void visit(const Store* v) override {
+  TORCH_API void postorder_visit(const Store* v) override {
     const Variable* base_node = v->base_handle().node();
     auto iter = buffer_mapping_.find(base_node);
     CHECK(iter != buffer_mapping_.end());
@@ -464,11 +464,11 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  TORCH_API void visit(const BaseCallNode* v) override {
+  TORCH_API void postorder_visit(const BaseCallNode* v) override {
     LOG(FATAL) << "unsupported visit to BaseCallNode";
   }
 
-  TORCH_API void visit(const Intrinsics* v) override {
+  TORCH_API void postorder_visit(const Intrinsics* v) override {
     std::vector<Value> values(v->nparams());
     for (int i = 0; i < v->nparams(); i++) {
       v->param(i).accept(this);
@@ -498,7 +498,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     value_ = Value(result);
   }
 
-  void visit(const Allocate* v) override {
+  void postorder_visit(const Allocate* v) override {
     const Variable* buffer_var = v->buffer_var().AsNode<Variable>();
     std::vector<Expr> dims = v->dims();
     int total_byte_size = v->dtype().byte_size();
@@ -518,7 +518,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     internal_buffers_.insert(std::make_pair(buffer_var, std::move(buffer)));
   }
 
-  void visit(const Free* v) override {
+  void postorder_visit(const Free* v) override {
     const Variable* buffer_var = v->buffer_var().AsNode<Variable>();
     int count = internal_buffers_.erase(buffer_var);
     if (count == 0) {
@@ -528,7 +528,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     }
   }
 
-  void visit(const Cond* v) override {
+  void postorder_visit(const Cond* v) override {
     v->condition().accept(this);
     if (value().as<int>()) {
       v->true_stmt().accept(this);

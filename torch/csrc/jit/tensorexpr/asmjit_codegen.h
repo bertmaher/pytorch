@@ -18,12 +18,12 @@ class TORCH_API ASMJITCodeGen : public IRVisitor {
 
  public:
   ASMJITCodeGen();
-  void visit(const Add* v) override;
-  void visit(const Sub* v) override;
-  void visit(const Mul* v) override;
-  void visit(const Div* v) override;
-  void visit(const IntImm* v) override;
-  void visit(const FloatImm* v) override;
+  void postorder_visit(const Add* v) override;
+  void postorder_visit(const Sub* v) override;
+  void postorder_visit(const Mul* v) override;
+  void postorder_visit(const Div* v) override;
+  void postorder_visit(const IntImm* v) override;
+  void postorder_visit(const FloatImm* v) override;
   int value();
 };
 

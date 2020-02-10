@@ -68,7 +68,7 @@ class ScheduleNode::DependencyTracker : public IRVisitor {
   }
 
  private:
-  void visit(const FunctionCall* v) override {
+  void postorder_visit(const FunctionCall* v) override {
     const TensorNode* producer = v->tensor().node();
     add_producer_consumer_pair(current_consumer_, producer);
   }

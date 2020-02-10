@@ -230,7 +230,7 @@ void LLVMCodeGen::call(const std::vector<CallArg>& args) {
 
 // TODO: The binary ops are copypasta.
 
-void LLVMCodeGen::visit(const Add* v) {
+void LLVMCodeGen::postorder_visit(const Add* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   bool lfp = lhs->getType()->isFloatingPointTy();
@@ -248,7 +248,7 @@ void LLVMCodeGen::visit(const Add* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Sub* v) {
+void LLVMCodeGen::postorder_visit(const Sub* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   bool lfp = lhs->getType()->isFloatingPointTy();
@@ -266,7 +266,7 @@ void LLVMCodeGen::visit(const Sub* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Mul* v) {
+void LLVMCodeGen::postorder_visit(const Mul* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   bool lfp = lhs->getType()->isFloatingPointTy();
@@ -284,7 +284,7 @@ void LLVMCodeGen::visit(const Mul* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Div* v) {
+void LLVMCodeGen::postorder_visit(const Div* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   bool lfp = lhs->getType()->isFloatingPointTy();
@@ -302,11 +302,11 @@ void LLVMCodeGen::visit(const Div* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Mod* v) {
+void LLVMCodeGen::postorder_visit(const Mod* v) {
   throw std::runtime_error("Mod unsupported in LLVM codegen yet");
 }
 
-void LLVMCodeGen::visit(const Max* v) {
+void LLVMCodeGen::postorder_visit(const Max* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   v->rhs().accept(this);
@@ -327,7 +327,7 @@ void LLVMCodeGen::visit(const Max* v) {
       irb_.CreateFCmp(llvm::FCmpInst::FCMP_OGT, lhs, rhs), lhs, rhs);
 }
 
-void LLVMCodeGen::visit(const Min* v) {
+void LLVMCodeGen::postorder_visit(const Min* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   v->rhs().accept(this);
@@ -348,7 +348,7 @@ void LLVMCodeGen::visit(const Min* v) {
       irb_.CreateFCmp(llvm::FCmpInst::FCMP_OLT, lhs, rhs), lhs, rhs);
 }
 
-void LLVMCodeGen::visit(const CompareSelect* v) {
+void LLVMCodeGen::postorder_visit(const CompareSelect* v) {
   v->lhs().accept(this);
   auto lhs = this->value_;
   v->rhs().accept(this);
@@ -410,15 +410,15 @@ void LLVMCodeGen::visit(const CompareSelect* v) {
   return;
 }
 
-void LLVMCodeGen::visit(const IntImm* v) {
+void LLVMCodeGen::postorder_visit(const IntImm* v) {
   value_ = llvm::ConstantInt::getSigned(int32Ty_, v->value());
 }
 
-void LLVMCodeGen::visit(const FloatImm* v) {
+void LLVMCodeGen::postorder_visit(const FloatImm* v) {
   value_ = llvm::ConstantFP::get(floatTy_, v->value());
 }
 
-void LLVMCodeGen::visit(const Cast* v) {
+void LLVMCodeGen::postorder_visit(const Cast* v) {
   v->src_value().accept(this);
 
   llvm::Type* dstType = nullptr;
@@ -446,7 +446,7 @@ void LLVMCodeGen::visit(const Cast* v) {
   LOG(FATAL) << "Unsupported cast!";
 }
 
-void LLVMCodeGen::visit(const Variable* v) {
+void LLVMCodeGen::postorder_visit(const Variable* v) {
   if (varToArg_.count(v)) {
     auto idx = varToArg_.at(v);
     auto arg = fn_->arg_begin() + idx;
@@ -456,7 +456,7 @@ void LLVMCodeGen::visit(const Variable* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Let* v) {
+void LLVMCodeGen::postorder_visit(const Let* v) {
   const Variable* var = v->var().AsNode<Variable>();
   CHECK(var != nullptr);
   v->value().accept(this);
@@ -474,7 +474,7 @@ void LLVMCodeGen::visit(const Let* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Ramp* v) {
+void LLVMCodeGen::postorder_visit(const Ramp* v) {
   v->base().accept(this);
   auto base = this->value_;
   v->stride().accept(this);
@@ -530,7 +530,7 @@ llvm::Value* LLVMCodeGen::emitMaskedLoad(
   return phi;
 }
 
-void LLVMCodeGen::visit(const Load* v) {
+void LLVMCodeGen::postorder_visit(const Load* v) {
   v->base_handle().accept(this);
   auto base = this->value_;
   v->index().accept(this);
@@ -596,7 +596,7 @@ void LLVMCodeGen::visit(const Load* v) {
   value_ = load;
 }
 
-void LLVMCodeGen::visit(const For* v) {
+void LLVMCodeGen::postorder_visit(const For* v) {
   // Create "start" value.
   v->start().accept(this);
   auto start = this->value_;
@@ -630,7 +630,7 @@ void LLVMCodeGen::visit(const For* v) {
   value_ = llvm::ConstantInt::get(int32Ty_, 0);
 }
 
-void LLVMCodeGen::visit(const Block* v) {
+void LLVMCodeGen::postorder_visit(const Block* v) {
   for (int i = 0; i < v->nstmts(); i++) {
     v->stmt(i).accept(this);
   }
@@ -668,7 +668,7 @@ void LLVMCodeGen::emitMaskedStore(
   irb_.SetInsertPoint(tailblock);
 }
 
-void LLVMCodeGen::visit(const Store* v) {
+void LLVMCodeGen::postorder_visit(const Store* v) {
   v->base_handle().accept(this);
   auto base = this->value_;
   v->index().accept(this);
@@ -727,13 +727,13 @@ void LLVMCodeGen::visit(const Store* v) {
   }
 }
 
-void LLVMCodeGen::visit(const Broadcast* v) {
+void LLVMCodeGen::postorder_visit(const Broadcast* v) {
   v->value().accept(this);
   int lanes = v->lanes();
   value_ = irb_.CreateVectorSplat(lanes, value_);
 }
 
-void LLVMCodeGen::visit(const IfThenElse* v) {
+void LLVMCodeGen::postorder_visit(const IfThenElse* v) {
   v->condition().accept(this);
   llvm::Value* condition = value_;
   llvm::Value* c =
@@ -761,7 +761,7 @@ void LLVMCodeGen::visit(const IfThenElse* v) {
   value_ = phi;
 }
 
-void LLVMCodeGen::visit(const BaseCallNode* v) {
+void LLVMCodeGen::postorder_visit(const BaseCallNode* v) {
   LOG(FATAL) << "Unimplemented: BaseCall";
 }
 
@@ -773,7 +773,7 @@ static void applyMathFunctionAttributes(llvm::Function* f) {
   f->addFnAttr(llvm::Attribute::WillReturn);
 }
 
-void LLVMCodeGen::visit(const Intrinsics* v) {
+void LLVMCodeGen::postorder_visit(const Intrinsics* v) {
   llvm::FunctionType* call_ty = nullptr;
   llvm::Value* call_fn = nullptr;
 
@@ -867,19 +867,19 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
   }
 }
 
-void LLVMCodeGen::visit(const FunctionCall* v) {
+void LLVMCodeGen::postorder_visit(const FunctionCall* v) {
   LOG(FATAL) << "Unimplemented: FunctionCall";
 }
 
-void LLVMCodeGen::visit(const Allocate* v) {
+void LLVMCodeGen::postorder_visit(const Allocate* v) {
   LOG(FATAL) << "Unimplemented: Allocate";
 }
 
-void LLVMCodeGen::visit(const Free* v) {
+void LLVMCodeGen::postorder_visit(const Free* v) {
   LOG(FATAL) << "Unimplemented: Free";
 }
 
-void LLVMCodeGen::visit(const Cond* v) {
+void LLVMCodeGen::postorder_visit(const Cond* v) {
   LOG(FATAL) << "Unimplemented: Cond";
 }
 

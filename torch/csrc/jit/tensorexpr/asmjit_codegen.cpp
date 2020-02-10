@@ -25,7 +25,7 @@ ASMJITCodeGen::ASMJITCodeGen() {
   cc_->addFunc(asmjit::FuncSignatureT<int>());
 }
 
-void ASMJITCodeGen::visit(const Add* v) {
+void ASMJITCodeGen::postorder_visit(const Add* v) {
   v->lhs().accept(this);
   auto lhs = this->value_.as<GPD>();
   v->rhs().accept(this);
@@ -35,7 +35,7 @@ void ASMJITCodeGen::visit(const Add* v) {
   cc_->lea(value_.as<GPD>(), asmjit::x86::ptr(lhs, rhs));
 }
 
-void ASMJITCodeGen::visit(const Sub* v) {
+void ASMJITCodeGen::postorder_visit(const Sub* v) {
   v->lhs().accept(this);
   auto lhs = this->value_.as<GPD>();
   v->rhs().accept(this);
@@ -46,7 +46,7 @@ void ASMJITCodeGen::visit(const Sub* v) {
   cc_->sub(value_.as<GPD>(), rhs);
 }
 
-void ASMJITCodeGen::visit(const Mul* v) {
+void ASMJITCodeGen::postorder_visit(const Mul* v) {
   v->lhs().accept(this);
   auto lhs = this->value_.as<GPD>();
   v->rhs().accept(this);
@@ -57,7 +57,7 @@ void ASMJITCodeGen::visit(const Mul* v) {
   cc_->imul(value_.as<GPD>(), rhs);
 }
 
-void ASMJITCodeGen::visit(const Div* v) {
+void ASMJITCodeGen::postorder_visit(const Div* v) {
   v->lhs().accept(this);
   auto lhs = this->value_.as<GPD>();
   v->rhs().accept(this);
@@ -70,7 +70,7 @@ void ASMJITCodeGen::visit(const Div* v) {
   cc_->idiv(asmjit::x86::edx, value_.as<GPD>(), rhs);
 }
 
-void ASMJITCodeGen::visit(const IntImm* v) {
+void ASMJITCodeGen::postorder_visit(const IntImm* v) {
   asmjit::x86::Mem const_mem =
       cc_->newInt32Const(asmjit::ConstPool::kScopeGlobal, v->value());
 
@@ -78,7 +78,7 @@ void ASMJITCodeGen::visit(const IntImm* v) {
   cc_->mov(value_.as<GPD>(), const_mem);
 }
 
-void ASMJITCodeGen::visit(const FloatImm* v) {
+void ASMJITCodeGen::postorder_visit(const FloatImm* v) {
   assert(false && "Integer only now sorry");
 }
 

@@ -21,23 +21,23 @@ void IRPrinter::print(Stmt stmt) {
   v->rhs().accept(this);             \
   os << ")";
 
-void IRPrinter::visit(const Add* v) {
+void IRPrinter::postorder_visit(const Add* v) {
   BINARY_ACCEPT(os(), v, "+");
 }
 
-void IRPrinter::visit(const Sub* v) {
+void IRPrinter::postorder_visit(const Sub* v) {
   BINARY_ACCEPT(os(), v, "-");
 }
 
-void IRPrinter::visit(const Mul* v) {
+void IRPrinter::postorder_visit(const Mul* v) {
   BINARY_ACCEPT(os(), v, "*");
 }
 
-void IRPrinter::visit(const Div* v) {
+void IRPrinter::postorder_visit(const Div* v) {
   BINARY_ACCEPT(os(), v, "/");
 }
 
-void IRPrinter::visit(const Mod* v) {
+void IRPrinter::postorder_visit(const Mod* v) {
   if (v->dtype() == kInt32) {
     BINARY_ACCEPT(os(), v, "%");
   } else if (v->dtype() == kFloat32) {
@@ -47,7 +47,7 @@ void IRPrinter::visit(const Mod* v) {
   }
 }
 
-void IRPrinter::visit(const Max* v) {
+void IRPrinter::postorder_visit(const Max* v) {
   os() << "Max(";
   v->lhs().accept(this);
   os() << ", ";
@@ -55,7 +55,7 @@ void IRPrinter::visit(const Max* v) {
   os() << ", " << (unsigned int)v->propagate_nans() << ")";
 }
 
-void IRPrinter::visit(const Min* v) {
+void IRPrinter::postorder_visit(const Min* v) {
   os() << "Min(";
   v->lhs().accept(this);
   os() << ", ";
@@ -63,7 +63,7 @@ void IRPrinter::visit(const Min* v) {
   os() << ", " << (unsigned int)v->propagate_nans() << ")";
 }
 
-void IRPrinter::visit(const CompareSelect* v) {
+void IRPrinter::postorder_visit(const CompareSelect* v) {
   CompareSelectOperation cmp_op = v->compare_select_op();
   os() << "(";
   v->lhs().accept(this);
@@ -93,26 +93,26 @@ void IRPrinter::visit(const CompareSelect* v) {
   os() << ")";
 }
 
-void IRPrinter::visit(const IntImm* v) {
+void IRPrinter::postorder_visit(const IntImm* v) {
   os() << v->value();
 }
 
-void IRPrinter::visit(const FloatImm* v) {
+void IRPrinter::postorder_visit(const FloatImm* v) {
   os() << v->value();
 }
 
-void IRPrinter::visit(const Cast* v) {
+void IRPrinter::postorder_visit(const Cast* v) {
   auto dtype = v->dtype();
   os() << dtype << "(";
   v->src_value().accept(this);
   os() << ")";
 }
 
-void IRPrinter::visit(const Variable* v) {
+void IRPrinter::postorder_visit(const Variable* v) {
   os() << name_manager_.get_unique_name(v);
 }
 
-void IRPrinter::visit(const Let* v) {
+void IRPrinter::postorder_visit(const Let* v) {
   os() << "(let ";
   v->var().accept(this);
   os() << " = ";
@@ -122,17 +122,17 @@ void IRPrinter::visit(const Let* v) {
   os() << ")";
 }
 
-void IRPrinter::visit(const Ramp* v) {
+void IRPrinter::postorder_visit(const Ramp* v) {
   os() << "Ramp(" << v->base() << ", " << v->stride() << ", " << v->lanes()
        << ")";
 }
 
-void IRPrinter::visit(const Load* v) {
+void IRPrinter::postorder_visit(const Load* v) {
   // TODO: support the mask case
   os() << v->base_handle() << "[" << v->index() << "]";
 }
 
-void IRPrinter::visit(const For* v) {
+void IRPrinter::postorder_visit(const For* v) {
   const Var& var = v->var();
   os() << "for (" << var.dtype().ToCppString() << " " << var << " = "
        << v->start() << "; " << var << " < " << v->stop() << "; " << var
@@ -146,27 +146,27 @@ void IRPrinter::visit(const For* v) {
   os() << "}";
 }
 
-void IRPrinter::visit(const Block* v) {
+void IRPrinter::postorder_visit(const Block* v) {
   for (int i = 0; i < v->nstmts(); ++i) {
     os() << v->stmt(i) << std::endl;
   }
 }
 
-void IRPrinter::visit(const Store* v) {
+void IRPrinter::postorder_visit(const Store* v) {
   // TODO: handle the mask
   os() << v->base_handle() << "[" << v->index() << "] = " << v->value() << ";";
 }
 
-void IRPrinter::visit(const Broadcast* v) {
+void IRPrinter::postorder_visit(const Broadcast* v) {
   os() << "Broadcast(" << v->value() << ", " << v->lanes() << ")";
 }
 
-void IRPrinter::visit(const IfThenElse* v) {
+void IRPrinter::postorder_visit(const IfThenElse* v) {
   os() << "IfThenElse(" << v->condition() << ", " << v->true_value() << ", "
        << v->false_value() << ")";
 }
 
-void IRPrinter::visit(const BaseCallNode* v) {
+void IRPrinter::postorder_visit(const BaseCallNode* v) {
   os() << v->func_name() << "(";
   for (int i = 0; i < v->nparams(); i++) {
     if (i > 0) {
@@ -177,7 +177,7 @@ void IRPrinter::visit(const BaseCallNode* v) {
   os() << ")";
 }
 
-void IRPrinter::visit(const Allocate* v) {
+void IRPrinter::postorder_visit(const Allocate* v) {
   os() << "Allocate(" << v->buffer_var() << ", " << v->dtype();
   os() << ", {";
   const std::vector<Expr>& dims = v->dims();
@@ -190,11 +190,11 @@ void IRPrinter::visit(const Allocate* v) {
   os() << "});";
 }
 
-void IRPrinter::visit(const Free* v) {
+void IRPrinter::postorder_visit(const Free* v) {
   os() << "Free(" << v->buffer_var() << ");";
 }
 
-void IRPrinter::visit(const Cond* v) {
+void IRPrinter::postorder_visit(const Cond* v) {
   const Expr& cond = v->condition();
   const Stmt& true_stmt = v->true_stmt();
   const Stmt& false_stmt = v->false_stmt();

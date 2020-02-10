@@ -8,113 +8,113 @@ namespace jit {
 namespace tensorexpr {
 
 template <typename Op>
-static void visit_binary_op(const BinaryOpNode<Op>* v, IRVisitor* visitor) {
+static void traverse_binary_op(const BinaryOpNode<Op>* v, IRVisitor* visitor) {
   v->lhs().accept(visitor);
   v->rhs().accept(visitor);
 }
 
-void IRVisitor::visit(const Add* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Add* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const Sub* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Sub* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const Mul* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Mul* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const Div* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Div* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const Mod* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Mod* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const Max* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Max* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const Min* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const Min* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const CompareSelect* v) {
-  visit_binary_op(v, this);
+void IRVisitor::traverse(const CompareSelect* v) {
+  traverse_binary_op(v, this);
 }
 
-void IRVisitor::visit(const IntImm* v) {}
-void IRVisitor::visit(const FloatImm* v) {}
-void IRVisitor::visit(const Cast* v) {
+void IRVisitor::traverse(const IntImm* v) {}
+void IRVisitor::traverse(const FloatImm* v) {}
+void IRVisitor::traverse(const Cast* v) {
   v->src_value().accept(this);
 }
-void IRVisitor::visit(const Variable* v) {}
-void IRVisitor::visit(const Let* v) {
+void IRVisitor::traverse(const Variable* v) {}
+void IRVisitor::traverse(const Let* v) {
   v->var().accept(this);
   v->value().accept(this);
   v->body().accept(this);
 }
 
-void IRVisitor::visit(const Ramp* v) {
+void IRVisitor::traverse(const Ramp* v) {
   v->base().accept(this);
   v->stride().accept(this);
 }
 
-void IRVisitor::visit(const Load* v) {
+void IRVisitor::traverse(const Load* v) {
   v->base_handle().accept(this);
   v->index().accept(this);
   v->mask().accept(this);
 }
 
-void IRVisitor::visit(const Store* v) {
+void IRVisitor::traverse(const Store* v) {
   v->base_handle().accept(this);
   v->index().accept(this);
   v->value().accept(this);
   v->mask().accept(this);
 }
 
-void IRVisitor::visit(const Block* v) {
+void IRVisitor::traverse(const Block* v) {
   for (int i = 0; i < v->nstmts(); i++) {
     v->stmt(i).accept(this);
   }
 }
 
-void IRVisitor::visit(const For* v) {
+void IRVisitor::traverse(const For* v) {
   v->var().accept(this);
   v->start().accept(this);
   v->stop().accept(this);
   v->body().accept(this);
 }
 
-void IRVisitor::visit(const Broadcast* v) {
+void IRVisitor::traverse(const Broadcast* v) {
   v->value().accept(this);
 }
 
-void IRVisitor::visit(const IfThenElse* v) {
+void IRVisitor::traverse(const IfThenElse* v) {
   v->condition().accept(this);
   v->true_value().accept(this);
   v->false_value().accept(this);
 }
 
-void IRVisitor::visit(const BaseCallNode* v) {
+void IRVisitor::traverse(const BaseCallNode* v) {
   for (int i = 0; i < v->nparams(); i++) {
     v->param(i).accept(this);
   }
 }
 
-void IRVisitor::visit(const Intrinsics* v) {
+void IRVisitor::traverse(const Intrinsics* v) {
   const BaseCallNode* base = v;
-  this->visit(base);
+  this->traverse(base);
 }
 
-void IRVisitor::visit(const FunctionCall* v) {
+void IRVisitor::traverse(const FunctionCall* v) {
   const BaseCallNode* base = v;
-  this->visit(base);
+  this->traverse(base);
 }
 
-void IRVisitor::visit(const Allocate* v) {
+void IRVisitor::traverse(const Allocate* v) {
   Var buffer_var = v->buffer_var();
   buffer_var.accept(this);
   std::vector<Expr> dims = v->dims();
@@ -123,12 +123,12 @@ void IRVisitor::visit(const Allocate* v) {
   }
 }
 
-void IRVisitor::visit(const Free* v) {
+void IRVisitor::traverse(const Free* v) {
   Var buffer_var = v->buffer_var();
   buffer_var.accept(this);
 }
 
-void IRVisitor::visit(const Cond* v) {
+void IRVisitor::traverse(const Cond* v) {
   Expr condition = v->condition();
   Stmt true_stmt = v->true_stmt();
   Stmt false_stmt = v->false_stmt();
