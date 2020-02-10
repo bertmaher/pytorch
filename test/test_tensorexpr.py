@@ -84,10 +84,6 @@ def test_four_arg():
     rand_b = torch.rand(1024, dtype=torch.float)
     rand_c = torch.rand(1024, dtype=torch.float)
     rand_d = torch.rand(1024, dtype=torch.float)
-    zeros = torch.zeros(1024, dtype=torch.float)
-    cc = np.array(1024, dtype=float)
-    cc.fill(np.nan)
-    nans = torch.from_numpy(cc)
 
     traced = torch.jit.trace(
         run_addcmul,
