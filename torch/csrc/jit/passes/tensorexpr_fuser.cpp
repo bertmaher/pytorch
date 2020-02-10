@@ -88,6 +88,7 @@ bool isSupported(Node* node) {
     case aten::sigmoid:    
     case aten::reciprocal:
     case aten::relu:
+    case aten::addcmul:
 #endif
       return true;
     default:

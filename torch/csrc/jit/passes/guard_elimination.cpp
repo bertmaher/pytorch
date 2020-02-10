@@ -268,6 +268,7 @@ private:
     case aten::frac:
     case aten::lgamma:
     case aten::reciprocal:
+    case aten::addcmul:
       return checkInputs(n, no_exceptions);
     case aten::cat:
       // check that the dimension argument is constant

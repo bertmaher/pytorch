@@ -175,6 +175,26 @@ Tensor TensorExprKernel::ComputeThreeOperand(
       });
 }
 
+Tensor TensorExprKernel::ComputeFourOperand(
+    const std::string& name,
+    torch::jit::Value* v,
+    std::function<Expr(const Expr&, const Expr&, const Expr&, const Expr&)> inner_expr) {
+  return Compute(
+      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+        Node* n = v->node();
+        std::vector<Expr> inputs = {
+            tensorOrConstant(n->inputs()[0], axes),
+            tensorOrConstant(n->inputs()[1], axes),
+            tensorOrConstant(n->inputs()[2], axes),
+            tensorOrConstant(n->inputs()[3], axes),
+        };
+
+        promoteInputs(inputs);
+        Expr compute = inner_expr(inputs[0], inputs[1], inputs[2], inputs[3]);
+        return demoteOutput(compute, n->output());
+      });
+}
+
 Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
   switch (v->node()->kind()) {
     case aten::add: {
@@ -202,6 +222,16 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
       return ComputeTwoOperand(
           "aten_div", v, [](const Expr& lhs, const Expr& rhs) {
             return lhs / rhs;
+          });
+    } break;
+
+    case aten::addcmul: {
+      return ComputeFourOperand(
+          "aten_addcmul",
+          v,
+          [](const Expr& a0, const Expr& a1, const Expr& a2, const Expr& a3) {
+            return cast<float>(a0) +
+                cast<float>(a3) * cast<float>(a1) * cast<float>(a2);
           });
     } break;
 

@@ -116,6 +116,12 @@ class TensorExprKernel {
       torch::jit::Value* v,
       std::function<Expr(const Expr&, const Expr&, const Expr&)> inner_expr);
 
+  Tensor ComputeFourOperand(
+      const std::string& name,
+      torch::jit::Value* v,
+      std::function<Expr(const Expr&, const Expr&, const Expr&, const Expr&)>
+          inner_expr);
+
   Tensor ComputeValue(torch::jit::Value* v);
 
   void LowerToBackend(BackendType backend_type);

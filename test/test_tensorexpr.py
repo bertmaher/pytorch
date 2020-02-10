@@ -75,6 +75,35 @@ def test_three_arg():
     )
 
 
+def test_four_arg():
+    def run_addcmul(x, y, z, w):
+        c = torch.addcmul(torch.add(x, y), z, w)
+        return c
+
+    rand_a = torch.rand(1024, dtype=torch.float)
+    rand_b = torch.rand(1024, dtype=torch.float)
+    rand_c = torch.rand(1024, dtype=torch.float)
+    rand_d = torch.rand(1024, dtype=torch.float)
+    zeros = torch.zeros(1024, dtype=torch.float)
+    cc = np.array(1024, dtype=float)
+    cc.fill(np.nan)
+    nans = torch.from_numpy(cc)
+
+    traced = torch.jit.trace(
+        run_addcmul,
+        (
+            torch.zeros(1024, dtype=torch.float),
+            torch.zeros(1024, dtype=torch.float),
+            torch.zeros(1024, dtype=torch.float),
+            torch.zeros(1024, dtype=torch.float),
+        ),
+    )
+
+    x = traced(rand_a, rand_b, rand_c, rand_d)
+    y = run_addcmul(rand_a, rand_b, rand_c, rand_d)
+    np.testing.assert_allclose(x.numpy(), y.numpy())
+
+
 def test_three_arg_cuda():
     if not torch.cuda.is_available():
         return
@@ -762,6 +791,7 @@ def test_scalar():
         xn, yn, zn = [t.numpy() for t in (x, y, z)]
         np.testing.assert_allclose(r.numpy(), xn + yn * a + zn * b)
         assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
+
 
 # FIXME: Blocked on profiling executor changes
 # def test_loop():
