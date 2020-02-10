@@ -99,7 +99,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     for (size_t i = 0; i < args.size(); i++) {
       bind(buffer_args()[i], args[i]);
     }
-    ir_node()->accept(this);
+    stmt().accept(this);
     eval_context_.clear();
     buffer_mapping_.clear();
     internal_buffers_.clear();
@@ -646,6 +646,67 @@ class VarSubMutator : public IRMutator {
 
  private:
   std::unordered_map<const Variable*, Expr> var_mapping_;
+};
+
+template <class CodeGenType>
+class ExprEval {
+ public:
+  using BufferArg = CodeGen::BufferArg;
+  using CallArg = CodeGen::CallArg;
+
+  template <typename... Ts>
+  ExprEval(const Expr& expr, Ts... ts) : ExprEval(expr, {BufferArg(ts)...}) {}
+
+  ExprEval(const Expr& expr, const std::vector<BufferArg>& buffer_args)
+      : dtype_(expr.dtype()) {
+    std::vector<BufferArg> buffer_args_extended = buffer_args;
+    Buffer ret_buf("ret_val", dtype_, {1});
+    Stmt store_stmt = Store::make(ret_buf.data(), 0, expr);
+    buffer_args_extended.push_back(ret_buf);
+    codegen_.reset(new CodeGenType(store_stmt, buffer_args_extended));
+  }
+
+  template <typename... Ts>
+  void operator()(Ts... ts) {
+    call(ts...);
+  }
+
+  void operator()(const std::vector<CallArg>& call_args) {
+    call(call_args);
+  }
+
+  template <typename... Ts>
+  void call(Ts... ts) {
+    call({CallArg(ts)...});
+  }
+
+  void call(const std::vector<CallArg>& call_args) {
+    std::vector<CallArg> call_args_extended = call_args;
+    if (dtype_ == kFloat32) {
+      std::vector<float> ret_val_arg(1);
+      call_args_extended.push_back(CallArg(ret_val_arg));
+      codegen_->call(call_args_extended);
+      ret_value_ = Value(ret_val_arg[0]);
+    } else if (dtype_ == kInt32) {
+      std::vector<int> ret_val_arg(1);
+      call_args_extended.push_back(CallArg(ret_val_arg));
+      codegen_->call(call_args_extended);
+      ret_value_ = Value(ret_val_arg[0]);
+    } else {
+      throw std::runtime_error("Invalid dtype");
+    }
+  }
+
+  template <typename T, typename... Ts>
+  T value(Ts... ts) {
+    call(std::forward<Ts>(ts)...);
+    return ret_value_.as<T>();
+  }
+
+ private:
+  Dtype dtype_;
+  std::unique_ptr<CodeGenType> codegen_;
+  Value ret_value_;
 };
 
 inline Expr Substitute(Expr* expr, const VarMapping& var_mapping) {

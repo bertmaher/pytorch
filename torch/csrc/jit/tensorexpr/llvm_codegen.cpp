@@ -50,29 +50,14 @@ static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
 #endif
 }
 
-LLVMCodeGen::LLVMCodeGen(
-    const Stmt& stmt,
-    const std::vector<BufferArg>& args,
-    Dtype dtype)
-    : LLVMCodeGen(stmt.node(), args, dtype) {}
-
 LLVMCodeGen::LLVMCodeGen(const Stmt& stmt)
     : LLVMCodeGen(stmt, std::vector<BufferArg>()) {}
 
 LLVMCodeGen::LLVMCodeGen(
-    const Expr& expr,
+    const Stmt& stmt,
     const std::vector<BufferArg>& args,
     Dtype dtype)
-    : LLVMCodeGen(expr.node(), args, dtype) {}
-
-LLVMCodeGen::LLVMCodeGen(const Expr& expr)
-    : LLVMCodeGen(expr, std::vector<BufferArg>()) {}
-
-LLVMCodeGen::LLVMCodeGen(
-    const IRNode* node,
-    const std::vector<BufferArg>& args,
-    Dtype dtype)
-    : CodeGen(node, args),
+    : CodeGen(stmt, args),
       context_(std::make_unique<llvm::LLVMContext>()),
       irb_(getContext()),
       int32Ty_(llvm::Type::getInt32Ty(getContext())),
@@ -110,7 +95,7 @@ LLVMCodeGen::LLVMCodeGen(
   }
 
   emitWrapper(params);
-  emitKernel(node, params);
+  emitKernel(stmt, params);
 
   cantFail(jit_->addModule(
       llvm::orc::ThreadSafeModule(std::move(module_), context_)));
@@ -166,14 +151,14 @@ void LLVMCodeGen::emitWrapper(const std::vector<llvm::Type*>& params) {
 }
 
 void LLVMCodeGen::emitKernel(
-    const IRNode* node,
+    const Stmt& stmt,
     const std::vector<llvm::Type*>& params) {
   // Set insert point to the real function.
   bb_ = llvm::BasicBlock::Create(getContext(), "entry", fn_);
   irb_.SetInsertPoint(bb_);
 
   // Compile the kernel.
-  node->accept(this);
+  stmt.accept(this);
   irb_.CreateRet(value_);
 
 #if DEBUG_PRINT
