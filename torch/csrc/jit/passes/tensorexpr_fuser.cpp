@@ -59,6 +59,7 @@ bool isSupported(Node* node) {
     case aten::log2:
     case aten::exp:
     case aten::erf:
+    case aten::erfc:
     case aten::cos:
     case aten::sin:
     case aten::tan:
@@ -79,6 +80,15 @@ bool isSupported(Node* node) {
     case prim::ConstantChunk:
     case aten::cat:
     case prim::ListConstruct:
+#ifndef ENABLE_LLVM    
+    case aten::expm1:
+    case aten::frac:
+    case aten::neg:
+    case aten::lgamma:    
+    case aten::sigmoid:    
+    case aten::reciprocal:
+    case aten::relu:
+#endif
       return true;
     default:
       return false;

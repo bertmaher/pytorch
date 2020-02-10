@@ -71,17 +71,22 @@ int Intrinsics::OpArgCount(IntrinsicsOp op_type) {
     case kCosh:
     case kTanh:
     case kExp:
+    case kExpm1:
     case kFabs:
     case kLog:
     case kLog2:
     case kLog10:
+    case kLog1p:
     case kErf:
+    case kErfc:
     case kSqrt:
     case kRsqrt:
     case kCeil:
     case kFloor:
     case kRound:
     case kTrunc:
+    case kFrac:
+    case kLgamma:      
       return 1;
     case kRand:
       return 0;

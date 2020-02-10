@@ -267,6 +267,31 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
           });
     } break;
 
+    case aten::sigmoid: {
+      return ComputeOneOperand("aten_sigmoid", v, [](const Expr& a) {
+        return Expr(1.0f) / (Expr(1.0f) + exp(Expr(-0.0f) - cast<float>(a)));
+      });
+    } break;
+
+    case aten::reciprocal: {
+      return ComputeOneOperand("aten_reciprocal", v, [](const Expr& a) {
+        return Expr(1.0f) / cast<float>(a);
+      });
+    } break;
+
+    case aten::neg: {
+      return ComputeOneOperand("aten_neg", v, [](const Expr& a) {
+        return Expr(-0) - cast<float>(a);
+      });
+    } break;
+
+    case aten::relu: {
+      return ComputeOneOperand("aten_relu", v, [](const Expr& a) {
+        Expr zero_cond = CompareSelect::make(cast<float>(a), Expr(0.0f), kLT);
+        return ifThenElse(zero_cond, Expr(0.0f), cast<float>(a));
+      });
+    } break;
+
     case aten::log: {
       return ComputeOneOperand(
           "aten_log", v, [](const Expr& a) { return log(a); });
@@ -287,9 +312,19 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
           "aten_exp", v, [](const Expr& a) { return exp(a); });
     } break;
 
+    case aten::expm1: {
+      return ComputeOneOperand(
+          "aten_expm1", v, [](const Expr& a) { return expm1(a); });
+    } break;
+
     case aten::erf: {
       return ComputeOneOperand(
           "aten_erf", v, [](const Expr& a) { return erf(a); });
+    } break;
+
+    case aten::erfc: {
+      return ComputeOneOperand(
+          "aten_erfc", v, [](const Expr& a) { return erfc(a); });
     } break;
 
     case aten::cos: {
@@ -395,6 +430,16 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
     case aten::trunc: {
       return ComputeOneOperand(
           "aten_trunc", v, [](const Expr& a) { return trunc(a); });
+    } break;
+
+    case aten::frac: {
+      return ComputeOneOperand(
+          "aten_frac", v, [](const Expr& a) { return frac(a); });
+    } break;
+
+    case aten::lgamma: {
+      return ComputeOneOperand(
+          "aten_lgamma", v, [](const Expr& a) { return lgamma(a); });
     } break;
 
     case prim::ConstantChunk: {
