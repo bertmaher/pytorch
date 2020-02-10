@@ -792,7 +792,6 @@ def test_scalar():
         np.testing.assert_allclose(r.numpy(), xn + yn * a + zn * b)
         assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
 
-
 # FIXME: Blocked on profiling executor changes
 # def test_loop():
 #    @torch.jit.script
