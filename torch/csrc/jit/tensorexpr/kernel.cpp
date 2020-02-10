@@ -230,8 +230,7 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
           "aten_addcmul",
           v,
           [](const Expr& a0, const Expr& a1, const Expr& a2, const Expr& a3) {
-            return cast<float>(a0) +
-                cast<float>(a3) * cast<float>(a1) * cast<float>(a2);
+            return a0 + a3 * a1 * a2;
           });
     } break;
 
