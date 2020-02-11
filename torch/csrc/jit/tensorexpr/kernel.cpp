@@ -580,7 +580,6 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
 #endif
 
   Stmt stmt = sch.Lower();
-  std::cerr << "Lowered stmt:\n" << stmt << "\n";
 
   // Set up formal params (inputs, then outputs) for kernel.
   std::vector<CodeGen::BufferArg> params(
@@ -694,7 +693,12 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input, const c10::opti
               [this, in_buffer](const std::vector<Var>& axes) {
                 return broadcast(in_buffer, axes);
               }));
-      buffer_args_.push_back(std::move(in_buffer));
+      buffer_args_.push_back(in_buffer);
+      for (auto& dim : in_buffer.dims()) {
+        if (auto var = dim.AsNode<Variable>()) {
+          buffer_args_.emplace_back(Var(var));
+        }
+      }
       break;
     }
     case TypeKind::FloatType: {
@@ -724,17 +728,13 @@ TensorExprKernel::TensorExprKernel(
   KernelScope kernel_scope(kernel_arena_);
 
   // Bind inputs to buffers.
-  std::cerr << "Binding inputs\n";
   int i = 0;
   for (auto const& input : inputs) {
-    std::cout << "Binding input: " << i++ << "\n";
     bindInput(input.first, input.second);
   }
-  std::cerr << "Done binding inputs\n";
 
   // Bind nodes to tensor compute expressions.
   for (auto const& n : graph.nodes()) {
-    std::cout << "Processing: " << *n << "\n";
     if (n->kind() == prim::Constant || n->kind() == prim::ListConstruct) {
       continue;
     } else {
@@ -744,10 +744,6 @@ TensorExprKernel::TensorExprKernel(
         }
       }
     }
-  }
-
-  for (auto const& t : tensors_) {
-    std::cout << t.second.function().body() << "\n";
   }
 
   // Move output operands from `tensors_` to `tensor_outputs_`

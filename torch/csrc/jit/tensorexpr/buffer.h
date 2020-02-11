@@ -40,6 +40,9 @@ class Buffer {
   const std::vector<Expr>& dims() const {
     return dims_;
   }
+  std::vector<Expr>& dims() {
+    return dims_;
+  }
 
   // TODO: consider defer the storage flatten to a later stage.
   template <typename... Args>

@@ -54,6 +54,7 @@ class TensorExprKernel {
   void compile();
 
   void run(Stack& stack);
+  void CodeGenRun(const std::vector<CodeGen::CallArg>& run_args);
 
  private:
   enum BackendType {
@@ -133,8 +134,6 @@ class TensorExprKernel {
   void LowerToBackend(BackendType backend_type);
 
   void PickAndCheckBackendType(const at::ArrayRef<IValue>& inputs);
-
-  void CodeGenRun(const std::vector<CodeGen::CallArg>& run_args);
 
   Buffer descBuffer(const torch::jit::Value* v, const TensorDesc& desc);
 

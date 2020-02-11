@@ -1214,7 +1214,6 @@ void FuseGraph(std::shared_ptr<Graph>& graph) {
   EliminateDeadCode(graph);
   // Improve the quality of shape propagation code that was left
   PeepholeOptimizeShapeExpressions(graph->block());
-  std::cerr << *graph;
 }
 
 void CustomFuseGraph(
