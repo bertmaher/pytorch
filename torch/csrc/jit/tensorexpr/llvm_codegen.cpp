@@ -732,11 +732,13 @@ void LLVMCodeGen::visit(const IfThenElse* v) {
   irb_.SetInsertPoint(then_block);
   v->true_value().accept(this);
   llvm::Value* then_val = value_;
+  then_block = irb_.GetInsertBlock();
   irb_.CreateBr(end_block);
 
   irb_.SetInsertPoint(else_block);
   v->false_value().accept(this);
   llvm::Value* else_val = value_;
+  else_block = irb_.GetInsertBlock();
   irb_.CreateBr(end_block);
 
   irb_.SetInsertPoint(end_block);
