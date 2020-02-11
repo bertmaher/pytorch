@@ -170,12 +170,12 @@ void testCudaDynamicShape2D() {
     cudaMemcpy(
         bDev,
         bData.data(),
-        bData.size() * sizeof(aData[0]),
+        bData.size() * sizeof(bData[0]),
         cudaMemcpyHostToDevice);
     cudaMemcpy(
         cDev,
         cData.data(),
-        cData.size() * sizeof(aData[0]),
+        cData.size() * sizeof(cData[0]),
         cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
@@ -185,7 +185,7 @@ void testCudaDynamicShape2D() {
     cudaMemcpy(
         cData.data(),
         cDev,
-        cData.size() * sizeof(aData[0]),
+        cData.size() * sizeof(cData[0]),
         cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
 
@@ -198,6 +198,54 @@ void testCudaDynamicShape2D() {
   testWithSize(32, 32);
   testWithSize(1, 16);
   testWithSize(27, 13);
+}
+
+void testCudaDynamicShapeSplit() {
+  KernelScope ks;
+  constexpr int N = 4096;
+  Var n("n", kInt32);
+  Buffer a(Var("a", kHandle), kFloat32, {n});
+  Tensor b = Compute("b", {{n, "n"}}, [&](const Var& i) { return a(i) * 2.0f; });
+  auto sch = Schedule::make({b});
+  Var outer;
+  Var inner;
+  b.SplitWithMask(b.arg(0), 1024, true, &outer, &inner);
+  b.GPUExecConfig({outer}, {inner});
+  Stmt s = sch.Lower();
+  CudaCodeGen cg(s, {a, b, n});
+
+  std::vector<float> aData(N, 1.0f);
+  std::vector<float> bData(N, 1.0f);
+  float* aDev = nullptr;
+  float* bDev = nullptr;
+  cudaMalloc(&aDev, aData.size() * sizeof(aData[0]));
+  cudaMalloc(&bDev, bData.size() * sizeof(bData[0]));
+  cudaMemcpy(
+      aDev,
+      aData.data(),
+      aData.size() * sizeof(aData[0]),
+      cudaMemcpyHostToDevice);
+  cudaMemcpy(
+      bDev,
+      bData.data(),
+      bData.size() * sizeof(aData[0]),
+      cudaMemcpyHostToDevice);
+  cudaDeviceSynchronize();
+
+  cg.call({aDev, bDev, N});
+  cudaDeviceSynchronize();
+
+  cudaMemcpy(
+      bData.data(),
+      bDev,
+      bData.size() * sizeof(aData[0]),
+      cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+
+  ExpectAllNear(bData, std::vector<float>(N, 2.0f), 1e-7);
+
+  cudaFree(aDev);
+  cudaFree(bDev);
 }
 
 } // namespace jit
