@@ -314,8 +314,7 @@ Tensor TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
 
     case aten::relu: {
       return ComputeOneOperand("aten_relu", v, [](const Expr& a) {
-        Expr zero_cond = CompareSelect::make(a, Expr(0.0f), kLT);
-        return ifThenElse(zero_cond, Expr(0.0f), a);
+        return Max::make(a, 0, false);
       });
     } break;
 
@@ -509,7 +508,7 @@ Tensor TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
 
     case aten::frac: {
       return ComputeOneOperand(
-          "aten_frac", v, [](const Expr& a) { return frac(a); });
+          "aten_frac", v, [](const Expr& a) { return a - floor(a); });
     } break;
 
     case aten::lgamma: {

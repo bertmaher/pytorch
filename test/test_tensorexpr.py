@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 
 class ExecutionCounter(object):
@@ -423,11 +424,13 @@ def test_lt():
         c = torch.lt(x, y)
         return c
 
-    traced = torch.jit.trace(easy, (torch.zeros(1024), torch.zeros(1024)))
-    a = torch.ones(1024, dtype=torch.int32)
-    b = torch.zeros(1024, dtype=torch.int32)
-    x = traced(a, b)
-    np.testing.assert_allclose(np.zeros(1024), x.numpy())
+    device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"]
+    for dev in device_options:
+        traced = torch.jit.trace(easy, (torch.zeros(1024, device=dev), torch.zeros(1024, device=dev)))
+        a = torch.ones(1024, dtype=torch.int32, device=dev)
+        b = torch.zeros(1024, dtype=torch.int32, device=dev)
+        x = traced(a, b)
+        np.testing.assert_allclose(np.zeros(1024), x.cpu().numpy())
 
 
 def test_min_max():
@@ -446,10 +449,24 @@ def test_clamp():
     def test(x):
         return torch.clamp(x + 3.0, 0.0, 6.0)
 
-    traced = torch.jit.trace(test, (torch.zeros(1024)))
-    a = 20.0 * torch.rand(1024) - 10.0
-    an = a.numpy()
-    np.testing.assert_allclose(traced(a), np.clip(an + 3.0, 0.0, 6.0))
+    device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"]
+
+    for dev in device_options:
+        traced = torch.jit.trace(test, (torch.zeros(1024, device=dev)))
+        a = 20.0 * torch.rand(1024, device=dev) - 10.0
+        an = a.cpu().numpy()
+        np.testing.assert_allclose(traced(a).cpu(), np.clip(an + 3.0, 0.0, 6.0))
+
+def test_relu():
+    def test(x):
+        return torch.clamp(F.relu(x), 0, 0.5)
+
+    device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"]
+    for dev in device_options:
+        traced = torch.jit.trace(test, (torch.zeros(1024, device=dev)))
+        a = 20.0 * torch.rand(1024, device=dev) - 10.0
+        an = a.cpu().numpy()
+        np.testing.assert_allclose(traced(a).cpu(), np.clip((np.maximum(0, an)), 0, 0.5))
 
 
 def test_reps():
@@ -487,8 +504,39 @@ def test_int_output():
     res = traced(x, y, z)
     np.testing.assert_allclose(xn * yn * zn, res.numpy())
 
+def test_binary_ops():
+    pass
 
 def test_unary_ops():
+
+    def test_exp(x, y):
+        c = torch.exp(torch.add(x, y))
+        return c
+
+    def test_log(x, y):
+        c = torch.log(torch.add(x, y))
+        return c
+
+    def test_log2(x, y):
+        c = torch.log2(torch.add(x, y))
+        return c
+
+    def test_log10(x, y):
+        c = torch.log10(torch.add(x, y))
+        return c
+
+    def test_erf(x, y):
+        c = torch.erf(torch.add(x, y))
+        return c
+
+    def test_rsqrt(x, y):
+        c = torch.rsqrt(torch.add(x, y))
+        return c
+
+    def test_round(x, y):
+        c = torch.round(torch.add(x, y))
+        return c
+
     def test_sin(x, y):
         c = torch.sin(torch.add(x, y))
         return c
@@ -610,6 +658,13 @@ def test_unary_ops():
         return c
 
     fns = {
+        test_exp,
+        test_log,
+        test_log2,
+        test_log10,
+        test_erf,
+        test_rsqrt,
+        test_round,
         test_sin,
         test_asin,
         test_sinh,
@@ -640,30 +695,26 @@ def test_unary_ops():
         test_neg,
         test_relu,
     }
-    rand_a = torch.rand(1024, dtype=torch.float)
-    rand_b = torch.rand(1024, dtype=torch.float)
-    zeros = torch.zeros(1024, dtype=torch.float)
-    cc = np.array(1024, dtype=float)
-    cc.fill(np.nan)
-    nans = torch.from_numpy(cc)
+    device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
 
     for torch_fn in fns:
-        # random floats
-        traced = torch.jit.trace(
-            torch_fn,
-            (
-                torch.zeros(1024, dtype=torch.float),
-                torch.zeros(1024, dtype=torch.float),
-            ),
-        )
-        x = traced(rand_a, rand_b)
-        y = torch_fn(rand_a, rand_b)
-        np.testing.assert_allclose(x.numpy(), y.numpy(), 1e-7, 1e-6)
-        # nans
-        traced = torch.jit.trace(torch_fn, (torch.zeros(1024), torch.zeros(1024)))
-        x = traced(nans, rand_b)
-        y = torch_fn(nans, rand_b)
-        np.testing.assert_allclose(x.numpy(), y.numpy())
+        torch_fn = test_frac
+        for dev in device_options:
+            rand_a = torch.rand(1024, device=dev)
+            rand_b = torch.rand(1024, device=dev)
+            ins = 20 * torch.rand(1024, device=dev)
+            cc = np.array(1024, dtype=float)
+            cc.fill(np.nan)
+            nans = torch.from_numpy(cc).to(dev)
+            traced = torch.jit.trace(torch_fn, (ins, ins))
+            x = traced(rand_a, rand_b)
+            y = torch_fn(rand_a, rand_b)
+            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy())
+            # nans
+            traced = torch.jit.trace(torch_fn, (ins, ins))
+            x = traced(nans, rand_b)
+            y = torch_fn(nans, rand_b)
+            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy())
 
 
 def test_nans():

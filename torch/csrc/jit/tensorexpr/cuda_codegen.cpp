@@ -129,6 +129,30 @@ void CudaPrinter::visit(const Load* v) {
   os() << "__ldg(" << v->base_handle() << " + " << v->index() << ")";
 }
 
+void CudaPrinter::visit(const Max* v) {
+  auto dtype = v->dtype();
+  if (dtype == kFloat32) {
+    os() << "fmaxf";
+  }
+  os() << "(";
+  v->lhs().accept(this);
+  os() << ",";
+  v->rhs().accept(this);
+  os() << ")";
+}
+
+void CudaPrinter::visit(const Min* v) {
+  auto dtype = v->dtype();
+  if (dtype == kFloat32) {
+    os() << "fminf";
+  }
+  os() << "(";
+  v->lhs().accept(this);
+  os() << ",";
+  v->rhs().accept(this);
+  os() << ")";
+}
+
 void CudaCodeGen::Initialize() {
   printer_.reset(new CudaPrinter(&oss_));
   // TODO: handle multiple kernels.
