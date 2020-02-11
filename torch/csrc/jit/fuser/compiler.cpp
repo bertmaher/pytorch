@@ -204,6 +204,7 @@ namespace {
 class TensorExprFusedKernel : public ::torch::jit::fuser::FusedKernel {
  public:
   TensorExprFusedKernel(
+      std::shared_ptr<tensorexpr::TensorExprKernel> kernel,
       int16_t device,
       std::string name,
       std::string code,
@@ -219,13 +220,21 @@ class TensorExprFusedKernel : public ::torch::jit::fuser::FusedKernel {
             output_desc,
             chunk_desc,
             concat_desc,
-            has_random) {}
+            has_random),
+        kernel_(kernel)
+    {}
 
   at::Backend backend() const override {
     return at::Backend::CUDA;
   }
 
-  void launch_raw(const uint32_t numel, std::vector<void*>& arguments) {}
+  void launch_raw(const uint32_t numel, std::vector<void*>& arguments) const override {
+    kernel_->compile();
+    LOG(FATAL) << "No launch method has been implemented";
+  }
+
+ private:
+  std::shared_ptr<tensorexpr::TensorExprKernel> kernel_;
 };
 
 static std::shared_ptr<FusedKernel> createTexprKernel(
@@ -242,8 +251,11 @@ static std::shared_ptr<FusedKernel> createTexprKernel(
     std::vector<PartitionDesc> concat_desc,
     bool has_random) {
   std::cerr << "Graph at point of createTexprKernel:\n" << graph << std::endl;
-  tensorexpr::TensorExprKernel kernel(graph, inputs, outputs);
-  return std::shared_ptr<FusedKernel>();
+  auto kernel = std::make_shared<tensorexpr::TensorExprKernel>(graph, inputs, outputs);
+  return std::make_shared<TensorExprFusedKernel>(
+      kernel,
+      device, name, "lol no code for you",
+      input_desc, output_desc, chunk_desc, concat_desc, has_random);
 }
 
 } // namespace

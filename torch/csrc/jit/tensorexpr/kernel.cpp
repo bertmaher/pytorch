@@ -1,11 +1,25 @@
+#include <torch/csrc/jit/tensorexpr/ir_printer.h>
 #include <torch/csrc/jit/tensorexpr/kernel.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
 
-static Dtype texprType(const c10::optional<at::ScalarType>& st) {
-  switch (*st) {
+static std::vector<DimArg> toDimArgs(const std::vector<Expr>& args) {
+  std::vector<DimArg> dimArgs;
+  for (auto const& arg : args) {
+    auto var = arg.AsNode<Variable>();
+    if (var) {
+      dimArgs.emplace_back(arg, var->name_hint());
+    } else {
+      dimArgs.emplace_back(arg);
+    }
+  }
+  return dimArgs;
+}
+
+static Dtype texprType(at::ScalarType st) {
+  switch (st) {
     case at::ScalarType::Int:
       return kInt32;
     case at::ScalarType::Float:
@@ -51,7 +65,7 @@ static Buffer texprBuffer(const torch::jit::Value* v) {
   auto tt = v->type()->cast<TensorType>();
   return Buffer(
       "t" + v->debugName(),
-      texprType(tt->scalarType()),
+      texprType(*tt->scalarType()),
       texprSizes(tt->sizes()));
 }
 
@@ -108,8 +122,16 @@ Tensor TensorExprKernel::ComputeOneOperand(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&)> inner_expr) {
+  LOG(FATAL) << "Not updated yet";
+  auto const& n = v->node();
+  auto const& in = n->inputs()[0];
+  auto ti = tensors_.find(in->unique());
+  TORCH_CHECK(ti != tensors_.end(), "Tensor not found");
+  auto const& dims = ti->second.dims();
+  std::vector<DimArg> dimArgs(dims.begin(), dims.end());
+
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name, dimArgs, [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {tensorOrConstant(n->inputs()[0], axes)};
 
@@ -123,6 +145,7 @@ Tensor TensorExprKernel::ComputeTwoOperand(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&)> inner_expr) {
+  LOG(FATAL) << "Not updated yet";
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
@@ -141,8 +164,18 @@ Tensor TensorExprKernel::ComputeTwoOperandWithAlpha(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&)> inner_expr) {
+
+  auto const& n = v->node();
+  auto const& in = n->inputs()[0];
+  auto ti = tensors_.find(in->unique());
+  TORCH_CHECK(ti != tensors_.end(), "Tensor not found");
+  auto const& dims = ti->second.dims();
+  //std::vector<DimArg> dimArgs(dims.begin(), dims.end());
+  auto dimArgs = toDimArgs(dims);
+
+
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name, dimArgs, [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
@@ -160,6 +193,7 @@ Tensor TensorExprKernel::ComputeThreeOperand(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&, const Expr&)> inner_expr) {
+  LOG(FATAL) << "Not updated yet";
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
@@ -493,6 +527,7 @@ Tensor TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
 void TensorExprKernel::LowerToBackend(BackendType backend_type) {
   std::vector<Tensor> tensor_outputs(tensor_outputs_);
 
+#if 0
   if (backend_type == BackendType::kCudaCodeGen) {
     for (int i = 0; i < tensor_outputs_.size(); i++) {
       const Tensor& tensor = tensor_outputs_[i];
@@ -522,6 +557,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       tensor_outputs[i] = new_out;
     }
   }
+#endif
 
   torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs);
 
@@ -529,6 +565,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
   for (auto& p : tensors_) {
     p.second.ComputeInline();
   }
+#if 0
   if (backend_type == kCudaCodeGen) {
     for (int i = 0; i < tensor_outputs_.size(); i++) {
       tensor_outputs_[i].ComputeInline();
@@ -540,8 +577,10 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       tensor.GPUExecConfig({outer}, {inner});
     }
   }
+#endif
 
   Stmt stmt = sch.Lower();
+  std::cerr << "Lowered stmt:\n" << stmt << "\n";
 
   // Set up formal params (inputs, then outputs) for kernel.
   std::vector<CodeGen::BufferArg> params(
@@ -568,6 +607,14 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
           std::to_string(static_cast<int>(backend_type_)));
   }
   codegen_ = CreateCodeGen(codegen_name, stmt, params);
+}
+
+void TensorExprKernel::compile() {
+  KernelScope kernel_scope(kernel_arena_);
+  if (backend_type_ == kUninitialized) {
+    backend_type_ = kCudaCodeGen;
+    LowerToBackend(backend_type_);
+  }
 }
 
 void TensorExprKernel::PickAndCheckBackendType(
@@ -621,16 +668,29 @@ void TensorExprKernel::CodeGenRun(
   }
 }
 
-void TensorExprKernel::bindInput(const torch::jit::Value* input) {
+Buffer TensorExprKernel::descBuffer(const torch::jit::Value* v, const TensorDesc& desc) {
+  std::vector<Expr> dims;
+  for (size_t i = 0; i < desc.nDim(); i++) {
+    dims.push_back(Variable::make(std::string("i") + std::to_string(v->unique())
+                                  + "_" + std::to_string(i),
+                                  kInt32));
+  }
+  return Buffer(
+      "t" + v->debugName(),
+      texprType(desc.scalar_type),
+      dims);
+}
+
+void TensorExprKernel::bindInput(const torch::jit::Value* input, const c10::optional<TensorDesc> desc) {
   auto const& t = input->type();
   switch (t->kind()) {
     case TypeKind::TensorType: {
-      Buffer in_buffer = texprBuffer(input);
+      Buffer in_buffer = descBuffer(input, *desc);
       tensors_.emplace(
           input->unique(),
           Compute(
               "input",
-              texprDims(input),
+              toDimArgs(in_buffer.dims()),
               [this, in_buffer](const std::vector<Var>& axes) {
                 return broadcast(in_buffer, axes);
               }));
@@ -664,12 +724,17 @@ TensorExprKernel::TensorExprKernel(
   KernelScope kernel_scope(kernel_arena_);
 
   // Bind inputs to buffers.
-  for (auto const& input : graph.inputs()) {
-    bindInput(input);
+  std::cerr << "Binding inputs\n";
+  int i = 0;
+  for (auto const& input : inputs) {
+    std::cout << "Binding input: " << i++ << "\n";
+    bindInput(input.first, input.second);
   }
+  std::cerr << "Done binding inputs\n";
 
   // Bind nodes to tensor compute expressions.
   for (auto const& n : graph.nodes()) {
+    std::cout << "Processing: " << *n << "\n";
     if (n->kind() == prim::Constant || n->kind() == prim::ListConstruct) {
       continue;
     } else {
@@ -679,6 +744,10 @@ TensorExprKernel::TensorExprKernel(
         }
       }
     }
+  }
+
+  for (auto const& t : tensors_) {
+    std::cout << t.second.function().body() << "\n";
   }
 
   // Move output operands from `tensors_` to `tensor_outputs_`

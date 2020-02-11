@@ -37,6 +37,9 @@ class Buffer {
   const Expr& dim(int index) const {
     return dims_[index];
   }
+  const std::vector<Expr>& dims() const {
+    return dims_;
+  }
 
   // TODO: consider defer the storage flatten to a later stage.
   template <typename... Args>

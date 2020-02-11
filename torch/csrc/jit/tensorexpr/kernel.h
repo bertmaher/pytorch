@@ -51,6 +51,8 @@ class TensorExprKernel {
           std::pair<const Value*, const c10::optional<TensorDesc>>>& inputs,
       const std::vector<std::pair<const Value*, const TensorDesc>>& outputs);
 
+  void compile();
+
   void run(Stack& stack);
 
  private:
@@ -65,7 +67,8 @@ class TensorExprKernel {
 
   template <typename T, typename T1>
   Expr broadcast(const T& t, const std::vector<T1>& axes) {
-    return t.call(computeIndicesToBroadcast(axes, bufferSizes(t)));
+    //return t.call(computeIndicesToBroadcast(axes, bufferSizes(t)));
+    return t.call(axes);
   }
 
   template <typename T, typename T1>
@@ -133,7 +136,9 @@ class TensorExprKernel {
 
   void CodeGenRun(const std::vector<CodeGen::CallArg>& run_args);
 
-  void bindInput(const torch::jit::Value* input);
+  Buffer descBuffer(const torch::jit::Value* v, const TensorDesc& desc);
+
+  void bindInput(const torch::jit::Value* input, const c10::optional<TensorDesc> desc);
 
  private:
   std::vector<CodeGen::BufferArg> buffer_args_;
