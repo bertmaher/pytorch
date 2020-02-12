@@ -176,7 +176,9 @@ c10::optional<Node*> tryMerge(
     Node* listconstruct = producer->inputs()[0]->node();
     Node* constant = producer->inputs()[1]->node();
     SubgraphUtils::mergeNodeIntoSubgraph(producer, consumer);
-    SubgraphUtils::mergeNodeIntoSubgraph(constant, consumer);
+    auto& subgraph = consumer->g(attr::Subgraph);
+    Node* new_const = subgraph->createClone(constant, [](Value*) -> Value* { return nullptr; } );
+    subgraph->insertNode(new_const);
     SubgraphUtils::mergeNodeIntoSubgraph(listconstruct, consumer);
   } else {
     if (consumer->kind() == aten::cat) {
