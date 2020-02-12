@@ -668,7 +668,6 @@ def test_unary_ops():
     device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
 
     for torch_fn in fns:
-        torch_fn = test_frac
         for dev in device_options:
             rand_a = torch.rand(1024, device=dev)
             rand_b = torch.rand(1024, device=dev)
