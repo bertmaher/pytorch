@@ -509,30 +509,6 @@ def test_binary_ops():
 
 def test_unary_ops():
 
-    def test_exp(x, y):
-        c = torch.exp(torch.add(x, y))
-        return c
-
-    def test_log(x, y):
-        c = torch.log(torch.add(x, y))
-        return c
-
-    def test_log2(x, y):
-        c = torch.log2(torch.add(x, y))
-        return c
-
-    def test_log10(x, y):
-        c = torch.log10(torch.add(x, y))
-        return c
-
-    def test_erf(x, y):
-        c = torch.erf(torch.add(x, y))
-        return c
-
-    def test_rsqrt(x, y):
-        c = torch.rsqrt(torch.add(x, y))
-        return c
-
     def test_round(x, y):
         c = torch.round(torch.add(x, y))
         return c
@@ -658,12 +634,6 @@ def test_unary_ops():
         return c
 
     fns = {
-        test_exp,
-        test_log,
-        test_log2,
-        test_log10,
-        test_erf,
-        test_rsqrt,
         test_round,
         test_sin,
         test_asin,
