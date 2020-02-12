@@ -560,6 +560,13 @@ class TORCH_API Store : public StmtNode<Store> {
     return Stmt(new Store(base_handle, index, value, mask));
   }
 
+  static Stmt make(
+      const Var& base_handle,
+      const Expr& index,
+      const Expr& value) {
+    return Stmt(new Store(base_handle, index, value, Expr(1)));
+  }
+
  private:
   // TODO: merge this with Load.
   Store(

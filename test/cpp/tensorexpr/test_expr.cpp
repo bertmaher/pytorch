@@ -1,6 +1,7 @@
 #include "test/cpp/tensorexpr/test_base.h"
 
 #include "test/cpp/tensorexpr/padded_buffer.h"
+#include "test/cpp/tensorexpr/test_utils.h"
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/eval.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
@@ -19,13 +20,14 @@ namespace torch {
 namespace jit {
 using namespace torch::jit::tensorexpr;
 
+using SimpleIRExprEval = ExprEval<SimpleIREvaluator>;
+
 void testExprBasicValueTest() {
   KernelScope kernel_scope;
   Expr a = IntImm::make(2), b = IntImm::make(3);
   Expr c = Add::make(a, b);
-  SimpleIREvaluator eval(c);
-  eval();
-  EXPECT_EQ(eval.value().as<int>(), 5);
+  SimpleIRExprEval eval(c);
+  EXPECT_EQ(eval.value<int>(), 5);
 }
 
 void testExprBasicValueTest02() {
@@ -35,9 +37,8 @@ void testExprBasicValueTest02() {
   Expr c(4.0f);
   Expr d(5.0f);
   Expr f = (a + b) - (c + d);
-  SimpleIREvaluator eval(f);
-  eval();
-  EXPECT_EQ(eval.value().as<float>(), -4.0f);
+  SimpleIRExprEval eval(f);
+  EXPECT_EQ(eval.value<float>(), -4.0f);
 }
 
 void testExprLetTest01() {
@@ -46,9 +47,8 @@ void testExprLetTest01() {
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
   Expr result = Let::make(x, Expr(3.f), body);
-  SimpleIREvaluator eval(result);
-  eval();
-  EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4));
+  SimpleIRExprEval eval(result);
+  EXPECT_EQ(eval.value<float>(), 2 + (3 * 3 + 4));
 }
 
 void testExprLetTest02() {
@@ -59,9 +59,8 @@ void testExprLetTest02() {
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
   Expr e1 = Let::make(x, Expr(3.f), body);
   Expr e2 = Let::make(y, Expr(6.f), e1);
-  SimpleIREvaluator eval(e2);
-  eval();
-  EXPECT_EQ(eval.value().as<float>(), 2 + (3 * 3 + 4 * 6));
+  SimpleIRExprEval eval(e2);
+  EXPECT_EQ(eval.value<float>(), 2 + (3 * 3 + 4 * 6));
 }
 
 static Expr test_01(const Expr& expr) {
@@ -186,10 +185,9 @@ void testExprMath01() {
   oss << v;
   ASSERT_EQ(oss.str(), "sin(1)");
 
-  SimpleIREvaluator eval(v);
-  eval();
+  SimpleIRExprEval eval(v);
   float v_ref = std::sin(1.0f);
-  float res = eval.value().as<float>();
+  float res = eval.value<float>();
   ASSERT_NEAR(res, v_ref, 1e-6);
 }
 
@@ -249,9 +247,8 @@ void testExprUnaryMath01() {
     const float input_v = 0.8765f;
     Expr v = test_config.func(Expr(input_v));
     float v_ref = test_config.ref_func(input_v);
-    SimpleIREvaluator eval(v);
-    eval();
-    EXPECT_NEAR(eval.value().as<float>(), v_ref, 1e-6) << "fail: " << v;
+    SimpleIRExprEval eval(v);
+    EXPECT_NEAR(eval.value<float>(), v_ref, 1e-6) << "fail: " << v;
   }
 }
 
@@ -274,9 +271,8 @@ void testExprBinaryMath01() {
     float v2 = 1.2345f;
     Expr v_expr = test_config.func(Expr(v1), Expr(v2));
     float v_ref = test_config.ref_func(v1, v2);
-    SimpleIREvaluator eval(v_expr);
-    eval();
-    EXPECT_NEAR(eval.value().as<float>(), v_ref, 1e-6) << "fail: " << v_expr;
+    SimpleIRExprEval eval(v_expr);
+    EXPECT_NEAR(eval.value<float>(), v_ref, 1e-6) << "fail: " << v_expr;
   }
 }
 
@@ -332,9 +328,8 @@ void testIfThenElse01() {
   oss << v;
   ASSERT_EQ(oss.str(), "IfThenElse(1, 1, 2)");
 
-  SimpleIREvaluator eval(v);
-  eval();
-  ASSERT_EQ(eval.value().as<float>(), 1.0f);
+  SimpleIRExprEval eval(v);
+  ASSERT_EQ(eval.value<float>(), 1.0f);
 }
 
 void testIfThenElse02() {
@@ -345,9 +340,8 @@ void testIfThenElse02() {
   oss << v;
   ASSERT_EQ(oss.str(), "IfThenElse(0, 1, 2)");
 
-  SimpleIREvaluator eval(v);
-  eval();
-  ASSERT_EQ(eval.value().as<float>(), 2.0f);
+  SimpleIRExprEval eval(v);
+  ASSERT_EQ(eval.value<float>(), 2.0f);
 }
 
 } // namespace jit

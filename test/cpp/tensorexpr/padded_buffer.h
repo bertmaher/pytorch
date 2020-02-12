@@ -37,6 +37,8 @@ class PaddedBufferBase {
     return total_size_ + 2 * kPaddingSize;
   }
 
+  virtual ~PaddedBufferBase() {}
+
  protected:
   explicit PaddedBufferBase(
       const std::vector<int>& dims,

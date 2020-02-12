@@ -2,6 +2,7 @@
 #include "test/cpp/tensorexpr/test_base.h"
 
 #include "test/cpp/tensorexpr/padded_buffer.h"
+#include "test/cpp/tensorexpr/test_utils.h"
 #include "torch/csrc/jit/tensorexpr/buffer.h"
 #include "torch/csrc/jit/tensorexpr/eval.h"
 #include "torch/csrc/jit/tensorexpr/function.h"
@@ -18,17 +19,19 @@ namespace jit {
 using namespace torch::jit::tensorexpr;
 using namespace torch::jit::tensorexpr::schedule;
 
+using LLVMExprEval = ExprEval<LLVMCodeGen>;
+
 void testLLVMIntImmTest() {
   KernelScope kernel_scope;
   auto a = IntImm::make(2);
-  LLVMCodeGen cg(a);
+  LLVMExprEval cg(a);
   EXPECT_EQ(cg.value<int>(), 2);
 }
 
 void testLLVMFloatImmTest() {
   KernelScope kernel_scope;
   auto a = FloatImm::make(1.0);
-  LLVMCodeGen cg(a, {}, kFloat32);
+  LLVMExprEval cg(a, {});
   EXPECT_EQ(cg.value<float>(), 1.0);
 }
 
@@ -37,7 +40,7 @@ void testLLVMIntAddTest() {
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Add::make(a, b);
-  LLVMCodeGen cg(c);
+  LLVMExprEval cg(c);
   EXPECT_EQ(cg.value<int>(), 5);
 }
 
@@ -46,7 +49,7 @@ void testLLVMIntSubTest() {
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Sub::make(a, b);
-  LLVMCodeGen cg(c);
+  LLVMExprEval cg(c);
   EXPECT_EQ(cg.value<int>(), -1);
 }
 
@@ -55,7 +58,7 @@ void testLLVMIntMulTest() {
   auto a = IntImm::make(2);
   auto b = IntImm::make(3);
   auto c = Mul::make(a, b);
-  LLVMCodeGen cg(c);
+  LLVMExprEval cg(c);
   EXPECT_EQ(cg.value<int>(), 6);
 }
 
@@ -64,7 +67,7 @@ void testLLVMIntDivTest() {
   auto a = IntImm::make(6);
   auto b = IntImm::make(3);
   auto c = Div::make(a, b);
-  LLVMCodeGen cg(c);
+  LLVMExprEval cg(c);
   EXPECT_EQ(cg.value<int>(), 2);
 }
 
@@ -72,7 +75,7 @@ void testLLVMIntToFloatCastTest() {
   KernelScope kernel_scope;
   auto a = IntImm::make(2);
   auto b = Cast::make(kFloat32, a);
-  LLVMCodeGen cg(b, {}, kFloat32);
+  LLVMExprEval cg(b, {});
   EXPECT_EQ(cg.value<float>(), 2.0);
 }
 
@@ -80,7 +83,7 @@ void testLLVMFloatToIntCastTest() {
   KernelScope kernel_scope;
   auto a = FloatImm::make(2.0);
   auto b = Cast::make(kInt32, a);
-  LLVMCodeGen cg(b);
+  LLVMExprEval cg(b);
   EXPECT_EQ(cg.value<int>(), 2);
 }
 
@@ -90,7 +93,7 @@ void testLLVMLetTest01() {
   Expr value = Expr(3.f);
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
   Expr result = Let::make(x, Expr(3.f), body);
-  LLVMCodeGen cg(result, {}, kFloat32);
+  LLVMExprEval cg(result, {});
   EXPECT_EQ(cg.value<float>(), 2.f + (3.f * 3.f + 4.f));
 }
 
@@ -102,7 +105,7 @@ void testLLVMLetTest02() {
   Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
   Expr e1 = Let::make(x, Expr(3.f), body);
   Expr e2 = Let::make(y, Expr(6.f), e1);
-  LLVMCodeGen cg(e2, {}, kFloat32);
+  LLVMExprEval cg(e2, {});
   EXPECT_EQ(cg.value<float>(), 2.f + (3.f * 3.f + 4.f * 6.f));
 }
 
@@ -112,7 +115,7 @@ void testLLVMBufferTest() {
   std::vector<int32_t> v(5);
   std::vector<void*> args({v.data()});
   auto rv = IntImm::make(0);
-  LLVMCodeGen cg(rv, {a});
+  LLVMExprEval cg(rv, {a});
   EXPECT_EQ(cg.value<int>(args), 0);
 }
 

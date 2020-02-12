@@ -9,21 +9,15 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-// The commomn class between all IR nodes.
-class IRNode : public KernelScopedObject {
- public:
-  TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
-  TORCH_API virtual ~IRNode() {}
-};
-
 // The common base between all expression node.
 class Expr;
-class BaseExprNode : public IRNode {
+class BaseExprNode : public KernelScopedObject {
  public:
   explicit BaseExprNode(Dtype dtype) : dtype_(dtype) {}
   Dtype dtype() const {
     return dtype_;
   }
+  TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
   virtual Expr accept_mutator(IRMutator* mutator) = 0;
 
  private:
@@ -31,9 +25,10 @@ class BaseExprNode : public IRNode {
 };
 
 // The common base between all statement node.
-class BaseStmtNode : public IRNode {
+class BaseStmtNode : public KernelScopedObject {
  public:
   BaseStmtNode() {}
+  TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
   virtual Stmt accept_mutator(IRMutator* mutator) = 0;
 };
 
