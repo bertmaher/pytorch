@@ -805,6 +805,3 @@ def test_scalar():
 #    test(x, y, z)
 #    r = test(x, y, z)
 #    assert llvm.elapsed_value == 1 or interp.elapsed_value() == 1
-
-if __name__ == "__main__":
-    test_unary_ops()
