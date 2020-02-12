@@ -72,7 +72,6 @@ bool isSupported(Node* node) {
     case aten::sqrt:
     case aten::rsqrt:
     case aten::abs:
-    case aten::relu:
     case aten::floor:
     case aten::ceil:
     case aten::round:
