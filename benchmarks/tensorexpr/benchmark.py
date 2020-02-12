@@ -28,7 +28,10 @@ Works only with Python3.\n A few examples:
     parser.add_argument('--mode', type=str, default='fwd,both',
                         help='a comma separated list of running modes')
     parser.add_argument('--engine', type=str, default='pt',
-                        help='the underlying tensor engine. one of pt or tf')
+                        help='the underlying tensor engine. only pt for now')
+    parser.add_argument('--jit_mode', type=str, default='trace',
+                        help='the jit mode to use: one of {trace, none}')
+    
     args = parser.parse_args()
 
     def set_global_threads(num_threads):
@@ -64,6 +67,7 @@ Works only with Python3.\n A few examples:
     def run_default_configs(bench_cls, allow_skip=True):
         for mode, device, config in itertools.product(modes, devices, bench_cls.default_configs()):
             benchmark = bench_cls(mode, device, *config)
+            benchmark.jit_mode = args.jit_mode
             if not benchmark.is_supported():
                 if allow_skip:
                     continue
@@ -111,6 +115,7 @@ Works only with Python3.\n A few examples:
                         except ValueError:
                             pass
                     benchmark = bench_cls(*config)
+                    benchmark.jit_mode = args.jit_mode
                     framework.run_benchmark(benchmark)
 
             if not match_class_name:

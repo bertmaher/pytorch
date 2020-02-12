@@ -21,8 +21,10 @@ class BroadcastMulBench(framework.Benchmark):
         else:
             raise ValueError('invalid case: %s' % (case))
 
-    def forward(self):
-        y = self.d1 + self.d2
+        self.inputs = [self.d1, self.d2]
+
+    def forward(self, d1, d2):
+        y = d1 + d2
         return y
 
     def reference(self):
@@ -74,6 +76,51 @@ class BroadcastColBench(BroadcastMulBench):
         return 'broadcast_col'
 
 
+class BroadcastThreeArgs(framework.Benchmark):
+    def __init__(self, mode, device, M, N, K, L):
+        super().__init__(mode, device)
+        self.M = M
+        self.N = N
+        self.K = K
+        self.L = L
+
+        self.d1 = self.rand([M, N], device=device, requires_grad=self.requires_grad)
+        self.d2 = self.rand([K, M, 1], device=device, requires_grad=self.requires_grad)
+        self.d3 = self.rand([L, K, 1, 1], device=device, requires_grad=self.requires_grad)
+
+        self.inputs = [self.d1, self.d2, self.d3]
+
+    def forward(self, d1, d2, d3):
+        y = d1 + d2 + d3
+        return y
+
+    def reference(self):
+        return self.numpy(self.d1) + self.numpy(self.d2) + self.numpy(self.d3)
+
+    def config(self):
+        return [self.M, self.N, self.K, self.L]
+
+    @staticmethod
+    def default_configs():
+        return [[32, 16, 64, 128]]
+
+    def memory_workload(self):
+        if self.mode == 'fwd':
+            sol_count = 1
+            algorithmic_count = 1
+        else:
+            sol_count = (1) + (1)
+            algorithmic_count = 1 + (1 + 1 + 1)
+
+        buffer_size = self.M * self.N * self.K * self.L * 4
+        return {'sol': buffer_size * sol_count, 'algorithmic': buffer_size * algorithmic_count}
+
+    @staticmethod
+    def module():
+        return 'broadcast_3args'
+    
+    
 framework.register_benchmark_class(BroadcastRowBench)
 framework.register_benchmark_class(BroadcastMidBench)
 framework.register_benchmark_class(BroadcastColBench)
+framework.register_benchmark_class(BroadcastThreeArgs)

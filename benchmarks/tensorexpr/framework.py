@@ -2,7 +2,7 @@ import numpy as np
 import os
 import time
 import tensor_engine
-
+import torch
 
 class BenchmarkBase(object):
     def __init__(self, mode, device):
@@ -24,7 +24,7 @@ class BenchmarkBase(object):
 
     def check(self):
         np.testing.assert_allclose(
-            self.reference(), self.numpy(self.forward()), atol=1e-7)
+            self.reference(), self.numpy(self.forward(*self.inputs)), atol=1e-7)
 
     def config(self):
         '''returns an array for the current benchmark configs
@@ -107,14 +107,20 @@ def run_benchmark(benchmark):
         benchmark.check()
     else:
         print(f"Warning: no reference result for {benchmark.module()}")
-        
+
+    bm_jit = None
     for i in range(warmups + iters):
         if i == warmups:
             if benchmark.device == 'cuda':
                 engine.sync_cuda()
             time_start = time.time()
 
-        z = benchmark.forward()
+        if i == 0 and benchmark.jit_mode == 'trace':
+            bm_jit = torch.jit.trace(benchmark.forward, example_inputs=benchmark.inputs)
+        if bm_jit:
+            z = bm_jit(*benchmark.inputs)
+        else:
+            z = benchmark.forward(*benchmark.inputs)
         if benchmark.mode == 'both':
             if benchmark.result_grad is None:
                 benchmark.result_grad = engine.rand_like(z)
