@@ -389,7 +389,7 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
               } else if (imm = 0.5f) {
                 return sqrt(lhs);
               } else if (imm == 0.0f) {
-                return Expr(0.0f);
+                return Expr(1.0f);
               } else if (imm == -0.5f) {
                 return rsqrt(lhs);
               } else if (imm == -1.0f) {
@@ -414,7 +414,7 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
                   Expr tmp = lhs * lhs;
                   return tmp * tmp;
                 } else if (imm == 0) {
-                  return Expr(0.0f);
+                  return Expr(1.0f);
                 } else if (imm == -1) {
                   return Expr(1.0f) / lhs;
                 } else if (imm == -2) {
