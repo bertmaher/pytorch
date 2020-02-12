@@ -374,6 +374,54 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
     case aten::pow: {
       return ComputeTwoOperand(
           "aten_pow", v, [](const Expr& lhs, const Expr& rhs) {
+            const FloatImm* float_imm = rhs.AsNode<FloatImm>();
+            if (float_imm) {
+              float imm = float_imm->value();
+              if (imm == 1.0f) {
+                return lhs;
+              } else if (imm == 2.0f) {
+                return lhs * lhs;
+              } else if (imm == 3.0f) {
+                return (lhs * lhs) * lhs;
+              } else if (imm == 4.0f) {
+                Expr tmp = lhs * lhs;
+                return tmp * tmp;
+              } else if (imm = 0.5f) {
+                return sqrt(lhs);
+              } else if (imm == 0.0f) {
+                return Expr(0.0f);
+              } else if (imm == -0.5f) {
+                return rsqrt(lhs);
+              } else if (imm == -1.0f) {
+                return Expr(1.0f) / lhs;
+              } else if (imm == -2.0f) {
+                return Expr(1.0f) / (lhs * lhs);
+              }
+            }
+
+            const Cast* float_cast = rhs.AsNode<Cast>();
+            if (float_cast) {
+              const IntImm* int_imm = float_cast->src_value().AsNode<IntImm>();
+              if (int_imm) {
+                float imm = int_imm->value();
+                if (imm == 1) {
+                  return lhs;
+                } else if (imm == 2) {
+                  return lhs * lhs;
+                } else if (imm == 3) {
+                  return (lhs * lhs) * lhs;
+                } else if (imm == 4) {
+                  Expr tmp = lhs * lhs;
+                  return tmp * tmp;
+                } else if (imm == 0) {
+                  return Expr(0.0f);
+                } else if (imm == -1) {
+                  return Expr(1.0f) / lhs;
+                } else if (imm == -2) {
+                  return Expr(1.0f) / (lhs * lhs);
+                }
+              }
+            }
             return pow(lhs, rhs);
           });
     } break;
