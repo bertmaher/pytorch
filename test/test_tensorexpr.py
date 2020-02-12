@@ -657,7 +657,6 @@ def test_unary_ops():
             ),
         )
         x = traced(rand_a, rand_b)
-        print(x)
         y = torch_fn(rand_a, rand_b)
         np.testing.assert_allclose(x.numpy(), y.numpy(), 1e-7, 1e-6)
         # nans
