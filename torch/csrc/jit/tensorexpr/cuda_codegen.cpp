@@ -33,7 +33,7 @@ class ScopedVarName {
       const std::string& name)
       : ScopedVarName(&manager->unique_name_mapping_, var, name) {}
 
-  ~ScopedVarName() {
+  ~ScopedVarName() noexcept(false) {
     auto iter = mapping_->find(var_);
     TORCH_CHECK(iter != mapping_->end(), "Invalid var entry");
     mapping_->erase(var_);
@@ -124,29 +124,34 @@ void CudaPrinter::visit(const For* v) {
   }
 }
 
+void CudaPrinter::visit(const Load* v) {
+  // TODO: find a better metric in using ldg or not. Support different dtypes.
+  os() << "__ldg(" << v->base_handle() << " + " << v->index() << ")";
+}
+
 void CudaCodeGen::Initialize() {
   printer_.reset(new CudaPrinter(&oss_));
   // TODO: handle multiple kernels.
   // TODO: handle dynamic dimension.
   // TODO: call nvrtc.
-  oss_ << "extern \"C\" __global__" << std::endl << "void f(";
+  os() << "extern \"C\" __global__" << std::endl << "void f(";
   const std::vector<BufferArg> buffer_args = this->buffer_args();
   for (int i = 0; i < buffer_args.size(); i++) {
     if (i > 0) {
-      oss_ << ", ";
+      os() << ", ";
     }
     const BufferArg& buffer_arg = buffer_args[i];
     const Var& var = buffer_arg.var();
     Dtype dtype = buffer_arg.dtype();
-    oss_ << dtype.ToCppString() << (buffer_arg.isVar() ? " " : "* ")
+    os() << dtype.ToCppString() << (buffer_arg.isVar() ? " " : "* ")
          << name_manager()->get_unique_name(var);
   }
-  oss_ << ") {";
+  os() << ") {";
 
-  oss_ << std::endl;
+  os() << std::endl;
   stmt().accept(printer_.get());
-  oss_ << std::endl;
-  oss_ << "}";
+  os() << std::endl;
+  os() << "}";
 
   // Check that all block extents had been set.
   const std::vector<Expr>& gpu_block_extents = printer_->gpu_block_extents();

@@ -64,10 +64,6 @@ class TORCH_API IRPrinter : public IRVisitor {
   }
 
  private:
-  std::ostream& raw_os() {
-    return printer_os_;
-  }
-
   PrinterStream printer_os_;
   UniqueNameManager name_manager_;
 };
