@@ -813,6 +813,8 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
       UNARY_MATH_CASE(kCosh, "coshf", floatTy_)
       UNARY_MATH_CASE(kSinh, "sinhf", floatTy_)
       UNARY_MATH_CASE(kTanh, "tanhf", floatTy_)
+      UNARY_MATH_CASE(kExpm1, "expm1f", floatTy_)
+      UNARY_MATH_CASE(kLgamma, "lgammaf", floatTy_)
 #undef UNARY_MATH_CASE
 
 #define BINARY_MATH_CASE(enum, name, type)                             \

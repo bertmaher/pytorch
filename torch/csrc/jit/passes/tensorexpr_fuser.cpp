@@ -80,15 +80,15 @@ bool isSupported(Node* node) {
     case prim::ConstantChunk:
     case aten::cat:
     case prim::ListConstruct:
-#ifndef ENABLE_LLVM    
-    case aten::expm1:
-    case aten::frac:
-    case aten::neg:
-    case aten::lgamma:    
-    case aten::sigmoid:    
-    case aten::reciprocal:
+    case aten::sigmoid:
     case aten::relu:
     case aten::addcmul:
+    case aten::neg:
+    case aten::reciprocal:
+    case aten::expm1:
+    case aten::lgamma:
+#ifndef ENABLE_LLVM
+    case aten::frac:
 #endif
       return true;
     default:

@@ -657,6 +657,7 @@ def test_unary_ops():
             ),
         )
         x = traced(rand_a, rand_b)
+        print(x)
         y = torch_fn(rand_a, rand_b)
         np.testing.assert_allclose(x.numpy(), y.numpy(), 1e-7, 1e-6)
         # nans
@@ -805,3 +806,6 @@ def test_scalar():
 #    test(x, y, z)
 #    r = test(x, y, z)
 #    assert llvm.elapsed_value == 1 or interp.elapsed_value() == 1
+
+if __name__ == "__main__":
+    test_unary_ops()
