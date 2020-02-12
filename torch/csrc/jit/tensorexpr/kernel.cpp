@@ -35,7 +35,7 @@ static std::vector<Expr> texprSizes(const c10::VaryingShape& shape) {
   return dims;
 }
 
-static std::vector<DimArg> texprDims(torch::jit::Value* v) {
+static std::vector<DimArg> texprDims(const torch::jit::Value* v) {
   CHECK(v->type()->kind() == TypeKind::TensorType);
   auto tt = v->type()->cast<TensorType>();
   std::vector<DimArg> dimArgs;
@@ -64,7 +64,7 @@ int64_t bufferSize(T t) {
   return size;
 }
 
-Expr TensorExprKernel::constant(torch::jit::Value* v) {
+Expr TensorExprKernel::constant(const torch::jit::Value* v) {
   if (v->node()->kind() == prim::Constant) {
     const auto val = toIValue(v).value();
     if (val.isDouble()) {
@@ -94,7 +94,7 @@ void TensorExprKernel::promoteInputs(std::vector<Expr>& inputs) {
   }
 }
 
-Expr TensorExprKernel::demoteOutput(const Expr& e, torch::jit::Value* v) {
+Expr TensorExprKernel::demoteOutput(const Expr& e, const torch::jit::Value* v) {
   CHECK(v->type()->kind() == TypeKind::TensorType);
   auto tt = v->type()->cast<TensorType>()->scalarType();
   if (e.dtype() == kFloat32 && tt == at::ScalarType::Int) {
@@ -106,11 +106,11 @@ Expr TensorExprKernel::demoteOutput(const Expr& e, torch::jit::Value* v) {
 
 Tensor TensorExprKernel::ComputeOneOperand(
     const std::string& name,
-    torch::jit::Value* v,
+    const torch::jit::Value* v,
     std::function<Expr(const Expr&)> inner_expr) {
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
-        Node* n = v->node();
+        auto const& n = v->node();
         std::vector<Expr> inputs = {tensorOrConstant(n->inputs()[0], axes)};
 
         promoteInputs(inputs);
@@ -121,11 +121,11 @@ Tensor TensorExprKernel::ComputeOneOperand(
 
 Tensor TensorExprKernel::ComputeTwoOperand(
     const std::string& name,
-    torch::jit::Value* v,
+    const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&)> inner_expr) {
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
-        Node* n = v->node();
+        auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
             tensorOrConstant(n->inputs()[1], axes),
@@ -139,11 +139,11 @@ Tensor TensorExprKernel::ComputeTwoOperand(
 
 Tensor TensorExprKernel::ComputeTwoOperandWithAlpha(
     const std::string& name,
-    torch::jit::Value* v,
+    const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&)> inner_expr) {
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
-        Node* n = v->node();
+        auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
             tensorOrConstant(n->inputs()[1], axes),
@@ -158,11 +158,11 @@ Tensor TensorExprKernel::ComputeTwoOperandWithAlpha(
 
 Tensor TensorExprKernel::ComputeThreeOperand(
     const std::string& name,
-    torch::jit::Value* v,
+    const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&, const Expr&)> inner_expr) {
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
-        Node* n = v->node();
+        auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
             tensorOrConstant(n->inputs()[1], axes),
@@ -177,11 +177,11 @@ Tensor TensorExprKernel::ComputeThreeOperand(
 
 Tensor TensorExprKernel::ComputeFourOperand(
     const std::string& name,
-    torch::jit::Value* v,
+    const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&, const Expr&, const Expr&)> inner_expr) {
   return Compute(
       name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
-        Node* n = v->node();
+        auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
             tensorOrConstant(n->inputs()[1], axes),
@@ -195,7 +195,7 @@ Tensor TensorExprKernel::ComputeFourOperand(
       });
 }
 
-Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
+Tensor TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
   switch (v->node()->kind()) {
     case aten::add: {
       return ComputeTwoOperandWithAlpha(
@@ -476,7 +476,7 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
           "prim_constantchunk",
           texprDims(v),
           [this, v](const std::vector<Var>& axes) {
-            Node* n = v->node();
+            auto const& n = v->node();
             int64_t dim = n->i(attr::dim);
             int64_t chunks = n->i(attr::chunks);
             return chunk(
@@ -491,7 +491,7 @@ Tensor TensorExprKernel::ComputeValue(torch::jit::Value* v) {
     case aten::cat: {
       return Compute(
           "aten_cat", texprDims(v), [this, v](const std::vector<Var>& axes) {
-            Node* n = v->node();
+            auto const& n = v->node();
             auto inputs = n->inputs()[0]->node()->inputs();
             size_t dim = n->inputs()[1]->node()->i(attr::value);
 
@@ -650,7 +650,7 @@ void TensorExprKernel::CodeGenRun(
   }
 }
 
-void TensorExprKernel::bindInput(torch::jit::Value* input) {
+void TensorExprKernel::bindInput(const torch::jit::Value* input) {
   auto const& t = input->type();
   switch (t->kind()) {
     case TypeKind::TensorType: {
