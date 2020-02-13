@@ -135,6 +135,7 @@ class TensorExprKernel {
   void bindInput(const torch::jit::Value* input);
 
  private:
+  int64_t n_inputs_ = 0;
   std::vector<CodeGen::BufferArg> buffer_args_;
   std::vector<Tensor> tensor_outputs_;
   std::unordered_map<int64_t, Tensor> tensors_;

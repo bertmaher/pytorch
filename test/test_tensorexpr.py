@@ -861,3 +861,17 @@ def test_unsqueeze():
     npr = npr + npr
     np.testing.assert_allclose(npr, x.numpy())
     assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
+
+def test_transpose():
+    @torch.jit.script
+    def test(x, y, z):
+        return x.transpose(0, 1) + y + z
+    llvm = LLVMCodeGenExecuted()
+    interp = SimpleIREvalExecuted()
+    x = torch.rand(4, 8, 2, 3)
+    y = torch.rand(8, 4, 2, 3)
+    z = torch.rand(8, 4, 2, 3)
+    ref = test(x, y, z)
+    res = test(x, y, z)
+    np.testing.assert_allclose(ref.numpy(), res.numpy())
+    assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1

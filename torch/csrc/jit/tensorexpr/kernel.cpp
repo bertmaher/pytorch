@@ -46,15 +46,6 @@ static std::vector<DimArg> texprDims(const torch::jit::Value* v) {
   return dimArgs;
 }
 
-static Buffer texprBuffer(const torch::jit::Value* v) {
-  CHECK(v->type()->kind() == TypeKind::TensorType);
-  auto tt = v->type()->cast<TensorType>();
-  return Buffer(
-      "t" + v->debugName(),
-      texprType(tt->scalarType()),
-      texprSizes(tt->sizes()));
-}
-
 template <typename T>
 int64_t bufferSize(T t) {
   int64_t size = 1;
@@ -728,16 +719,33 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
   auto const& t = input->type();
   switch (t->kind()) {
     case TypeKind::TensorType: {
-      Buffer in_buffer = texprBuffer(input);
+      auto tt = input->type()->cast<TensorType>();
+      Buffer in_buffer(
+          "t" + input->debugName(), texprType(tt->scalarType()), {0});
+      std::vector<Var> strides;
+      for (int i = 0; i < *tt->dim(); i++) {
+        strides.push_back(
+            Var("stride_" + c10::to_string(input->unique()) + "_" +
+                    c10::to_string(i),
+                kInt32));
+      }
       tensors_.emplace(
           input->unique(),
           Compute(
               "input",
               texprDims(input),
-              [this, in_buffer](const std::vector<Var>& axes) {
-                return broadcast(in_buffer, axes);
+              [this, in_buffer, strides](const std::vector<Var>& axes) {
+                std::vector<Expr> idxs;
+                idxs.push_back(axes[0] * strides[0]);
+                for (int i = 1; i < axes.size(); i++) {
+                  idxs.push_back(idxs[i - 1] + axes[i] * strides[i]);
+                }
+                return in_buffer(idxs.back());
               }));
       buffer_args_.push_back(std::move(in_buffer));
+      for (auto const& stride : strides) {
+        buffer_args_.push_back(stride);
+      }
       break;
     }
     case TypeKind::FloatType: {
@@ -764,6 +772,7 @@ TensorExprKernel::TensorExprKernel(const Node* node) {
   auto subgraph = node->g(attr::Subgraph);
 
   // Bind inputs to buffers.
+  n_inputs_ = subgraph->inputs().size();
   for (auto const& input : subgraph->inputs()) {
     bindInput(input);
   }
@@ -792,24 +801,25 @@ TensorExprKernel::TensorExprKernel(const Node* node) {
 void TensorExprKernel::run(Stack& stack) {
   KernelScope kernel_scope(kernel_arena_);
   // Set up arguments (inputs, then outputs) for kernel call.
-  auto inputs = last(stack, buffer_args_.size());
+  auto inputs = last(stack, n_inputs_);
   PickAndCheckBackendType(inputs);
 
   std::vector<CodeGen::CallArg> run_args;
-  for (int i = 0; i < buffer_args_.size(); i++) {
-    if (buffer_args_[i].isVar()) {
-      auto const& dtype = buffer_args_[i].dtype();
-      if (dtype == kInt32) {
-        run_args.push_back((int32_t)inputs[i].toInt());
-      } else if (dtype == kFloat32) {
-        run_args.push_back((float)inputs[i].toDouble());
-      } else {
-        LOG(FATAL) << "Unhandled dtype";
+  for (int i = 0; i < inputs.size(); i++) {
+    auto const& input = inputs[i];
+    if (input.isInt()) {
+      run_args.push_back((int32_t)input.toInt());
+    } else if (input.isDouble()) {
+      run_args.push_back((float)input.toDouble());
+    } else if (input.isTensor()) {
+      auto const& tensor = input.toTensor();
+      run_args.push_back(tensor.data_ptr());
+      for (auto const& stride : tensor.strides()) {
+        run_args.push_back((int32_t)stride);
       }
-    } else {
-      run_args.push_back(inputs[i].toTensor().data_ptr());
     }
   }
+
   std::vector<at::Tensor> outputs;
   for (auto& o : tensor_outputs_) {
     outputs.push_back(at::empty(
@@ -821,7 +831,7 @@ void TensorExprKernel::run(Stack& stack) {
   CodeGenRun(run_args);
 
   // Update the stack.
-  drop(stack, buffer_args_.size());
+  drop(stack, n_inputs_);
   for (auto& o : outputs) {
     push_one(stack, std::move(o));
   }
