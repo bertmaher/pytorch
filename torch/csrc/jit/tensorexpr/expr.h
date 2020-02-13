@@ -1,3 +1,8 @@
+/**
+ * This file implements the core classes for Tensor Expressions.
+ *
+ * The structure of the expressions is inspired by Halide/TVM IR.
+ */
 #pragma once
 
 #include "torch/csrc/jit/tensorexpr/ir_mutator.h"
