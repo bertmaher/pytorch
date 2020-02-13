@@ -383,7 +383,7 @@ Tensor TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
               } else if (imm == 4.0f) {
                 Expr tmp = lhs * lhs;
                 return tmp * tmp;
-              } else if (imm = 0.5f) {
+              } else if (imm == 0.5f) {
                 return sqrt(lhs);
               } else if (imm == 0.0f) {
                 return Expr(1.0f);
