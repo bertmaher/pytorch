@@ -1,4 +1,4 @@
-# JIT C++ Tests
+# TensorExpr C++ Tests
 
 ## How to add a new test
 First, create a new test file. Test files should have be placed in this
@@ -6,7 +6,7 @@ directory, with a name that starts with `test_`, like `test_foo.cpp`.
 
 Here is an example test file you can copy-paste.
 ```cpp
-#include <test/cpp/jit/test_base.h>
+#include <test/cpp/tensorexpr/test_base.h>
 
 // Tests go in torch::jit
 namespace torch {
@@ -44,26 +44,12 @@ cmake:
 python setup.py build --cmake
 ```
 
-## Why do we have two different test runners?
-We have two different ways of running our cpp tests:
-1. With `gtest`, from a standalone binary.
-2. With Python, from `TestJit.test_cpp` and `TestJit.test_cpp_cuda` (in
-   `test/test_jit.py`)
-
-We want both because we need to test things from a pure-C++ environment and
-with all our various Python patch-points enabled.
-
 ## How do I run the tests?
 The following commands assume you are in PyTorch root.
 
-1. With `gtest`:
-   ```bash
-   # (re)build the test binary
-   ninja build/bin/test_jit
-   # run
-   build/bin/test_jit --gtest_filter='glob_style_filter*'
-   ```
-2. With Python:
-   ```
-   python test/test_jit.py TestJit.test_cpp TestJit.test_cpp_cuda
-   ```
+ ```bash
+ # (re)build the test binary
+ ninja build/bin/test_tensorexpr
+ # run
+ build/bin/test_tensorexpr --gtest_filter='glob_style_filter*'
+ ```
