@@ -24,7 +24,7 @@ class BenchmarkBase(object):
 
     def check(self):
         np.testing.assert_allclose(
-            self.reference(), self.numpy(self.forward(*self.inputs)), atol=1e-7)
+            self.reference(), self.numpy(self.forward(*self.inputs)), atol=1e-2)
 
     def config(self):
         '''returns an array for the current benchmark configs
@@ -80,7 +80,6 @@ class Benchmark(BenchmarkBase):
                 continue
             method_engine = getattr(self.engine, method)
             setattr(self, method, method_engine)
-
 
     def rand(self, shape, device=None, requires_grad=False):
         v = self.engine.rand(shape, device=device, requires_grad=requires_grad)

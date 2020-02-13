@@ -36,6 +36,7 @@ class CudaPrinter : public IRPrinter {
     os() << ")";
   }
 
+  void visit(const Intrinsics* v);
   void visit(const For* v);
 
   void visit(const Load* v);

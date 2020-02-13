@@ -124,6 +124,33 @@ void CudaPrinter::visit(const For* v) {
   }
 }
 
+void CudaPrinter::visit(const Intrinsics* v) {
+  std::string func_name;
+  // TODO: handle other data types.
+  switch (v->op_type()) {
+    case IntrinsicsOp::kSin:
+      func_name = "sinf";
+      break;
+    case IntrinsicsOp::kCos:
+      func_name = "cosf";
+      break;
+    case IntrinsicsOp::kExp:
+      func_name = "expf";
+      break;
+    default:
+      IRPrinter::visit(v);
+      return;
+  }
+  os() << func_name << "(";
+  for (int i = 0; i < v->nparams(); i++) {
+    if (i > 0) {
+      os() << ", ";
+    }
+    os() << v->param(i);
+  }
+  os() << ")";
+}
+
 void CudaPrinter::visit(const Load* v) {
   // TODO: find a better metric in using ldg or not. Support different dtypes.
   os() << "__ldg(" << v->base_handle() << " + " << v->index() << ")";

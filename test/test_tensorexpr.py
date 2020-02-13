@@ -98,7 +98,7 @@ def test_four_arg():
 
     x = traced(rand_a, rand_b, rand_c, rand_d)
     y = run_addcmul(rand_a, rand_b, rand_c, rand_d)
-    np.testing.assert_allclose(x.numpy(), y.numpy())
+    np.testing.assert_allclose(x.numpy(), y.numpy(), atol=1e-6)
 
 
 def test_three_arg_cuda():
@@ -678,7 +678,7 @@ def test_unary_ops():
             traced = torch.jit.trace(torch_fn, (ins, ins))
             x = traced(rand_a, rand_b)
             y = torch_fn(rand_a, rand_b)
-            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy())
+            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy(), atol=2e-3)
             # nans
             traced = torch.jit.trace(torch_fn, (ins, ins))
             x = traced(nans, rand_b)
