@@ -53,6 +53,7 @@ bool isSupported(Node* node) {
     case aten::lt:
     case aten::min:
     case aten::max:
+    case aten::pow:
     case aten::clamp:
     case aten::log10:
     case aten::log:
