@@ -98,7 +98,7 @@ void IRPrinter::visit(const IntImm* v) {
 }
 
 void IRPrinter::visit(const FloatImm* v) {
-  os() << v->value();
+  os() << v->value() << "f";
 }
 
 void IRPrinter::visit(const Cast* v) {
