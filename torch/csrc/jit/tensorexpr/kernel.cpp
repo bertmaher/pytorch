@@ -722,30 +722,24 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
       auto tt = input->type()->cast<TensorType>();
       Buffer in_buffer(
           "t" + input->debugName(), texprType(tt->scalarType()), {0});
-      std::vector<Var> strides;
-      for (int i = 0; i < *tt->dim(); i++) {
-        strides.push_back(
-            Var("stride_" + c10::to_string(input->unique()) + "_" +
-                    c10::to_string(i),
-                kInt32));
-      }
+      auto const& strides = tt->strides();
       tensors_.emplace(
           input->unique(),
           Compute(
               "input",
               texprDims(input),
               [this, in_buffer, strides](const std::vector<Var>& axes) {
+                TORCH_CHECK(
+                    axes.size() == strides.size(),
+                    "strides and axes are not the same size");
                 std::vector<Expr> idxs;
-                idxs.push_back(axes[0] * strides[0]);
+                idxs.push_back(axes[0] * (int32_t)*strides[0]);
                 for (int i = 1; i < axes.size(); i++) {
-                  idxs.push_back(idxs[i - 1] + axes[i] * strides[i]);
+                  idxs.push_back(idxs[i - 1] + axes[i] * (int32_t)*strides[i]);
                 }
                 return in_buffer(idxs.back());
               }));
       buffer_args_.push_back(std::move(in_buffer));
-      for (auto const& stride : strides) {
-        buffer_args_.push_back(stride);
-      }
       break;
     }
     case TypeKind::FloatType: {
@@ -814,9 +808,6 @@ void TensorExprKernel::run(Stack& stack) {
     } else if (input.isTensor()) {
       auto const& tensor = input.toTensor();
       run_args.push_back(tensor.data_ptr());
-      for (auto const& stride : tensor.strides()) {
-        run_args.push_back((int32_t)stride);
-      }
     }
   }
 
