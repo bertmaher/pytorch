@@ -3,6 +3,14 @@ import itertools
 import framework
 import os
 import tensor_engine
+# import normalization
+# import broadcast
+# import reduction
+# import elementwise
+# import softmax
+# import pooling
+# import conv
+# import matmul
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
