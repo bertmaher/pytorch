@@ -183,7 +183,7 @@ void testExprMath01() {
 
   std::ostringstream oss;
   oss << v;
-  ASSERT_EQ(oss.str(), "sin(1)");
+  ASSERT_EQ(oss.str(), "sin(1.f)");
 
   SimpleIRExprEval eval(v);
   float v_ref = std::sin(1.0f);
@@ -326,7 +326,7 @@ void testIfThenElse01() {
 
   std::ostringstream oss;
   oss << v;
-  ASSERT_EQ(oss.str(), "IfThenElse(1, 1, 2)");
+  ASSERT_EQ(oss.str(), "IfThenElse(1, 1.f, 2.f)");
 
   SimpleIRExprEval eval(v);
   ASSERT_EQ(eval.value<float>(), 1.0f);
@@ -338,7 +338,7 @@ void testIfThenElse02() {
 
   std::ostringstream oss;
   oss << v;
-  ASSERT_EQ(oss.str(), "IfThenElse(0, 1, 2)");
+  ASSERT_EQ(oss.str(), "IfThenElse(0, 1.f, 2.f)");
 
   SimpleIRExprEval eval(v);
   ASSERT_EQ(eval.value<float>(), 2.0f);

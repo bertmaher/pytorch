@@ -344,7 +344,9 @@ void CudaCodeGen::CompileToNVRTC(const std::string& code) {
     std::vector<char> log(logsize);
     AT_CUDA_NVRTC_CHECK(nvrtc().nvrtcGetProgramLog(program, log.data()));
     std::stringstream cu;
-    cu << log.data();
+    cu << log.data() << std::endl;
+    cu << "nvrtc compilation failed: " << std::endl;
+    cu << code << std::endl;
     throw std::runtime_error(cu.str());
   }
   ResourceGuard holdProgram(

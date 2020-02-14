@@ -98,7 +98,15 @@ void IRPrinter::visit(const IntImm* v) {
 }
 
 void IRPrinter::visit(const FloatImm* v) {
-  os() << v->value() << "f";
+  std::ostringstream oss;
+  oss << v->value();
+  std::string s = oss.str();
+  if (s.find('.') == std::string::npos) {
+    s += ".f";
+  } else {
+    s += "f";
+  }
+  os() << s;
 }
 
 void IRPrinter::visit(const Cast* v) {
