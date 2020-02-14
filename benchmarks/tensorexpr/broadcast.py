@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 import torch
 
-
 class BroadcastMulBench(framework.Benchmark):
     def __init__(self, mode, device, case, M, N, K):
         super().__init__(mode, device)
@@ -51,7 +50,7 @@ class BroadcastMulBench(framework.Benchmark):
         buffer_size = self.M * self.N * self.K * 4
         return {'sol': buffer_size * sol_count, 'algorithmic': buffer_size * algorithmic_count}
 
-    
+
 class BroadcastRowBench(BroadcastMulBench):
     def __init__(self, mode, device, M, N, K):
         super(BroadcastRowBench, self).__init__(mode, device, 'row', M, N, K)
@@ -60,7 +59,7 @@ class BroadcastRowBench(BroadcastMulBench):
     def module():
         return 'broadcast_row'
 
-    
+
 class BroadcastMidBench(BroadcastMulBench):
     def __init__(self, mode, device, M, N, K):
         super(BroadcastMidBench, self).__init__(mode, device, 'mid', M, N, K)
@@ -69,7 +68,7 @@ class BroadcastMidBench(BroadcastMulBench):
     def module():
         return 'broadcast_mid'
 
-    
+
 class BroadcastColBench(BroadcastMulBench):
     def __init__(self, mode, device, M, N, K):
         super(BroadcastColBench, self).__init__(mode, device, 'col', M, N, K)
@@ -121,12 +120,12 @@ class BroadcastThreeArgs(framework.Benchmark):
     @staticmethod
     def module():
         return 'broadcast_3args'
-    
-    
-#framework.register_benchmark_class(BroadcastRowBench)
-#framework.register_benchmark_class(BroadcastMidBench)
-#framework.register_benchmark_class(BroadcastColBench)
-#framework.register_benchmark_class(BroadcastThreeArgs)
+
+
+# framework.register_benchmark_class(BroadcastRowBench)
+# framework.register_benchmark_class(BroadcastMidBench)
+# framework.register_benchmark_class(BroadcastColBench)
+# framework.register_benchmark_class(BroadcastThreeArgs)
 
 # TODO: merge this with elementwise bench
 # A template class for elementwise operations.
@@ -139,6 +138,7 @@ class BroadcastBench(framework.Benchmark):
     unary_op_pt_func = None
     unary_op_np_func = None
     split_input = True
+
     def __init__(self, mode, device, M, N, K):
         super().__init__(mode, device)
         self.M = M
@@ -152,9 +152,11 @@ class BroadcastBench(framework.Benchmark):
 
     def _eval(self, d1, d2, d3, d4, binary_op, unary_op):
         if not binary_op:
-            binary_op = lambda x, y: x + y
+            def binary_op(x, y):
+                return x + y
         if not unary_op:
-            unary_op = lambda x: x
+            def unary_op(x):
+                return x
         if self.split_input:
             d1 = unary_op(d1)
             d2 = unary_op(d2)
@@ -166,7 +168,7 @@ class BroadcastBench(framework.Benchmark):
         b = binary_op(d3, d4)
         c = a + b
         return c
-        
+
     def forward(self, d1, d2, d3, d4):
         binary_op = self.__class__.binary_op_pt_func
         unary_op = self.__class__.unary_op_pt_func
@@ -226,7 +228,7 @@ def register_broadcast_ops():
         ["sin", lambda x: torch.sin(x), lambda x: np.sin(x)],
         ["cos", lambda x: torch.cos(x), lambda x: np.cos(x)],
     ]
-    
+
     for split_input, binary_op in itertools.product([True, False], binary_op_list):
         # Make a copy of BroadcastBench
         if len(binary_op) == 2:
@@ -242,7 +244,7 @@ def register_broadcast_ops():
         bm_cls.binary_op_np_func = op_np_func
         bm_cls.split_input = split_input
         framework.register_benchmark_class(bm_cls)
-                
+
     for split_input, unary_op in itertools.product([True, False], unary_op_list):
         # Make a copy of BroadcastBench
         if len(unary_op) == 2:
@@ -258,7 +260,6 @@ def register_broadcast_ops():
         bm_cls.unary_op_np_func = op_np_func
         bm_cls.split_input = split_input
         framework.register_benchmark_class(bm_cls)
-                
-    
-register_broadcast_ops()
 
+
+register_broadcast_ops()

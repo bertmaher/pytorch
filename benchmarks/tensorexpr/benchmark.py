@@ -3,20 +3,10 @@ import itertools
 import framework
 import os
 import tensor_engine
-#import normalization
-import broadcast
-#import reduction
-import elementwise
-#import softmax
-#import pooling
-#import conv
-#import matmul
-
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description=
-'''Benchmark operators in specific shapes.
+                                     description='''Benchmark operators in specific shapes.
 Works only with Python3.\n A few examples:
   * benchmark.py: runs all the default configs with all the benchmarks.
   * benchmark.py reduce: runs all the default configs with all benchmark with a prefix 'reduce'
@@ -31,7 +21,7 @@ Works only with Python3.\n A few examples:
                         help='the underlying tensor engine. only pt for now')
     parser.add_argument('--jit_mode', type=str, default='trace',
                         help='the jit mode to use: one of {trace, none}')
-    
+
     args = parser.parse_args()
 
     def set_global_threads(num_threads):
@@ -105,7 +95,7 @@ Works only with Python3.\n A few examples:
                     if len(config) < 2:
                         raise ValueError('invalid config: %s' % config)
                     mode, device = config[0:2]
-                    #TODO: make sure virtual devices such as 'cpu1' and 'cpu4' are supported.
+                    # TODO: make sure virtual devices such as 'cpu1' and 'cpu4' are supported.
                     if mode not in ['fwd', 'both']:
                         raise ValueError('invalid mode: %s' % (mode))
                     for i, entry in enumerate(config):
@@ -123,5 +113,5 @@ Works only with Python3.\n A few examples:
                 raise ValueError('invalid name: %s\nAvailable benchmark classes:\n%s' % (name, available_classes))
 
 
-if __name__== '__main__':
+if __name__ == '__main__':
     main()

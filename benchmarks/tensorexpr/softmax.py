@@ -8,7 +8,7 @@ class SoftmaxBench(framework.Benchmark):
         self.M = M
         self.N = N
         self.data = self.rand([M, N], device=device, requires_grad=self.requires_grad)
- 
+
     def forward(self):
         y = self.softmax(self.data, dim=1)
         return y
@@ -36,7 +36,7 @@ class SoftmaxBench(framework.Benchmark):
 
     @staticmethod
     def default_configs():
-        return [[128, 1<<16]]
+        return [[128, 1 << 16]]
 
 
 framework.register_benchmark_class(SoftmaxBench)

@@ -18,7 +18,7 @@ class ReduceBench(framework.Benchmark):
             self.dims = [0, 1]
         else:
             raise ValueError('invalid case: %s' % case)
-        
+
     def forward(self):
         y = self.sum(self.data, self.dims)
         return y
@@ -29,7 +29,6 @@ class ReduceBench(framework.Benchmark):
     @staticmethod
     def default_configs():
         return [
-            #[512, 512, 512],
             [512, 64, 512],
         ]
 

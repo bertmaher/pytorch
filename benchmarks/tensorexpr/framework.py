@@ -4,6 +4,7 @@ import time
 import tensor_engine
 import torch
 
+
 class BenchmarkBase(object):
     def __init__(self, mode, device):
         self.mode = mode
@@ -105,7 +106,7 @@ def run_benchmark(benchmark):
     if callable(getattr(benchmark, 'reference', None)):
         benchmark.check()
     else:
-        print(f"Warning: no reference result for {benchmark.module()}")
+        print("Warning: no reference result for {}".format(benchmark.module()))
 
     bm_jit = None
     for i in range(warmups + iters):
@@ -144,6 +145,7 @@ def run_benchmark(benchmark):
 
 
 benchmark_classes = []
+
 
 def register_benchmark_class(benchmark_cls):
     benchmark_classes.append(benchmark_cls)

@@ -22,7 +22,7 @@ class ConvImplBench(framework.Benchmark):
         self.conv = self.conv2d_layer(iC, oC, kernel_size, groups=self.groups)
         if device != 'cpu':
             self.to_device(self.conv, device)
- 
+
     def forward(self):
         y = self.conv(self.data)
         return y
@@ -83,21 +83,21 @@ class ConvImplBench(framework.Benchmark):
 
 class ConvBench(ConvImplBench):
     def __init__(self, *args):
-        super().__init__('conv', *args) 
+        super().__init__('conv', *args)
 
     @staticmethod
     def module():
         return 'conv'
 
-    
+
 class DepthwiseConvBench(ConvImplBench):
     def __init__(self, *args):
-        super().__init__('depthwise_conv', *args) 
+        super().__init__('depthwise_conv', *args)
 
     @staticmethod
     def module():
         return 'depthwise_conv'
 
-    
+
 framework.register_benchmark_class(ConvBench)
 framework.register_benchmark_class(DepthwiseConvBench)

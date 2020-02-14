@@ -5,6 +5,8 @@ import torch
 
 # A template class for elementwise operations.
 # A derived class will override the class instance to customize its behavior.
+
+
 class ElementBench(framework.Benchmark):
     # List of customization class variables.
     op_str = None
@@ -13,6 +15,7 @@ class ElementBench(framework.Benchmark):
     unary_op_pt_func = None
     unary_op_np_func = None
     split_input = True
+
     def __init__(self, mode, device, N):
         super().__init__(mode, device)
         self.N = N
@@ -24,9 +27,11 @@ class ElementBench(framework.Benchmark):
 
     def _eval(self, d1, d2, d3, d4, binary_op, unary_op):
         if not binary_op:
-            binary_op = lambda x, y: x + y
+            def binary_op(x, y):
+                return x + y
         if not unary_op:
-            unary_op = lambda x: x
+            def unary_op(x):
+                return x
         if self.split_input:
             d1 = unary_op(d1)
             d2 = unary_op(d2)
@@ -41,7 +46,7 @@ class ElementBench(framework.Benchmark):
         b = binary_op(d3, d4)
         c = a + b
         return c
-        
+
     def forward(self, d1, d2, d3, d4):
         binary_op = self.__class__.binary_op_pt_func
         unary_op = self.__class__.unary_op_pt_func
@@ -101,7 +106,7 @@ def register_element_ops():
         ["sin", lambda x: torch.sin(x), lambda x: np.sin(x)],
         ["cos", lambda x: torch.cos(x), lambda x: np.cos(x)],
     ]
-    
+
     for split_input, binary_op in itertools.product([True, False], binary_op_list):
         # Make a copy of ElementBench
         if len(binary_op) == 2:
@@ -117,7 +122,7 @@ def register_element_ops():
         bm_cls.binary_op_np_func = op_np_func
         bm_cls.split_input = split_input
         framework.register_benchmark_class(bm_cls)
-                
+
     for split_input, unary_op in itertools.product([True, False], unary_op_list):
         # Make a copy of ElementBench
         if len(unary_op) == 2:
@@ -133,8 +138,7 @@ def register_element_ops():
         bm_cls.unary_op_np_func = op_np_func
         bm_cls.split_input = split_input
         framework.register_benchmark_class(bm_cls)
-                
-    
-#framework.register_benchmark_class(ElementMulBench)
-register_element_ops()
 
+
+# framework.register_benchmark_class(ElementMulBench)
+register_element_ops()

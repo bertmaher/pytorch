@@ -34,7 +34,7 @@ class MatMulBench(framework.Benchmark):
             sol_count = 1 + 1
             algorithmic_count = 1 + (1 + 1)
 
-        buffer_size = self.B * self.M * self.N  + self.B * self.M * self.N + self.B * self.N * self.K
+        buffer_size = self.B * self.M * self.N + self.B * self.M * self.N + self.B * self.N * self.K
         buffer_size *= 4
         return {'sol': buffer_size * sol_count, 'algorithmic': buffer_size * algorithmic_count}
 
@@ -48,7 +48,6 @@ class MatMulBench(framework.Benchmark):
 
         return op_count * count
 
-        
     @staticmethod
     def default_configs():
         return [[128, 64, 128, 256]]

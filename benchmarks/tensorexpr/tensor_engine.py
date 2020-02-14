@@ -1,5 +1,6 @@
 tensor_engine = None
 
+
 def unsupported(func):
     def wrapper(self):
         return func(self)
@@ -35,7 +36,7 @@ def set_engine_mode(mode):
         raise ValueError('invalid tensor engine mode: %s' % (mode))
     tensor_engine.mode = mode
 
-    
+
 def get_engine():
     if tensor_engine is None:
         raise ValueError('use of get_engine, before calling set_engine_mode is illegal')

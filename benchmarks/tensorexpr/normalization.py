@@ -1,6 +1,7 @@
 import framework
 import tensor_engine
 
+
 class NormalizationBench(framework.Benchmark):
     def __init__(self, mode, device, N, C, H, W):
         super().__init__(mode, device)
@@ -42,7 +43,7 @@ class BatchNormBench(NormalizationBench):
     def module():
         return 'batchnorm'
 
-    
+
 class InstanceNormBench(NormalizationBench):
     def forward(self):
         y = self.instance_norm(self.data)
@@ -54,8 +55,8 @@ class InstanceNormBench(NormalizationBench):
 
     def is_supported(self):
         return tensor_engine.is_supported(self.instance_norm)
-        
-    
+
+
 class LayerNormBench(NormalizationBench):
     def forward(self):
         y = self.layer_norm(self.data, [self.H, self.W])
