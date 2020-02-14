@@ -4,6 +4,31 @@
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
 
+namespace torch {
+namespace jit {
+namespace tensorexpr {
+
+static int te_cuda_pointwise_loop_levels = -1;
+static int te_cuda_pointwise_block_count = -1;
+static int te_cuda_pointwise_block_size = -1;
+
+int& GetTECudaPointwiseLoopLevels() {
+  return te_cuda_pointwise_loop_levels;
+}
+
+int& GetTECudaPointwiseBlockCount() {
+  return te_cuda_pointwise_block_count;
+}
+
+int& GetTECudaPointwiseBlockSize() {
+  return te_cuda_pointwise_block_size;
+}
+
+} // namespace tensorexpr
+} // namespace jit
+} // namespace torch
+
+
 static Dtype texprType(const c10::optional<at::ScalarType>& st) {
   switch (*st) {
     case at::ScalarType::Int:
@@ -646,10 +671,37 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       tensor_outputs_[i].ComputeInline();
       Tensor tensor = tensor_outputs[i];
       Var index = tensor.arg(0);
-      Var outer;
-      Var inner;
-      tensor.SplitWithMask(index, 512, true, &outer, &inner);
-      tensor.GPUExecConfig({outer}, {inner});
+      int loop_levels = GetTECudaPointwiseLoopLevels();
+      const int kDefaultLoopLevels = 2;
+      loop_levels = (loop_levels > 0) ? loop_levels : kDefaultLoopLevels;
+      int block_count = GetTECudaPointwiseBlockCount();
+      int block_size = GetTECudaPointwiseBlockSize();
+
+      if (loop_levels == 2) {
+	Var outer;
+	Var inner;
+	int kDefaultBlockSize = 512;
+	if (block_size < 0) {
+	  block_size = kDefaultBlockSize;
+	}
+	tensor.SplitWithMask(index, block_size, true, &outer, &inner);
+	tensor.GPUExecConfig({outer}, {inner});
+      } else if (loop_levels == 3) {
+	Var outer;
+	Var inner;
+	Var inner_1;
+	Var inner_2;
+	// TODO: change the number of microprocessors
+	const int kDefaultBlockCount = 1280;
+	const int kDefaultBlockSize = 256;
+	block_count = (block_count > 0) ? block_count : kDefaultBlockCount;
+	block_size = (block_size > 0) ? block_size : kDefaultBlockSize;
+	tensor.SplitWithMask(index, block_count * block_size, true, &outer, &inner);
+	tensor.SplitWithMask(inner, block_size, true, &inner_1, &inner_2);
+	tensor.GPUExecConfig({inner_1}, {inner_2});
+      } else {
+	throw std::runtime_error("Invalid loop-level: " + std::to_string(loop_levels));
+      }
     }
   }
 

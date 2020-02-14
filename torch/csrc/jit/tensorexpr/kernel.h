@@ -146,6 +146,10 @@ class TensorExprKernel {
   at::Device device_ = at::kCPU;
 };
 
+TORCH_API int& GetTECudaPointwiseLoopLevels();
+TORCH_API int& GetTECudaPointwiseBlockCount();
+TORCH_API int& GetTECudaPointwiseBlockSize();
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
