@@ -141,7 +141,7 @@ class TensorExprKernel {
   std::unordered_map<int64_t, Tensor> tensors_;
   std::unordered_map<int64_t, Var> scalars_;
   std::unique_ptr<CodeGen> codegen_;
-  KernelArena kernel_arena_;
+  KernelScope kernel_scope_;
   BackendType backend_type_ = BackendType::kUninitialized;
   at::Device device_ = at::kCPU;
 };
