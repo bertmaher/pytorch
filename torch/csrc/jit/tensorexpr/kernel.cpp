@@ -762,6 +762,7 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
 }
 
 TensorExprKernel::TensorExprKernel(const Node* node) {
+  KernelScope ks(&kernel_arena_);
   auto subgraph = node->g(attr::Subgraph);
 
   // Bind inputs to buffers.
@@ -792,6 +793,7 @@ TensorExprKernel::TensorExprKernel(const Node* node) {
 }
 
 void TensorExprKernel::run(Stack& stack) {
+  KernelScope ks(&kernel_arena_);
   // Set up arguments (inputs, then outputs) for kernel call.
   auto inputs = last(stack, n_inputs_);
   PickAndCheckBackendType(inputs);
