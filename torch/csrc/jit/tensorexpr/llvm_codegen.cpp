@@ -338,13 +338,14 @@ void LLVMCodeGen::visit(const CompareSelect* v) {
   auto lhs = this->value_;
   v->rhs().accept(this);
   auto rhs = this->value_;
+  auto type_used = v->lhs().dtype();
 
   llvm::Value* cmp_;
   llvm::Value* false_int_ = llvm::ConstantInt::getSigned(int32Ty_, 0);
   llvm::Value* true_int_ = llvm::ConstantInt::getSigned(int32Ty_, 1);
   CompareSelectOperation cmp_op_ = v->compare_select_op();
 
-  if (v->dtype() == kInt32) {
+  if (type_used == kInt32) {
     switch (cmp_op_) {
       case CompareSelectOperation::kEQ:
         cmp_ = irb_.CreateICmpEQ(lhs, rhs);
@@ -372,6 +373,9 @@ void LLVMCodeGen::visit(const CompareSelect* v) {
     switch (cmp_op_) {
       case CompareSelectOperation::kEQ:
         cmp_ = irb_.CreateFCmpUEQ(lhs, rhs);
+        break;
+      case CompareSelectOperation::kNE:
+        cmp_ = irb_.CreateFCmpUNE(lhs, rhs);
         break;
       case CompareSelectOperation::kGT:
         cmp_ = irb_.CreateFCmpUGT(lhs, rhs);
