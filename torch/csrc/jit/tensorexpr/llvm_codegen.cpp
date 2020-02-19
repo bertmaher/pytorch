@@ -372,22 +372,22 @@ void LLVMCodeGen::visit(const CompareSelect* v) {
   } else { // FP32
     switch (cmp_op_) {
       case CompareSelectOperation::kEQ:
-        cmp_ = irb_.CreateFCmpUEQ(lhs, rhs);
+        cmp_ = irb_.CreateFCmpOEQ(lhs, rhs);
         break;
       case CompareSelectOperation::kNE:
-        cmp_ = irb_.CreateFCmpUNE(lhs, rhs);
+        cmp_ = irb_.CreateFCmpONE(lhs, rhs);
         break;
       case CompareSelectOperation::kGT:
-        cmp_ = irb_.CreateFCmpUGT(lhs, rhs);
+        cmp_ = irb_.CreateFCmpOGT(lhs, rhs);
         break;
       case CompareSelectOperation::kGE:
-        cmp_ = irb_.CreateFCmpUGE(lhs, rhs);
+        cmp_ = irb_.CreateFCmpOGE(lhs, rhs);
         break;
       case CompareSelectOperation::kLT:
-        cmp_ = irb_.CreateFCmpULT(lhs, rhs);
+        cmp_ = irb_.CreateFCmpOLT(lhs, rhs);
         break;
       case CompareSelectOperation::kLE:
-        cmp_ = irb_.CreateFCmpULE(lhs, rhs);
+        cmp_ = irb_.CreateFCmpOLE(lhs, rhs);
         break;
       default:
         // TODO: change to a proper error report
