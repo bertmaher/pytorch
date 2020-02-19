@@ -831,22 +831,21 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
   }
 }
 
-TensorExprKernel::TensorExprKernel(const Node* node) {
+TensorExprKernel::TensorExprKernel(const Graph& subgraph) {
   KernelScope kernel_scope(kernel_arena_);
-  auto subgraph = node->g(attr::Subgraph);
 
   // Bind inputs to buffers.
-  n_inputs_ = subgraph->inputs().size();
-  for (auto const& input : subgraph->inputs()) {
+  n_inputs_ = subgraph.inputs().size();
+  for (auto const& input : subgraph.inputs()) {
     bindInput(input);
   }
 
   // Bind nodes to tensor compute expressions.
-  for (auto const& n : subgraph->nodes()) {
+  for (auto const& n : subgraph.nodes()) {
     if (n->kind() == prim::Constant || n->kind() == prim::ListConstruct) {
       continue;
     } else {
-      for (torch::jit::Value* output : n->outputs()) {
+      for (auto const& output : n->outputs()) {
         if (output->hasUses()) {
           tensors_.emplace(output->unique(), ComputeValue(output));
         }
@@ -855,7 +854,7 @@ TensorExprKernel::TensorExprKernel(const Node* node) {
   }
 
   // Move output operands from `tensors_` to `tensor_outputs_`
-  for (const auto& output : subgraph->outputs()) {
+  for (const auto& output : subgraph.outputs()) {
     CHECK(tensors_.count(output->unique())) << "Output must be a tensor";
     tensor_outputs_.emplace_back(tensors_.at(output->unique()));
     tensors_.erase(output->unique());
