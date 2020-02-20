@@ -83,6 +83,8 @@ class TensorExprKernel {
     return t.call(indices);
   }
 
+  std::vector<Expr> valueShape(const torch::jit::Value* v);
+
   void promoteInputs(std::vector<Expr>& inputs);
 
   Expr demoteOutput(const Expr& e, const torch::jit::Value* v);

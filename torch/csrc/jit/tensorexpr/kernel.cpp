@@ -1,4 +1,5 @@
 #include <torch/csrc/jit/tensorexpr/kernel.h>
+#include <torch/csrc/jit/tensorexpr/ir_printer.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 
 using namespace torch::jit;
@@ -120,12 +121,67 @@ Expr TensorExprKernel::demoteOutput(const Expr& e, const torch::jit::Value* v) {
   return e;
 }
 
+static bool isOne(Expr e) {
+  auto const& n = e.AsNode<IntImm>();
+  if (!n) {
+    return false;
+  }
+  return n->value() == 1;
+}
+
+static std::vector<Expr> broadcastShapes(
+    const std::vector<Expr>& a,
+    const std::vector<Expr>& b) {
+  auto at = a.rbegin();
+  auto bt = b.rbegin();
+  std::vector<Expr> ret;
+  while (at != a.rend() || bt != b.rend()) {
+    if (at == a.rend()) {
+      ret.push_back(*bt++);
+      continue;
+    }
+    if (bt == b.rend()) {
+      ret.push_back(*at++);
+      continue;
+    }
+    // TODO: if neither *at nor *bt is 1, ensure they are identical
+    // expressions.  Nb: `==` doesn't work since that simply produces a new
+    // Expr.
+    Expr dim = isOne(*at) ? *bt : *at;
+    ret.push_back(dim);
+    at++;
+    bt++;
+  }
+  std::reverse(ret.begin(), ret.end());
+  return ret;
+}
+
+template <typename... Args>
+static std::vector<Expr> broadcastShapes(
+    const std::vector<Expr>& a,
+    const std::vector<Expr>& b,
+    Args... args) {
+  return broadcastShapes(broadcastShapes(a, b), args...);
+}
+
+std::vector<Expr> TensorExprKernel::valueShape(const torch::jit::Value* v) {
+  auto it = tensors_.find(v->unique());
+  if (it == tensors_.end()) {
+    return {1};
+  }
+  return it->second.dims();
+}
+
 Tensor TensorExprKernel::ComputeOneOperand(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&)> inner_expr) {
+  auto const& n = v->node();
+  auto const& shape = valueShape(n->inputs()[0]);
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name,
+      c10::fmap<DimArg>(shape),
+      [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {tensorOrConstant(n->inputs()[0], axes)};
 
@@ -139,8 +195,13 @@ Tensor TensorExprKernel::ComputeTwoOperand(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&)> inner_expr) {
+  auto const& n = v->node();
+  auto const& shape =
+      broadcastShapes(valueShape(n->inputs()[0]), valueShape(n->inputs()[1]));
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name,
+      c10::fmap<DimArg>(shape),
+      [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
@@ -157,8 +218,13 @@ Tensor TensorExprKernel::ComputeTwoOperandWithAlpha(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&)> inner_expr) {
+  auto const& n = v->node();
+  auto const& shape =
+      broadcastShapes(valueShape(n->inputs()[0]), valueShape(n->inputs()[1]));
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name,
+      c10::fmap<DimArg>(shape),
+      [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
@@ -176,8 +242,15 @@ Tensor TensorExprKernel::ComputeThreeOperand(
     const std::string& name,
     const torch::jit::Value* v,
     std::function<Expr(const Expr&, const Expr&, const Expr&)> inner_expr) {
+  auto const& n = v->node();
+  auto const& shape = broadcastShapes(
+      valueShape(n->inputs()[0]),
+      valueShape(n->inputs()[1]),
+      valueShape(n->inputs()[2]));
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name,
+      c10::fmap<DimArg>(shape),
+      [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
@@ -194,9 +267,18 @@ Tensor TensorExprKernel::ComputeThreeOperand(
 Tensor TensorExprKernel::ComputeFourOperand(
     const std::string& name,
     const torch::jit::Value* v,
-    std::function<Expr(const Expr&, const Expr&, const Expr&, const Expr&)> inner_expr) {
+    std::function<Expr(const Expr&, const Expr&, const Expr&, const Expr&)>
+        inner_expr) {
+  auto const& n = v->node();
+  auto const& shape = broadcastShapes(
+      valueShape(n->inputs()[0]),
+      valueShape(n->inputs()[1]),
+      valueShape(n->inputs()[2]),
+      valueShape(n->inputs()[3]));
   return Compute(
-      name, texprDims(v), [this, v, inner_expr](const std::vector<Var>& axes) {
+      name,
+      c10::fmap<DimArg>(shape),
+      [this, v, inner_expr](const std::vector<Var>& axes) {
         auto const& n = v->node();
         std::vector<Expr> inputs = {
             tensorOrConstant(n->inputs()[0], axes),
