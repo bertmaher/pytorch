@@ -463,6 +463,25 @@ void LLVMCodeGen::visit(const Let* v) {
   }
 }
 
+// TODO: refactor this and merge with Let
+void LLVMCodeGen::visit(const LetStmt* v) {
+  const Variable* var = v->var().AsNode<Variable>();
+  CHECK(var != nullptr);
+  v->value().accept(this);
+  auto value = value_;
+  if (!varToVal_.count(var)) {
+    varToVal_.emplace(var, value);
+  } else {
+    throw std::runtime_error("var should not exist before");
+  }
+  v->body().accept(this);
+  if (varToVal_.count(var)) {
+    varToVal_.erase(var);
+  } else {
+    throw std::runtime_error("erasing var that doesn't exist");
+  }
+}
+
 void LLVMCodeGen::visit(const Ramp* v) {
   v->base().accept(this);
   auto base = this->value_;
