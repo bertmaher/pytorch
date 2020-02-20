@@ -42,7 +42,7 @@ inline std::vector<Expr> computeIndicesToBroadcast(
 
 class TensorExprKernel {
  public:
-  explicit TensorExprKernel(const Node* node);
+  explicit TensorExprKernel(const Graph& subgraph);
 
   void run(Stack& stack);
 
@@ -82,6 +82,8 @@ class TensorExprKernel {
 
     return t.call(indices);
   }
+
+  std::vector<Expr> valueShape(const torch::jit::Value* v);
 
   void promoteInputs(std::vector<Expr>& inputs);
 
