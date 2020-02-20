@@ -723,6 +723,7 @@ class TORCH_API CompareSelect : public ExprNode<CompareSelect> {
       const Expr& lhs,
       const Expr& rhs,
       CompareSelectOperation cmp_op) {
+    CHECK_EQ(lhs.dtype(), rhs.dtype());
     return Expr(
         new CompareSelect(lhs, rhs, IntImm::make(1), IntImm::make(0), cmp_op));
   }
@@ -733,6 +734,8 @@ class TORCH_API CompareSelect : public ExprNode<CompareSelect> {
       const Expr& ret_val1,
       const Expr& ret_val2,
       CompareSelectOperation cmp_op) {
+    CHECK_EQ(lhs.dtype(), rhs.dtype());
+    CHECK_EQ(ret_val1.dtype(), ret_val2.dtype());
     return Expr(new CompareSelect(lhs, rhs, ret_val1, ret_val2, cmp_op));
   }
 
