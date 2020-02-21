@@ -26,7 +26,7 @@ void testCudaTestVectorAdd01() {
   const int block_size = 128;
   Buffer a_buf("a", kFloat32, {num_iter, block_count, block_size});
   Buffer b_buf("b", kFloat32, {num_iter, block_count, block_size});
-  Tensor c = Compute(
+  Tensor* c = Compute(
       "c",
       {
           {num_iter, "n"},
@@ -37,9 +37,9 @@ void testCudaTestVectorAdd01() {
         return a_buf(n, b_id, t_id) + b_buf(n, b_id, t_id);
       });
   Schedule sch({c});
-  const Var& b_id = c.arg(1);
-  const Var& t_id = c.arg(2);
-  c.GPUExecConfig({b_id}, {t_id});
+  const Var& b_id = c->arg(1);
+  const Var& t_id = c->arg(2);
+  c->GPUExecConfig({b_id}, {t_id});
   Stmt stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
   const int N = block_count * block_size * num_iter;
@@ -83,18 +83,18 @@ static void testCudaTestVectorAdd02_impl(int N, int block_size) {
   KernelScope kernel_scope;
   Buffer a_buf("a", kFloat32, {N});
   Buffer b_buf("b", kFloat32, {N});
-  Tensor c = Compute(
+  Tensor* c = Compute(
       "c",
       {
           {N, "N"},
       },
       [&](const Var& n) { return a_buf(n) + b_buf(n); });
   Schedule sch({c});
-  const Var& n = c.arg(0);
+  const Var& n = c->arg(0);
   Var n_outer;
   Var n_inner;
-  c.SplitWithMask(n, block_size, true, &n_outer, &n_inner);
-  c.GPUExecConfig({n_outer}, {n_inner});
+  c->SplitWithMask(n, block_size, true, &n_outer, &n_inner);
+  c->GPUExecConfig({n_outer}, {n_inner});
   Stmt stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
   PaddedBuffer<float> a_v(N);
@@ -145,7 +145,7 @@ void testCudaDynamicShape2D() {
     Var n("n", kInt32);
     Buffer a(Var("a", kHandle), kFloat32, {m, n});
     Buffer b(Var("b", kHandle), kFloat32, {m, n});
-    Tensor c =
+    Tensor* c =
         Compute("c", {{m, "m"}, {n, "n"}}, [&](const Var& i, const Var& j) {
           return a(i, j) + b(i, j);
         });
@@ -205,7 +205,7 @@ void testCudaTestRand01() {
   const int num_iter = 3;
   const int block_count = 16;
   const int block_size = 128;
-  Tensor c = Compute(
+  Tensor* c = Compute(
       "c",
       {
           {num_iter, "n"},
@@ -216,9 +216,9 @@ void testCudaTestRand01() {
         return Intrinsics::make(IntrinsicsOp::kRand, kFloat32);
       });
   Schedule sch({c});
-  const Var& b_id = c.arg(1);
-  const Var& t_id = c.arg(2);
-  c.GPUExecConfig({b_id}, {t_id});
+  const Var& b_id = c->arg(1);
+  const Var& t_id = c->arg(2);
+  c->GPUExecConfig({b_id}, {t_id});
   Stmt stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c);
   const int N = block_count * block_size * num_iter;

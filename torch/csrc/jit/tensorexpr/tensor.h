@@ -46,8 +46,7 @@ class TORCH_API TensorOperation : public KernelScopedObject {
 
  protected:
   TensorOperation() {}
-  explicit TensorOperation(TensorExprNode* expr_node)
-      : expr_node_(expr_node) {}
+  explicit TensorOperation(TensorExprNode* expr_node) : expr_node_(expr_node) {}
 
  private:
   void check_expr_node();
@@ -63,6 +62,9 @@ class Tensor : public TensorOperation {
   }
   int output_index() const {
     return output_index_;
+  }
+  const Var& arg(int index) const {
+    return function_->arg(index);
   }
 
   Tensor(Function* function, int output_index)
