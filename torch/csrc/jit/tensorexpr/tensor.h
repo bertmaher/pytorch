@@ -16,8 +16,7 @@ class ScheduleNode;
 
 using schedule::TensorExprNode;
 
-class TensorOperation;
-class TORCH_API TensorOperationNode : public KernelScopedObject {
+class TORCH_API TensorOperation : public KernelScopedObject {
  public:
   void SplitWithTail(
       const Var& loop_var,
@@ -26,7 +25,7 @@ class TORCH_API TensorOperationNode : public KernelScopedObject {
       Var* outer_var,
       Var* inner_var,
       Var* tail_var,
-      TensorOperation* tail_op);
+      TensorOperation** tail_op);
 
   void SplitWithMask(
       const Var& loop_var,
@@ -46,19 +45,18 @@ class TORCH_API TensorOperationNode : public KernelScopedObject {
   }
 
  protected:
-  TensorOperationNode() {}
-  explicit TensorOperationNode(TensorExprNode* expr_node)
+  TensorOperation() {}
+  explicit TensorOperation(TensorExprNode* expr_node)
       : expr_node_(expr_node) {}
 
  private:
   void check_expr_node();
 
-  friend class TensorOperation;
   friend class schedule::ScheduleNode;
   TensorExprNode* expr_node_ = nullptr;
 };
 
-class Tensor : public TensorOperationNode {
+class Tensor : public TensorOperation {
  public:
   Function* function() const {
     return function_;
@@ -79,70 +77,6 @@ class Tensor : public TensorOperationNode {
  private:
   Function* function_;
   int output_index_;
-};
-
-class TORCH_API TensorOperation {
- public:
-  TensorOperation() {}
-  static TensorOperation make() {
-    return TensorOperation(new TensorOperationNode());
-  }
-  static TensorOperation make(TensorExprNode* expr_node) {
-    return TensorOperation(new TensorOperationNode(expr_node));
-  }
-  TensorExprNode* expr_node() {
-    return node()->expr_node();
-  }
-
-  void SplitWithTail(
-      const Var& loop_var,
-      int factor,
-      bool factor_on_inner,
-      Var* outer_var,
-      Var* inner_var,
-      Var* tail_var,
-      TensorOperation* tail_op) {
-    return node()->SplitWithTail(
-        loop_var,
-        factor,
-        factor_on_inner,
-        outer_var,
-        inner_var,
-        tail_var,
-        tail_op);
-  }
-
-  void SplitWithMask(
-      const Var& loop_var,
-      int factor,
-      bool factor_on_inner,
-      Var* outer_var,
-      Var* inner_var) {
-    return node()->SplitWithMask(
-        loop_var, factor, factor_on_inner, outer_var, inner_var);
-  }
-
-  void ComputeInline() {
-    node()->ComputeInline();
-  }
-
-  void GPUExecConfig(
-      const std::vector<Var>& blockIdx,
-      const std::vector<Var>& threadIdx) {
-    node()->GPUExecConfig(blockIdx, threadIdx);
-  }
-
- protected:
-  TensorOperation(TensorOperationNode* node) : node_(node) {}
-  const TensorOperationNode* node() const {
-    return node_;
-  }
-  TensorOperationNode* node() {
-    return node_;
-  }
-
- private:
-  TensorOperationNode* node_ = nullptr;
 };
 
 // A helper structure to store the arguments to specify dimensions. In the

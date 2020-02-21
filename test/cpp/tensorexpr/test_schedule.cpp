@@ -31,13 +31,13 @@ void testExprSimple01() {
   Var x_outer;
   Var x_inner;
   Var x_tail;
-  TensorOperation tail_op;
+  TensorOperation* tail_op;
   tensor->SplitWithTail(x, 2, true, &x_outer, &x_inner, &x_tail, &tail_op);
 
   Var x_2;
   Var x_1;
   Var x_tail_2;
-  TensorOperation tail_op_2;
+  TensorOperation* tail_op_2;
   tensor->SplitWithTail(x_outer, 2, true, &x_2, &x_1, &x_tail_2, &tail_op_2);
 }
 
@@ -69,7 +69,7 @@ void testExprSimple02() {
   Var x_outer;
   Var x_inner;
   Var x_tail;
-  TensorOperation tail_op;
+  TensorOperation* tail_op;
   tensor->SplitWithTail(x, 4, true, &x_outer, &x_inner, &x_tail, &tail_op);
 
   Stmt stmt = sch.Lower();
