@@ -780,6 +780,19 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
   if (backend_type == kCudaCodeGen) {
     for (int i = 0; i < tensor_outputs_.size(); i++) {
       tensor_outputs_[i]->ComputeInline();
+
+      // TODO: implement splitting of variable axes.  Until then, skip this
+      // optimization when axes are dynamic.
+      bool dynamicShapes = false;
+      for (auto const& dim : tensor_outputs_[i]->function()->dims()) {
+        if (!dim.AsNode<IntImm>()) {
+          dynamicShapes = true;
+          break;
+        }
+      }
+      if (dynamicShapes) {
+        continue;
+      }
       Tensor* tensor = tensor_outputs[i];
       Var index = tensor->function()->arg(0);
       int loop_levels = GetTECudaPointwiseLoopLevels();
@@ -819,8 +832,16 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
   Stmt stmt = sch.Lower();
 
   // Set up formal params (inputs, then outputs) for kernel.
-  std::vector<CodeGen::BufferArg> params(
-      buffer_args_.begin(), buffer_args_.end());
+  std::vector<CodeGen::BufferArg> params;
+  for (auto const& arg : kernelArgs_) {
+    params.push_back(arg.buffer());
+    for (auto const& size : arg.sizes()) {
+      params.push_back(size.var);
+    }
+    for (auto const& stride : arg.strides()) {
+      params.push_back(stride.var);
+    }
+  }
   for (auto& o : tensor_outputs) {
     params.push_back(o);
   }
@@ -896,6 +917,53 @@ void TensorExprKernel::CodeGenRun(
   }
 }
 
+Expr TensorExprKernel::createInputIndexExpr(
+    const Buffer& buffer,
+    const std::vector<Var>& axes,
+    const c10::VaryingShape& sizes,
+    const c10::VaryingStrides& strides,
+    const c10::VaryingStrides& contiguity,
+    const std::unordered_map<int64_t, Var>& sizeVars) {
+  TORCH_CHECK(
+      axes.size() == strides.size(), "strides and axes are not the same size");
+
+  std::vector<ShapeArg> strideArgs;
+  std::vector<ShapeArg> sizeArgs;
+  Expr stride = 1;
+  Expr index = 0;
+  int n = axes.size() - 1;
+
+  for (int i = 0; i < axes.size(); i++) {
+    // For discontiguous tensors, create a parameter to represent stride.
+    if (!*contiguity[i]) {
+      Var v =
+          Var{"stride_" + buffer.data().name_hint() + "_" + std::to_string(i),
+              kInt32};
+      strideArgs.emplace_back(n - i, v);
+      stride = v;
+    }
+
+    // If size is dynamic (indicated by negative value) create a size param.
+    Expr size;
+    auto sizeVal = *sizes[n - i];
+    if (sizeVal < 0) {
+      auto it = sizeVars.find(sizeVal);
+      TORCH_CHECK(it != sizeVars.end());
+      auto const& v = it->second;
+      sizeArgs.emplace_back(n - i, v);
+      size = v;
+    } else {
+      size = int32_t{sizeVal};
+    }
+
+    index = index + axes[n - i] * stride;
+    stride = stride * size;
+  }
+
+  kernelArgs_.emplace_back(buffer, std::move(sizeArgs), std::move(strideArgs));
+  return buffer(index);
+}
+
 void TensorExprKernel::bindInput(const torch::jit::Value* input) {
   auto const& t = input->type();
   switch (t->kind()) {
@@ -903,35 +971,43 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
       auto tt = input->type()->cast<TensorType>();
       Buffer in_buffer(
           "t" + input->debugName(), texprType(tt->scalarType()), {0});
-      auto const& strides = tt->strides();
+      std::vector<DimArg> inputTensorDims;
+      std::unordered_map<int64_t, Var> sizeVars;
+      for (int i = 0; i < *tt->sizes().size(); i++) {
+        auto const& size = *tt->sizes()[i];
+        if (size < 0) {
+          Var v(
+              "size_" + std::to_string(input->unique()) + "_" +
+                  std::to_string(i),
+              kInt32);
+          sizeVars.emplace(size, v);
+          inputTensorDims.push_back(v);
+        } else {
+          inputTensorDims.push_back({int32_t{size}, "i" + std::to_string(i)});
+        }
+      }
       tensors_.emplace(
           input->unique(),
-          Compute(
-              "input",
-              texprDims(input),
-              [this, in_buffer, strides](const std::vector<Var>& axes) {
-                TORCH_CHECK(
-                    axes.size() == strides.size(),
-                    "strides and axes are not the same size");
-                std::vector<Expr> idxs;
-                idxs.push_back(axes[0] * (int32_t)*strides[0]);
-                for (int i = 1; i < axes.size(); i++) {
-                  idxs.push_back(idxs[i - 1] + axes[i] * (int32_t)*strides[i]);
-                }
-                return in_buffer(idxs.back());
-              }));
-      buffer_args_.push_back(std::move(in_buffer));
+          Compute("input", inputTensorDims, [&](const std::vector<Var>& axes) {
+            return createInputIndexExpr(
+                in_buffer,
+                axes,
+                tt->sizes(),
+                tt->strides(),
+                tt->contiguity(),
+                sizeVars);
+          }));
       break;
     }
     case TypeKind::FloatType: {
       Var v("v" + input->debugName(), kFloat32);
-      buffer_args_.push_back(v);
+      kernelArgs_.push_back(v);
       scalars_.emplace(input->unique(), v);
       break;
     }
     case TypeKind::IntType: {
       Var v("v" + input->debugName(), kInt32);
-      buffer_args_.push_back(v);
+      kernelArgs_.push_back(v);
       scalars_.emplace(input->unique(), v);
       break;
     }
@@ -978,6 +1054,8 @@ void TensorExprKernel::run(Stack& stack) {
   auto inputs = last(stack, n_inputs_);
   PickAndCheckBackendType(inputs);
 
+  std::map<const BaseExprNode*, int32_t> varToSize;
+
   std::vector<CodeGen::CallArg> run_args;
   for (int i = 0; i < inputs.size(); i++) {
     auto const& input = inputs[i];
@@ -988,13 +1066,34 @@ void TensorExprKernel::run(Stack& stack) {
     } else if (input.isTensor()) {
       auto const& tensor = input.toTensor();
       run_args.push_back(tensor.data_ptr());
+      for (auto const& size : kernelArgs_[i].sizes()) {
+        int32_t s = tensor.sizes()[size.idx];
+        run_args.push_back(s);
+        varToSize[size.var.node()] = s;
+      }
+      for (auto const& stride : kernelArgs_[i].strides()) {
+        int32_t s = tensor.strides()[stride.idx];
+        run_args.push_back(s);
+      }
     }
   }
 
   std::vector<at::Tensor> outputs;
   for (auto& o : tensor_outputs_) {
+    std::vector<int64_t> tensorSize;
+    for (auto const& dim : o->function()->dims()) {
+      auto it = varToSize.find(dim.node());
+      if (it != varToSize.end()) {
+        tensorSize.push_back(it->second);
+      } else {
+        auto const& s = dim.AsNode<IntImm>();
+        TORCH_CHECK(s);
+        tensorSize.push_back(s->value());
+      }
+    }
+
     outputs.push_back(at::empty(
-        bufferSizes(o), c10::TensorOptions(tensorType(o)).device(device_)));
+        tensorSize, c10::TensorOptions(tensorType(o)).device(device_)));
     run_args.push_back(outputs.back().data_ptr());
   }
 

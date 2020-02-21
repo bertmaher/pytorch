@@ -20,7 +20,7 @@ inline std::vector<int64_t> bufferSizes(const T& t) {
 template <typename T>
 inline std::vector<Expr> computeIndicesToBroadcast(
     const std::vector<T>& output_axes,
-    const std::vector<int64_t>& input_sizes) {
+    const std::vector<Expr>& input_sizes) {
   TORCH_CHECK(
       output_axes.size() >= input_sizes.size(),
       "Cannot broadcast to a lower rank tensor");
@@ -28,7 +28,8 @@ inline std::vector<Expr> computeIndicesToBroadcast(
   auto axis_it = output_axes.rbegin();
   auto size_it = input_sizes.rbegin();
   while (size_it != input_sizes.rend()) {
-    if (*size_it == 1) {
+    auto const& size = size_it->AsNode<IntImm>();
+    if (size && size->value() == 1) {
       bcast.push_back(0);
     } else {
       bcast.push_back(*axis_it);
@@ -58,7 +59,7 @@ class TensorExprKernel {
 
   template <typename T, typename T1>
   Expr broadcast(const T& t, const std::vector<T1>& axes) {
-    return t->call(computeIndicesToBroadcast(axes, bufferSizes(t)));
+    return t->call(computeIndicesToBroadcast(axes, t->function()->dims()));
   }
 
   template <typename T, typename T1>
@@ -136,9 +137,51 @@ class TensorExprKernel {
 
   void bindInput(const torch::jit::Value* input);
 
+  Expr createInputIndexExpr(
+      const Buffer& buffer,
+      const std::vector<Var>& axes,
+      const c10::VaryingShape& sizes,
+      const c10::VaryingStrides& strides,
+      const c10::VaryingStrides& contiguity,
+      const std::unordered_map<int64_t, Var>& sizeVars);
+
  private:
+  struct ShapeArg {
+    size_t idx;
+    Var var;
+
+    ShapeArg(size_t i, Var v) : idx(i), var(v) {}
+  };
+
+  struct KernelArg {
+    template <typename B>
+    KernelArg(B&& b) : bufferArg_(std::forward<B>(b)) {}
+
+    template <typename B, typename T>
+    KernelArg(B&& b, T&& sizes, T&& strides)
+        : bufferArg_(b),
+          sizeArgs_(std::forward<T>(sizes)),
+          strideArgs_(std::forward<T>(strides)) {}
+
+    const CodeGen::BufferArg& buffer() const {
+      return bufferArg_;
+    }
+
+    const std::vector<ShapeArg>& sizes() const {
+      return sizeArgs_;
+    }
+
+    const std::vector<ShapeArg>& strides() const {
+      return strideArgs_;
+    }
+
+    CodeGen::BufferArg bufferArg_;
+    std::vector<ShapeArg> sizeArgs_;
+    std::vector<ShapeArg> strideArgs_;
+  };
+
   int64_t n_inputs_ = 0;
-  std::vector<CodeGen::BufferArg> buffer_args_;
+  std::vector<KernelArg> kernelArgs_;
   std::vector<Tensor*> tensor_outputs_;
   std::unordered_map<int64_t, Tensor*> tensors_;
   std::unordered_map<int64_t, Var> scalars_;
