@@ -284,48 +284,48 @@ class LetStmt : public StmtNode<LetStmt> {
     return value_;
   }
 
-  const Stmt& body() const {
+  Stmt* body() const {
     return body_;
   }
 
-  static Stmt make(const Var& var, const Expr& value, const Stmt& body) {
-    return Stmt(new LetStmt(var, value, body));
+  static Stmt* make(const Var& var, const Expr& value, Stmt* body) {
+    return new LetStmt(var, value, body);
   }
 
  private:
-  LetStmt(const Var& var, const Expr& value, const Stmt& body)
+  LetStmt(const Var& var, const Expr& value, Stmt* body)
       : var_(var), value_(value), body_(body) {}
 
   Var var_;
   Expr value_;
-  Stmt body_;
+  Stmt* body_;
 };
 
 class Block : public StmtNode<Block> {
  public:
-  static Stmt make(const std::vector<Stmt>& stmts) {
-    std::vector<Stmt> valid_stmts;
+  static Stmt* make(const std::vector<Stmt*>& stmts) {
+    std::vector<Stmt*> valid_stmts;
     for (size_t i = 0; i < stmts.size(); i++) {
-      if (stmts[i].empty()) {
+      if (!stmts[i]) {
         continue;
       }
       valid_stmts.push_back(stmts[i]);
     }
     if (valid_stmts.empty()) {
-      return Stmt();
+      return nullptr;
     }
-    return Stmt(new Block(valid_stmts));
+    return new Block(valid_stmts);
   }
   int nstmts() const {
     return stmts_.size();
   }
-  const Stmt& stmt(int index) const {
+  Stmt* stmt(int index) const {
     return stmts_[index];
   }
 
  private:
-  explicit Block(const std::vector<Stmt>& stmts) : stmts_(stmts) {}
-  std::vector<Stmt> stmts_;
+  explicit Block(const std::vector<Stmt*>& stmts) : stmts_(stmts) {}
+  std::vector<Stmt*> stmts_;
 };
 
 class LoopOptions {
@@ -418,42 +418,42 @@ class For : public StmtNode<For> {
   const Expr& stop() const {
     return stop_;
   }
-  const Stmt& body() const {
+  Stmt* body() const {
     return body_;
   }
-  static Stmt make(
+  static Stmt* make(
       const Var& var,
       const Expr& start,
       const Expr& stop,
-      const Stmt& body) {
-    if (body.empty()) {
-      return Stmt();
+      Stmt* body) {
+    if (!body) {
+      return nullptr;
     }
-    return Stmt(new For(var, start, stop, body));
+    return new For(var, start, stop, body);
   }
-  static Stmt make(
+  static Stmt* make(
       const Var& var,
       const Expr& start,
       const Expr& stop,
-      const Stmt& body,
+      Stmt* body,
       const LoopOptions& loop_options) {
-    if (body.empty()) {
-      return Stmt();
+    if (!body) {
+      return nullptr;
     }
-    return Stmt(new For(var, start, stop, body, loop_options));
+    return new For(var, start, stop, body, loop_options);
   }
   const LoopOptions loop_options() const {
     return loop_options_;
   }
 
  private:
-  For(const Var& var, const Expr& start, const Expr& stop, const Stmt& body)
+  For(const Var& var, const Expr& start, const Expr& stop, Stmt* body)
       : var_(var), start_(start), stop_(stop), body_(body) {}
 
   For(const Var& var,
       const Expr& start,
       const Expr& stop,
-      const Stmt& body,
+      Stmt* body,
       const LoopOptions& loop_options)
       : var_(var),
         start_(start),
@@ -464,7 +464,7 @@ class For : public StmtNode<For> {
   Var var_;
   Expr start_;
   Expr stop_;
-  Stmt body_;
+  Stmt* body_;
   LoopOptions loop_options_;
 };
 
@@ -549,27 +549,27 @@ class TORCH_API Store : public StmtNode<Store> {
     return mask_;
   }
 
-  static Stmt make(
+  static Stmt* make(
       const Buffer& buffer,
       const Expr& index,
       const Expr& value,
       const Expr& mask) {
-    return Stmt(new Store(buffer, index, value, mask));
+    return new Store(buffer, index, value, mask);
   }
 
-  static Stmt make(
+  static Stmt* make(
       const Var& base_handle,
       const Expr& index,
       const Expr& value,
       const Expr& mask) {
-    return Stmt(new Store(base_handle, index, value, mask));
+    return new Store(base_handle, index, value, mask);
   }
 
-  static Stmt make(
+  static Stmt* make(
       const Var& base_handle,
       const Expr& index,
       const Expr& value) {
-    return Stmt(new Store(base_handle, index, value, Expr(1)));
+    return new Store(base_handle, index, value, Expr(1));
   }
 
  private:
@@ -940,11 +940,11 @@ class FunctionCall;
 // explicitly freed. An unfreed memory is likely considered an error.
 class Allocate : public StmtNode<Allocate> {
  public:
-  static Stmt make(
+  static Stmt* make(
       const Var& buffer_var,
       Dtype dtype,
       const std::vector<Expr>& dims) {
-    return Stmt(new Allocate(buffer_var, dtype, dims));
+    return new Allocate(buffer_var, dtype, dims);
   }
 
   const Var& buffer_var() const {
@@ -972,8 +972,8 @@ class Allocate : public StmtNode<Allocate> {
 // Free the specific buffer. It is an error.
 class Free : public StmtNode<Free> {
  public:
-  static Stmt make(const Var& buffer_var) {
-    return Stmt(new Free(buffer_var));
+  static Stmt* make(const Var& buffer_var) {
+    return new Free(buffer_var);
   }
 
   const Var& buffer_var() const {
@@ -988,32 +988,32 @@ class Free : public StmtNode<Free> {
 
 class Cond : public StmtNode<Cond> {
  public:
-  static Stmt make(
+  static Stmt* make(
       const Expr& condition,
-      const Stmt& true_stmt,
-      const Stmt& false_stmt) {
-    return Stmt(new Cond(condition, true_stmt, false_stmt));
+      Stmt* true_stmt,
+      Stmt* false_stmt) {
+    return new Cond(condition, true_stmt, false_stmt);
   }
 
   const Expr& condition() const {
     return condition_;
   }
 
-  const Stmt& true_stmt() const {
+  Stmt* true_stmt() const {
     return true_stmt_;
   }
 
-  const Stmt& false_stmt() const {
+  Stmt* false_stmt() const {
     return false_stmt_;
   }
 
  private:
-  Cond(const Expr& condition, const Stmt& true_stmt, const Stmt& false_stmt)
+  Cond(const Expr& condition, Stmt* true_stmt, Stmt* false_stmt)
       : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {}
 
   Expr condition_;
-  Stmt true_stmt_;
-  Stmt false_stmt_;
+  Stmt* true_stmt_;
+  Stmt* false_stmt_;
 };
 
 } // namespace tensorexpr

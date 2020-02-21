@@ -50,11 +50,11 @@ static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
 #endif
 }
 
-LLVMCodeGen::LLVMCodeGen(const Stmt& stmt)
+LLVMCodeGen::LLVMCodeGen(Stmt* stmt)
     : LLVMCodeGen(stmt, std::vector<BufferArg>()) {}
 
 LLVMCodeGen::LLVMCodeGen(
-    const Stmt& stmt,
+    Stmt* stmt,
     const std::vector<BufferArg>& args,
     Dtype dtype)
     : CodeGen(stmt, args),
@@ -151,14 +151,14 @@ void LLVMCodeGen::emitWrapper(const std::vector<llvm::Type*>& params) {
 }
 
 void LLVMCodeGen::emitKernel(
-    const Stmt& stmt,
+    Stmt* stmt,
     const std::vector<llvm::Type*>& params) {
   // Set insert point to the real function.
   bb_ = llvm::BasicBlock::Create(getContext(), "entry", fn_);
   irb_.SetInsertPoint(bb_);
 
   // Compile the kernel.
-  stmt.accept(this);
+  stmt->accept(this);
   irb_.CreateRet(value_);
 
 #if DEBUG_PRINT
@@ -477,7 +477,7 @@ void LLVMCodeGen::visit(const LetStmt* v) {
   } else {
     throw std::runtime_error("var should not exist before");
   }
-  v->body().accept(this);
+  v->body()->accept(this);
   if (varToVal_.count(var)) {
     varToVal_.erase(var);
   } else {
@@ -624,7 +624,7 @@ void LLVMCodeGen::visit(const For* v) {
   varToVal_.emplace(v->var().node(), idx);
 
   // Codegen the body.
-  v->body().accept(this);
+  v->body()->accept(this);
 
   // Create the stop condition. and "after" block.
   auto inc = irb_.CreateAdd(idx, llvm::ConstantInt::getSigned(int32Ty_, 1));
@@ -643,7 +643,7 @@ void LLVMCodeGen::visit(const For* v) {
 
 void LLVMCodeGen::visit(const Block* v) {
   for (int i = 0; i < v->nstmts(); i++) {
-    v->stmt(i).accept(this);
+    v->stmt(i)->accept(this);
   }
 }
 

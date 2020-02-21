@@ -800,7 +800,7 @@ void testLLVMSimpleMath01() {
   Tensor* tensor = Compute(
       "f", {{N, "i"}}, [](const Var& i) { return cast<float>(i * i + 1); });
   Schedule sch = Schedule::make({tensor});
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
   Buffer f_buf(tensor->function()->func_var(), kFloat32, {N});
   LLVMCodeGen cg(stmt, {f_buf});
 
@@ -826,7 +826,7 @@ void testLLVMComputeMul() {
 
   Buffer c_buf(c->function()->func_var(), kFloat32, {N});
   Schedule sch = Schedule::make({c});
-  Stmt s = sch.Lower();
+  Stmt* s = sch.Lower();
 
   LLVMCodeGen cg(s, {a, b, c_buf});
 
@@ -852,7 +852,7 @@ void testLLVMBroadcastAdd() {
 
   Buffer c_buf(c->function()->func_var(), kFloat32, {M, N});
   Schedule sch = Schedule::make({c});
-  Stmt s = sch.Lower();
+  Stmt* s = sch.Lower();
 
   LLVMCodeGen cg(s, {a, b, c_buf});
 
@@ -879,7 +879,7 @@ void testLLVMDynamicShapeAdd() {
     Buffer b(Var("b", kHandle), kFloat32, {n});
     Buffer c(Var("c", kHandle), kFloat32, {n});
     Var i("i", kInt32);
-    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
+    Stmt* s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
@@ -901,7 +901,7 @@ void testLLVMBindDynamicShapeAdd() {
     Buffer b(Var("b", kHandle), kFloat32, {n});
     Buffer c(Var("c", kHandle), kFloat32, {n});
     Var i("i", kInt32);
-    Stmt s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
+    Stmt* s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
     std::vector<float> cData(size, 0.0f);
@@ -923,7 +923,7 @@ void testLLVMTensorDynamicShapeAdd() {
     Tensor* c =
         Compute("c", {{n, "n"}}, [&](const Var& i) { return a(i) + b(i); });
     Schedule sch = Schedule::make({c});
-    Stmt s = sch.Lower();
+    Stmt* s = sch.Lower();
     LLVMCodeGen cg(s, {a, b, c, n});
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
@@ -948,7 +948,7 @@ void testLLVMDynamicShape2D() {
           return a(i, j) + b(i, j);
         });
     auto sch = torch::jit::tensorexpr::schedule::Schedule::make({c});
-    Stmt s = sch.Lower();
+    Stmt* s = sch.Lower();
     LLVMCodeGen cg(s, {a, b, c, m, n});
     std::vector<float> aData(M * N, 1.0f);
     std::vector<float> bData(M * N, 2.0f);

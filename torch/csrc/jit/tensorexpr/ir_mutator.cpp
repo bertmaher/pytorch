@@ -121,10 +121,10 @@ Expr IRMutator::mutate(const Let* v) {
   return Let::make(var_new, value_new, body_new);
 }
 
-Stmt IRMutator::mutate(const LetStmt* v) {
+Stmt* IRMutator::mutate(const LetStmt* v) {
   Var var = v->var();
   Expr value = v->value();
-  Stmt body = v->body();
+  Stmt* body = v->body();
   Expr var_new_expr = var.accept_mutator(this);
   Variable* var_new_ptr = var_new_expr.AsNode<Variable>();
   if (var_new_ptr == nullptr) {
@@ -132,10 +132,10 @@ Stmt IRMutator::mutate(const LetStmt* v) {
   }
   Var var_new{var_new_ptr};
   Expr value_new = value.accept_mutator(this);
-  Stmt body_new = body.accept_mutator(this);
+  Stmt* body_new = body->accept_mutator(this);
   if (same_node(var, var_new) && same_node(value, value_new) &&
       same_node(body, body_new)) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
   return LetStmt::make(var_new, value_new, body_new);
 }
@@ -220,42 +220,42 @@ Expr IRMutator::mutate(const BaseCallNode* v) {
   return v->DefaultMutator(params);
 }
 
-Stmt IRMutator::mutate(const For* v) {
+Stmt* IRMutator::mutate(const For* v) {
   Var var = v->var();
   Expr start = v->start();
   Expr stop = v->stop();
-  Stmt body = v->body();
+  Stmt* body = v->body();
   LoopOptions loop_options = v->loop_options();
   Expr var_new_expr = var.accept_mutator(this);
   Var var_new = Var(var_new_expr.AsNode<Variable>());
   Expr start_new = start.accept_mutator(this);
   Expr stop_new = stop.accept_mutator(this);
-  Stmt body_new = body.accept_mutator(this);
+  Stmt* body_new = body->accept_mutator(this);
   if (same_node(var, var_new) && same_node(start, start_new) &&
       same_node(stop, stop_new) && same_node(body, body_new)) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
   return For::make(var_new, start_new, stop_new, body_new, loop_options);
 }
 
-Stmt IRMutator::mutate(const Block* v) {
+Stmt* IRMutator::mutate(const Block* v) {
   bool any_change = false;
-  std::vector<Stmt> stmts;
+  std::vector<Stmt*> stmts;
   for (int i = 0; i < v->nstmts(); i++) {
-    Stmt stmt = v->stmt(i);
-    Stmt stmt_new = stmt.accept_mutator(this);
+    Stmt* stmt = v->stmt(i);
+    Stmt* stmt_new = stmt->accept_mutator(this);
     if (!same_node(stmt, stmt_new)) {
       any_change = true;
     }
     stmts.push_back(stmt_new);
   }
   if (!any_change) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
   return Block::make(stmts);
 }
 
-Stmt IRMutator::mutate(const Store* v) {
+Stmt* IRMutator::mutate(const Store* v) {
   Var base_handle = v->base_handle();
   Expr index = v->index();
   Expr value = v->value();
@@ -267,12 +267,12 @@ Stmt IRMutator::mutate(const Store* v) {
   Expr mask_new = mask.accept_mutator(this);
   if (same_node(base_handle, base_handle_new) && same_node(index, index_new) &&
       same_node(value, value_new) && same_node(mask, mask_new)) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
   return Store::make(base_handle_new, index_new, value_new, mask_new);
 }
 
-Stmt IRMutator::mutate(const Allocate* v) {
+Stmt* IRMutator::mutate(const Allocate* v) {
   Var buffer_var_old = v->buffer_var();
   Var buffer_var_new =
       Var(buffer_var_old.accept_mutator(this).AsNode<Variable>());
@@ -286,35 +286,35 @@ Stmt IRMutator::mutate(const Allocate* v) {
   }
 
   if (!any_change) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
 
   return Allocate::make(buffer_var_new, v->dtype(), dims_new);
 }
 
-Stmt IRMutator::mutate(const Free* v) {
+Stmt* IRMutator::mutate(const Free* v) {
   Var buffer_var_old = v->buffer_var();
   Var buffer_var_new =
       Var(buffer_var_old.accept_mutator(this).AsNode<Variable>());
   if (same_node(buffer_var_new, buffer_var_old)) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
 
   return Free::make(buffer_var_new);
 }
 
-Stmt IRMutator::mutate(const Cond* v) {
+Stmt* IRMutator::mutate(const Cond* v) {
   Expr cond_old = v->condition();
-  Stmt true_old = v->true_stmt();
-  Stmt false_old = v->false_stmt();
+  Stmt* true_old = v->true_stmt();
+  Stmt* false_old = v->false_stmt();
 
   Expr cond_new = cond_old.accept_mutator(this);
-  Stmt true_new = true_old.accept_mutator(this);
-  Stmt false_new = false_old.accept_mutator(this);
+  Stmt* true_new = true_old ? true_old->accept_mutator(this) : true_old;
+  Stmt* false_new = false_old ? false_old->accept_mutator(this) : false_old;
 
   if (same_node(cond_old, cond_new) && same_node(true_old, true_new) &&
       same_node(false_old, false_new)) {
-    return Stmt(v);
+    return (Stmt*)v;
   }
   return Cond::make(cond_new, true_new, false_new);
 }

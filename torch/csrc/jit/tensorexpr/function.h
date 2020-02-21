@@ -61,7 +61,7 @@ class Function : public KernelScopedObject {
   const Var& func_var() const {
     return func_var_;
   }
-  Stmt ElementStmt();
+  Stmt* ElementStmt();
 
  private:
   Var func_var_;

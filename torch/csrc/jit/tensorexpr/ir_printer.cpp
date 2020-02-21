@@ -8,8 +8,8 @@ void IRPrinter::print(Expr expr) {
   expr.accept(this);
 }
 
-void IRPrinter::print(Stmt stmt) {
-  stmt.accept(this);
+void IRPrinter::print(Stmt* stmt) {
+  stmt->accept(this);
 }
 
 // TODO: change whether to include the parenthesis to the parent expression,
@@ -134,7 +134,7 @@ void IRPrinter::visit(const LetStmt* v) {
   Var var = v->var();
   os() << var.dtype().ToCppString() << " " << var << " = " << v->value() << "; "
        << std::endl;
-  v->body().accept(this);
+  v->body()->accept(this);
 }
 
 void IRPrinter::visit(const Ramp* v) {
@@ -211,9 +211,9 @@ void IRPrinter::visit(const Free* v) {
 
 void IRPrinter::visit(const Cond* v) {
   const Expr& cond = v->condition();
-  const Stmt& true_stmt = v->true_stmt();
-  const Stmt& false_stmt = v->false_stmt();
-  if (true_stmt.empty()) {
+  Stmt* true_stmt = v->true_stmt();
+  Stmt* false_stmt = v->false_stmt();
+  if (!true_stmt) {
     os() << "if(!" << cond << ") {" << std::endl;
     os() << false_stmt << std::endl;
     os() << "}";
@@ -221,7 +221,7 @@ void IRPrinter::visit(const Cond* v) {
     os() << "if(" << cond << ") {" << std::endl;
     os() << true_stmt << std::endl;
     os() << "}";
-    if (!false_stmt.empty()) {
+    if (false_stmt) {
       os() << " else {" << std::endl;
       os() << false_stmt << std::endl;
       os() << "}";
@@ -241,11 +241,11 @@ std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const Stmt& stmt) {
+std::ostream& operator<<(std::ostream& stream, Stmt* stmt) {
   IRPrinter::PrinterStream* printer_stream =
       dynamic_cast<IRPrinter::PrinterStream*>(&stream);
   if (printer_stream != nullptr) {
-    stmt.accept(printer_stream->printer());
+    stmt->accept(printer_stream->printer());
   } else {
     IRPrinter p(stream);
     p.print(stmt);

@@ -836,7 +836,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
     }
   }
 
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
 
   // Set up formal params (inputs, then outputs) for kernel.
   std::vector<CodeGen::BufferArg> params;

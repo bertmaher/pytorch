@@ -20,8 +20,8 @@ void testATen_cast_Float() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr to_float = Cast::make(kFloat32, load_a);
-  Stmt store_b = Store::make(b_buf, index, to_float, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, to_float, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -48,8 +48,8 @@ void testATennegInt() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr to_float = Sub::make(0, load_a);
-  Stmt store_b = Store::make(b_buf, index, to_float, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, to_float, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -76,8 +76,8 @@ void testATennegFloat() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr to_float = Sub::make(0, load_a);
-  Stmt store_b = Store::make(b_buf, index, to_float, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, to_float, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -107,8 +107,8 @@ void testATenaddInt() {
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
-  Stmt store_d = Store::make(d_buf, index, load_a + load_b * load_c, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_d);
+  Stmt* store_d = Store::make(d_buf, index, load_a + load_b * load_c, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_d);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -144,8 +144,8 @@ void testATenaddFloat() {
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
-  Stmt store_d = Store::make(d_buf, index, load_a + load_b * load_c, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_d);
+  Stmt* store_d = Store::make(d_buf, index, load_a + load_b * load_c, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_d);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -181,8 +181,8 @@ void testATensubInt() {
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
-  Stmt store_d = Store::make(d_buf, index, load_a - load_b * load_c, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_d);
+  Stmt* store_d = Store::make(d_buf, index, load_a - load_b * load_c, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_d);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -218,8 +218,8 @@ void testATensubFloat() {
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
-  Stmt store_d = Store::make(d_buf, index, load_a - load_b * load_c, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_d);
+  Stmt* store_d = Store::make(d_buf, index, load_a - load_b * load_c, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_d);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -255,9 +255,9 @@ void testATenlerp() {
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
-  Stmt store_d =
+  Stmt* store_d =
       Store::make(d_buf, index, load_a + load_c * (load_b - load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_d);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_d);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -295,9 +295,9 @@ void testATenaddcmulInt() {
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
   Expr load_d = Load::make(d_buf, index, 1);
-  Stmt store_e =
+  Stmt* store_e =
       Store::make(e_buf, index, load_a + load_b * load_c * load_d, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_e);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_e);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -338,9 +338,9 @@ void testATenaddcmulFloat() {
   Expr load_b = Load::make(b_buf, index, 1);
   Expr load_c = Load::make(c_buf, index, 1);
   Expr load_d = Load::make(d_buf, index, 1);
-  Stmt store_e =
+  Stmt* store_e =
       Store::make(e_buf, index, load_a + load_b * load_c * load_d, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_e);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_e);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -377,8 +377,8 @@ void testATenmulInt() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, load_a * load_b, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, load_a * load_b, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -409,8 +409,8 @@ void testATenmulFloat() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, load_a * load_b, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, load_a * load_b, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -441,8 +441,8 @@ void testATendivInt() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, load_a / load_b, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, load_a / load_b, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -473,8 +473,8 @@ void testATendivFloat() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, load_a / load_b, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, load_a / load_b, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -505,8 +505,8 @@ void testATenmaxInt() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, Max::make(load_a, load_b, true), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, Max::make(load_a, load_b, true), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -537,8 +537,8 @@ void testATenmaxFloat() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, Max::make(load_a, load_b, true), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, Max::make(load_a, load_b, true), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -569,8 +569,8 @@ void testATenminInt() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, Min::make(load_a, load_b, true), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, Min::make(load_a, load_b, true), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -601,8 +601,8 @@ void testATenminFloat() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(c_buf, index, Min::make(load_a, load_b, true), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* store_c = Store::make(c_buf, index, Min::make(load_a, load_b, true), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -633,9 +633,9 @@ void testATen_sigmoid_backward() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(
+  Stmt* store_c = Store::make(
       c_buf, index, load_a * load_b * (FloatImm::make(1.0f) - load_b), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -666,9 +666,9 @@ void testATen_tanh_backward() {
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
   Expr load_b = Load::make(b_buf, index, 1);
-  Stmt store_c = Store::make(
+  Stmt* store_c = Store::make(
       c_buf, index, load_a * (FloatImm::make(1.0f) - (load_b * load_b)), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_c);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_c);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -697,8 +697,8 @@ void testATenreciprocal() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, FloatImm::make(1.0f) / load_a, 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, FloatImm::make(1.0f) / load_a, 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -724,8 +724,8 @@ void testATenreluInt() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, Max::make(load_a, 0, false), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, Max::make(load_a, 0, false), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<int> a_v(kTotalSize);
   PaddedBuffer<int> b_v(kTotalSize);
@@ -751,12 +751,12 @@ void testATenreluFloat() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(
+  Stmt* store_b = Store::make(
       b_buf,
       index,
       Max::make(load_a, 0, false), // relu does not propagate nans
       1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -782,8 +782,8 @@ void testATenlogFloat() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, log(load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, log(load_a), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -809,8 +809,8 @@ void testATenlog10Float() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, log10(load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, log10(load_a), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -836,8 +836,8 @@ void testATenlog2Float() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, log2(load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, log2(load_a), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -863,8 +863,8 @@ void testATenexpFloat() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, exp(load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, exp(load_a), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -890,8 +890,8 @@ void testATenerfFloat() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, erf(load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, erf(load_a), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);
@@ -917,8 +917,8 @@ void testATencosFloat() {
 
   Var index = Var("index", kInt32);
   Expr load_a = Load::make(a_buf, index, 1);
-  Stmt store_b = Store::make(b_buf, index, cos(load_a), 1);
-  Stmt stmt = For::make(index, 0, kTotalSize, store_b);
+  Stmt* store_b = Store::make(b_buf, index, cos(load_a), 1);
+  Stmt* stmt = For::make(index, 0, kTotalSize, store_b);
 
   PaddedBuffer<float> a_v(kTotalSize);
   PaddedBuffer<float> b_v(kTotalSize);

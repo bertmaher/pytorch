@@ -73,12 +73,12 @@ class CudaPrinter : public IRPrinter {
 class TORCH_API CudaCodeGen : public CodeGen {
  public:
   template <typename... Ts>
-  CudaCodeGen(const Stmt& stmt, Ts... ts)
+  CudaCodeGen(Stmt* stmt, Ts... ts)
       : CodeGen(stmt, std::forward<Ts>(ts)...) {
     Initialize();
   }
 
-  CudaCodeGen(const Stmt& stmt, const std::vector<BufferArg>& buffer_args)
+  CudaCodeGen(Stmt* stmt, const std::vector<BufferArg>& buffer_args)
       : CodeGen(stmt, buffer_args) {
     Initialize();
   }

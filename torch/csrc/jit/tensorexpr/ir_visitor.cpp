@@ -63,7 +63,7 @@ void IRVisitor::visit(const Let* v) {
 void IRVisitor::visit(const LetStmt* v) {
   v->var().accept(this);
   v->value().accept(this);
-  v->body().accept(this);
+  v->body()->accept(this);
 }
 
 void IRVisitor::visit(const Ramp* v) {
@@ -86,7 +86,7 @@ void IRVisitor::visit(const Store* v) {
 
 void IRVisitor::visit(const Block* v) {
   for (int i = 0; i < v->nstmts(); i++) {
-    v->stmt(i).accept(this);
+    v->stmt(i)->accept(this);
   }
 }
 
@@ -94,7 +94,7 @@ void IRVisitor::visit(const For* v) {
   v->var().accept(this);
   v->start().accept(this);
   v->stop().accept(this);
-  v->body().accept(this);
+  v->body()->accept(this);
 }
 
 void IRVisitor::visit(const Broadcast* v) {
@@ -139,11 +139,15 @@ void IRVisitor::visit(const Free* v) {
 
 void IRVisitor::visit(const Cond* v) {
   Expr condition = v->condition();
-  Stmt true_stmt = v->true_stmt();
-  Stmt false_stmt = v->false_stmt();
+  Stmt* true_stmt = v->true_stmt();
+  Stmt* false_stmt = v->false_stmt();
   condition.accept(this);
-  true_stmt.accept(this);
-  false_stmt.accept(this);
+  if (true_stmt) {
+    true_stmt->accept(this);
+  }
+  if (false_stmt) {
+    false_stmt->accept(this);
+  }
 }
 
 } // namespace tensorexpr

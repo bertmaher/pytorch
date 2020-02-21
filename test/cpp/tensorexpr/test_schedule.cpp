@@ -50,7 +50,7 @@ void testExprLower01() {
   Var x = tensor->function()->arg(0);
   Var y = tensor->function()->arg(1);
   Schedule sch = Schedule::make({tensor});
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
   std::ostringstream oss;
   oss << stmt;
   ASSERT_GT(oss.str().size(), 20);
@@ -72,7 +72,7 @@ void testExprSimple02() {
   TensorOperation* tail_op;
   tensor->SplitWithTail(x, 4, true, &x_outer, &x_inner, &x_tail, &tail_op);
 
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
   std::ostringstream oss;
   oss << stmt;
   ASSERT_GT(oss.str().size(), 200);
@@ -86,7 +86,7 @@ void testExprSimple02() {
     Var x_tail("x_tail", kInt32);
     Var f("f", kHandle);
     Expr x_1 = x_outer * 4 + x_inner;
-    Stmt stmt1 = For::make(
+    Stmt* stmt1 = For::make(
         x_outer,
         0,
         6,
@@ -97,12 +97,12 @@ void testExprSimple02() {
             For::make(
                 y, 0, 5, Store::make(f, x_1 * 5 + y * 1, func(x_1, y), 1))));
     Expr x_2 = x_tail + Expr(6) * 4;
-    Stmt stmt2 = For::make(
+    Stmt* stmt2 = For::make(
         x_tail,
         0,
         2,
         For::make(y, 0, 5, Store::make(f, x_2 * 5 + y * 1, func(x_2, y), 1)));
-    Stmt stmt = Block::make({stmt1, stmt2});
+    Stmt* stmt = Block::make({stmt1, stmt2});
 
     std::ostringstream oss_ref;
     oss_ref << stmt;
@@ -144,7 +144,7 @@ void testExprSplitWithMask01() {
   Schedule sch({tensor});
   tensor->SplitWithMask(n, 4, true, &n_outer, &n_inner);
 
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
 
   PaddedBuffer<float> a_v(M, N, "a");
   PaddedBuffer<float> b_v(M, N, "b");
@@ -177,7 +177,7 @@ void testScheduleBroadcastAddBuffer() {
         return a_buf(m, n) + b_buf(n, k);
       });
   Schedule sch({c});
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
 
   PaddedBuffer<float> a_v(M, N, "a_v");
   for (int m = 0; m < M; m++) {
@@ -231,7 +231,7 @@ void testScheduleFunctionCall01() {
       [&](const Var& m, const Var& n, const Var& k) { return c->call(m, n, k) + 1; });
 
   Schedule sch({d});
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
   std::ostringstream oss;
   oss << stmt;
   ASSERT_GT(oss.str().size(), 100);
@@ -312,7 +312,7 @@ void InlineFunc01Helper(const std::vector<std::string>& inline_order) {
       throw std::runtime_error("Invalid order: " + order);
     }
   }
-  Stmt stmt = sch.Lower();
+  Stmt* stmt = sch.Lower();
 
   std::ostringstream oss;
   oss << stmt;
@@ -369,7 +369,7 @@ void InlineFunc01Helper(const std::vector<std::string>& inline_order) {
               (c_buf(m, n) * d_buf(m, k) + a_buf(m, n) * b_buf(n, k));
         });
     Schedule sch2({z2});
-    Stmt stmt2 = sch2.Lower();
+    Stmt* stmt2 = sch2.Lower();
 
     std::ostringstream oss2;
     oss2 << stmt2;
@@ -408,7 +408,7 @@ void testScheduleFuserStyle() {
       });
 
   Schedule sch({b, c});
-  Stmt s = sch.Lower();
+  Stmt* s = sch.Lower();
 
   std::vector<float> a_data(kTotalSize, 7.0f);
   std::vector<float> b_data(kTotalSize, 0.0f);
@@ -442,7 +442,7 @@ void testScheduleFuserThreeArg() {
   Schedule sch({g});
   e->ComputeInline();
   f->ComputeInline();
-  Stmt s = sch.Lower();
+  Stmt* s = sch.Lower();
 
   std::vector<float> a_data(kTotalSize, 1.0f);
   std::vector<float> b_data(kTotalSize, 2.0f);
@@ -468,7 +468,7 @@ void testScheduleDynamicShape2D() {
           return a(i, j) + b(i, j);
         });
     auto sch = Schedule::make({c});
-    Stmt s = sch.Lower();
+    Stmt* s = sch.Lower();
     SimpleIREvaluator cg(s, {a, b, c, m, n});
     std::vector<float> aData(M * N, 1.0f);
     std::vector<float> bData(M * N, 2.0f);

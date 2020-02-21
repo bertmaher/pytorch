@@ -99,7 +99,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     for (size_t i = 0; i < args.size(); i++) {
       bind(buffer_args()[i], args[i]);
     }
-    stmt().accept(this);
+    stmt()->accept(this);
     eval_context_.clear();
     buffer_mapping_.clear();
     internal_buffers_.clear();
@@ -328,7 +328,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         << "var must not exist in the context before";
     eval_context_[var] = value_;
 
-    v->body().accept(this);
+    v->body()->accept(this);
 
     eval_context_.erase(var);
   }
@@ -376,7 +376,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
         << "var in For must not exist in eval context";
     for (int i = start; i < stop; i++) {
       eval_context_[var_node] = Value(i);
-      v->body().accept(this);
+      v->body()->accept(this);
     }
     eval_context_.erase(var_node);
   }
@@ -559,9 +559,13 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   void visit(const Cond* v) override {
     v->condition().accept(this);
     if (value().as<int>()) {
-      v->true_stmt().accept(this);
+      if (v->true_stmt()) {
+        v->true_stmt()->accept(this);
+      }
     } else {
-      v->false_stmt().accept(this);
+      if (v->false_stmt()) {
+        v->false_stmt()->accept(this);
+      }
     }
   }
 
@@ -691,7 +695,7 @@ class ExprEval {
       : dtype_(expr.dtype()) {
     std::vector<BufferArg> buffer_args_extended = buffer_args;
     Buffer ret_buf("ret_val", dtype_, {1});
-    Stmt store_stmt = Store::make(ret_buf.data(), 0, expr);
+    Stmt* store_stmt = Store::make(ret_buf.data(), 0, expr);
     buffer_args_extended.push_back(ret_buf);
     codegen_.reset(new CodeGenType(store_stmt, buffer_args_extended));
   }
@@ -744,7 +748,7 @@ inline Expr Substitute(Expr* expr, const VarMapping& var_mapping) {
   return expr->accept_mutator(&var_sub);
 }
 
-inline Stmt Substitute(Stmt* stmt, const VarMapping& var_mapping) {
+inline Stmt* Substitute(Stmt* stmt, const VarMapping& var_mapping) {
   VarSubMutator var_sub(var_mapping);
   return stmt->accept_mutator(&var_sub);
 }

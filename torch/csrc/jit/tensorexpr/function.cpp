@@ -93,7 +93,7 @@ Tensor* Compute(
   return new Tensor(func, 0);
 }
 
-Stmt Function::ElementStmt() {
+Stmt* Function::ElementStmt() {
   std::vector<Expr> strides(dims_.size());
   for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
@@ -119,7 +119,7 @@ Stmt Function::ElementStmt() {
 
   Expr mask = 1;
 
-  Stmt update_stmt = Store::make(func_var(), total_index, body(), mask);
+  Stmt* update_stmt = Store::make(func_var(), total_index, body(), mask);
   return update_stmt;
 }
 

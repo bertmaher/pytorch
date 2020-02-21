@@ -97,7 +97,7 @@ void CudaPrinter::visit(const For* v) {
   if (loop_options.is_gpu_block_index()) {
     ScopedVarName var_name(
         name_manager(), v->var().node(), loop_options.gpu_block_index_str());
-    v->body().accept(this);
+    v->body()->accept(this);
     int gpu_block_index = loop_options.gpu_block_index();
     if (gpu_block_extents_.size() <= gpu_block_index) {
       gpu_block_extents_.resize(gpu_block_index + 1);
@@ -111,7 +111,7 @@ void CudaPrinter::visit(const For* v) {
   } else if (loop_options.is_gpu_thread_index()) {
     ScopedVarName var_name(
         name_manager(), v->var().node(), loop_options.gpu_thread_index_str());
-    v->body().accept(this);
+    v->body()->accept(this);
     int gpu_thread_index = loop_options.gpu_thread_index();
     if (gpu_thread_extents_.size() <= gpu_thread_index) {
       gpu_thread_extents_.resize(gpu_thread_index + 1);
@@ -206,32 +206,32 @@ class PrioritizeLoad : public IRMutator {
   }
 
   // TODO: merge this with the IRMutator::mutate version.
-  virtual Stmt mutate(const For* v) {
+  virtual Stmt* mutate(const For* v) {
     Var var = v->var();
     Expr start = v->start();
     Expr stop = v->stop();
-    Stmt body = v->body();
+    Stmt* body = v->body();
     LoopOptions loop_options = v->loop_options();
     Expr var_new_expr = var.accept_mutator(this);
     Var var_new = Var(var_new_expr.AsNode<Variable>());
     Expr start_new = start.accept_mutator(this);
     Expr stop_new = stop.accept_mutator(this);
     PushList();
-    Stmt body_new = body.accept_mutator(this);
-    Stmt body_with_loads = AddMemLoadsFromList(body_new);
+    Stmt* body_new = body->accept_mutator(this);
+    Stmt* body_with_loads = AddMemLoadsFromList(body_new);
     PopList();
     if (same_node(var, var_new) && same_node(start, start_new) &&
         same_node(stop, stop_new) && same_node(body, body_with_loads)) {
-      return Stmt(v);
+      return (Stmt*)v;
     }
     return For::make(
         var_new, start_new, stop_new, body_with_loads, loop_options);
   }
 
-  virtual Stmt mutate(const LetStmt* v) {
+  virtual Stmt* mutate(const LetStmt* v) {
     Var var = v->var();
     Expr value = v->value();
-    Stmt body = v->body();
+    Stmt* body = v->body();
     Expr var_new_expr = var.accept_mutator(this);
     Variable* var_new_ptr = var_new_expr.AsNode<Variable>();
     if (var_new_ptr == nullptr) {
@@ -240,43 +240,43 @@ class PrioritizeLoad : public IRMutator {
     Var var_new{var_new_ptr};
     Expr value_new = value.accept_mutator(this);
     PushList();
-    Stmt body_new = body.accept_mutator(this);
-    Stmt body_with_loads = AddMemLoadsFromList(body_new);
+    Stmt* body_new = body->accept_mutator(this);
+    Stmt* body_with_loads = AddMemLoadsFromList(body_new);
     PopList();
     if (same_node(var, var_new) && same_node(value, value_new) &&
         same_node(body, body_with_loads)) {
-      return Stmt(v);
+      return (Stmt*)v;
     }
     return LetStmt::make(var_new, value_new, body_with_loads);
   }
 
-  virtual Stmt mutate(const Cond* v) {
+  virtual Stmt* mutate(const Cond* v) {
     Expr cond_old = v->condition();
-    Stmt true_old = v->true_stmt();
-    Stmt false_old = v->false_stmt();
+    Stmt* true_old = v->true_stmt();
+    Stmt* false_old = v->false_stmt();
 
     Expr cond_new = cond_old.accept_mutator(this);
     PushList();
-    Stmt true_new = true_old.accept_mutator(this);
-    Stmt true_with_loads = AddMemLoadsFromList(true_new);
+    Stmt* true_new = true_old ? true_old->accept_mutator(this) : true_old;
+    Stmt* true_with_loads = AddMemLoadsFromList(true_new);
     PopList();
     PushList();
-    Stmt false_new = false_old.accept_mutator(this);
-    Stmt false_with_loads = AddMemLoadsFromList(false_new);
+    Stmt* false_new = false_old ? false_old->accept_mutator(this) : false_old;
+    Stmt* false_with_loads = AddMemLoadsFromList(false_new);
     PopList();
 
     if (same_node(cond_old, cond_new) && same_node(true_old, true_with_loads) &&
         same_node(false_old, false_with_loads)) {
-      return Stmt(v);
+      return (Stmt*)v;
     }
     return Cond::make(cond_new, true_with_loads, false_with_loads);
   }
 
-  Stmt Process(const Stmt& stmt) {
+  Stmt* Process(Stmt* stmt) {
     this->PushList();
-    Stmt stmt_v = stmt;
-    Stmt stmt_new = stmt_v.accept_mutator(this);
-    Stmt stmt_with_loads = AddMemLoadsFromList(stmt_new);
+    Stmt* stmt_v = stmt;
+    Stmt* stmt_new = stmt_v->accept_mutator(this);
+    Stmt* stmt_with_loads = AddMemLoadsFromList(stmt_new);
     this->PopList();
     return stmt_with_loads;
   }
@@ -294,9 +294,9 @@ class PrioritizeLoad : public IRMutator {
     load_stack_.pop_back();
   }
 
-  Stmt AddMemLoadsFromList(const Stmt& stmt) {
+  Stmt* AddMemLoadsFromList(Stmt* stmt) {
     MemLoadList& load_list = load_stack_.back();
-    Stmt stmt_v = stmt;
+    Stmt* stmt_v = stmt;
     for (int i = load_list.size() - 1; i >= 0; i--) {
       const MemLoadEntry& entry = load_list[i];
       Variable* var_ptr = const_cast<Variable*>(entry.first);
@@ -310,8 +310,8 @@ class PrioritizeLoad : public IRMutator {
 
 class HasRand : public IRVisitor {
  public:
-  HasRand(const Stmt& stmt) : stmt_(stmt) {
-    stmt_.accept(this);
+  HasRand(Stmt* stmt) : stmt_(stmt) {
+    stmt_->accept(this);
   }
 
   bool has_rand() const {
@@ -326,7 +326,7 @@ class HasRand : public IRVisitor {
       IRVisitor::visit(v);
     }
   }
-  Stmt stmt_;
+  Stmt* stmt_;
   bool has_rand_ = false;
 };
 
@@ -375,10 +375,10 @@ void CudaCodeGen::Initialize() {
     os() << std::endl;
   }
 
-  Stmt stmt_v = stmt();
+  Stmt* stmt_v = stmt();
   PrioritizeLoad prioritize_load;
   stmt_v = prioritize_load.Process(stmt_v);
-  stmt_v.accept(printer_.get());
+  stmt_v->accept(printer_.get());
   os() << std::endl;
   os() << "}";
 

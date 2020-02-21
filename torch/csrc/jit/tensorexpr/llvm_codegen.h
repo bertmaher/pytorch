@@ -50,14 +50,14 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
   llvm::Type* dtypeToLLVM(Dtype dtype);
   llvm::Type* dtypeToLLVMPtr(Dtype dtype);
   void emitWrapper(const std::vector<llvm::Type*>& params);
-  void emitKernel(const Stmt& stmt, const std::vector<llvm::Type*>& params);
+  void emitKernel(Stmt* stmt, const std::vector<llvm::Type*>& params);
 
  public:
   explicit LLVMCodeGen(
-      const Stmt& stmt,
+      Stmt* stmt,
       const std::vector<BufferArg>& args,
       Dtype dtype = kInt32);
-  explicit LLVMCodeGen(const Stmt& stmt);
+  explicit LLVMCodeGen(Stmt* stmt);
 
   ~LLVMCodeGen() override {}
 

@@ -30,11 +30,11 @@ class BaseExprNode : public KernelScopedObject {
 };
 
 // The common base between all statement node.
-class BaseStmtNode : public KernelScopedObject {
+class Stmt : public KernelScopedObject {
  public:
-  BaseStmtNode() {}
+  Stmt() {}
   TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
-  virtual Stmt accept_mutator(IRMutator* mutator) = 0;
+  virtual Stmt* accept_mutator(IRMutator* mutator) = 0;
 };
 
 // A CRTP pattern to accept visitors for children class,
@@ -52,13 +52,13 @@ class ExprNode : public Base {
 };
 
 template <class Op>
-class StmtNode : public BaseStmtNode {
+class StmtNode : public Stmt {
  public:
   using StmtNodeBase = StmtNode<Op>;
   void accept(IRVisitor* visitor) const override {
     visitor->visit(static_cast<const Op*>(this));
   }
-  Stmt accept_mutator(IRMutator* mutator) override;
+  Stmt* accept_mutator(IRMutator* mutator) override;
   StmtNode() {}
 };
 
@@ -132,47 +132,6 @@ class TORCH_API Expr {
   BaseExprNode* base_expr_node_ = nullptr;
 };
 
-class Stmt {
- public:
-  Stmt() {}
-  explicit Stmt(const BaseStmtNode* node)
-      : base_stmt_node_(const_cast<BaseStmtNode*>(node)) {}
-
-  BaseStmtNode* node() {
-    return base_stmt_node_;
-  }
-
-  const BaseStmtNode* node() const {
-    return base_stmt_node_;
-  }
-
-  void accept(IRVisitor* visitor) const {
-    if (node() == nullptr) {
-      return;
-    }
-    node()->accept(visitor);
-  }
-
-  Stmt accept_mutator(IRMutator* mutator) {
-    if (node() == nullptr) {
-      return Stmt();
-    }
-    return node()->accept_mutator(mutator);
-  }
-
-  bool empty() const {
-    return node() == nullptr;
-  }
-
-  template <class Op>
-  const Op* AsNode() const {
-    return dynamic_cast<const Op*>(this->node());
-  }
-
- private:
-  BaseStmtNode* base_stmt_node_ = nullptr;
-};
-
 template <class Op, class Base>
 Expr ExprNode<Op, Base>::accept_mutator(IRMutator* mutator) {
   ExprNode* this_mutable = const_cast<ExprNode*>(this);
@@ -180,7 +139,7 @@ Expr ExprNode<Op, Base>::accept_mutator(IRMutator* mutator) {
 }
 
 template <class Op>
-Stmt StmtNode<Op>::accept_mutator(IRMutator* mutator) {
+Stmt* StmtNode<Op>::accept_mutator(IRMutator* mutator) {
   StmtNode* this_mutable = const_cast<StmtNode*>(this);
   return mutator->mutate(static_cast<Op*>(this_mutable));
 }
@@ -189,8 +148,8 @@ inline bool same_node(const Expr& expr1, const Expr& expr2) {
   return expr1.AsNode<BaseExprNode>() == expr2.AsNode<BaseExprNode>();
 }
 
-inline bool same_node(const Stmt& stmt1, const Stmt& stmt2) {
-  return stmt1.AsNode<BaseStmtNode>() == stmt2.AsNode<BaseStmtNode>();
+inline bool same_node(Stmt* stmt1, Stmt* stmt2) {
+  return stmt1 == stmt2;
 }
 
 TORCH_API Expr sin(const Expr& v);
