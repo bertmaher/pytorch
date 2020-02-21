@@ -200,6 +200,64 @@ void testCudaDynamicShape2D() {
   testWithSize(27, 13);
 }
 
+void testCudaTestRand01() {
+  KernelScope kernel_scope;
+  const int num_iter = 3;
+  const int block_count = 16;
+  const int block_size = 128;
+  Tensor c = Compute(
+      "c",
+      {
+          {num_iter, "n"},
+          {block_count, "b_id"},
+          {block_size, "t_id"},
+      },
+      [&](const Var& n, const Var& b_id, const Var& t_id) {
+        return Intrinsics::make(IntrinsicsOp::kRand, kFloat32);
+      });
+  Schedule sch({c});
+  const Var& b_id = c.arg(1);
+  const Var& t_id = c.arg(2);
+  c.GPUExecConfig({b_id}, {t_id});
+  Stmt stmt = sch.Lower();
+  CudaCodeGen cuda_cg(stmt, c);
+  const int N = block_count * block_size * num_iter;
+  PaddedBuffer<float> c_v(N);
+
+  // TODO: move gpu support into PaddedBuffer
+  float* c_dev = nullptr;
+  cudaMalloc(&c_dev, N * sizeof(float));
+  cudaDeviceSynchronize();
+
+  cuda_cg(c_dev);
+
+  cudaDeviceSynchronize();
+  cudaMemcpy(c_v.data(), c_dev, N * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+
+  float sum1 = 0;
+  float sum2 = 0;
+  float sum3 = 0;
+  for (int i = 0; i < N; i++) {
+    float v = c_v.data()[i];
+    sum1 += v;
+    sum2 += v * v;
+    sum3 += v * v * v;
+    EXPECT_TRUE(v >= 0 && v < 1) << "invalid value: " << i << ", " << v;
+  }
+  sum1 /= N;
+  sum2 /= N;
+  sum3 /= N;
+  float sum1_mean = 1.f / 2;
+  float sum2_mean = 1.f / 3;
+  float sum3_mean = 1.f / 4;
+
+  EXPECT_NEAR(sum1, sum1_mean, 2e-2);
+  EXPECT_NEAR(sum2, sum2_mean, 2e-2);
+  EXPECT_NEAR(sum3, sum3_mean, 2e-2);
+  cudaFree(c_dev);
+}
+
 } // namespace jit
 } // namespace torch
 

@@ -54,9 +54,14 @@ class CudaPrinter : public IRPrinter {
 
   using IRPrinter::name_manager;
 
+  void SetRandFunc(const Var& rand_func) {
+    rand_func_ = rand_func;
+  }
+
  private:
   std::vector<Expr> gpu_block_extents_;
   std::vector<Expr> gpu_thread_extents_;
+  Var rand_func_;
 };
 
 // Construct Cuda C from the buffer and tensor input, and invoke the kernel
@@ -102,6 +107,7 @@ class TORCH_API CudaCodeGen : public CodeGen {
   std::ostringstream oss_;
   std::unique_ptr<CudaPrinter> printer_;
   CUfunction function_;
+  bool has_random_ = false;
 };
 
 } // namespace tensorexpr
