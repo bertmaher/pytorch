@@ -722,7 +722,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       // Flatten the index for GPU kernels.
       // TODO: move this to fusing axis when it is ready.
       Tensor new_out = Compute(
-          tensor.function().func_var().name_hint() + "_flat",
+          tensor.function()->func_var().name_hint() + "_flat",
           {total_count},
           [tensor](const Var& index) -> Expr {
             std::vector<Expr> dims;
