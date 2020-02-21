@@ -58,7 +58,7 @@ class TORCH_API TensorOperationNode : public KernelScopedObject {
   TensorExprNode* expr_node_ = nullptr;
 };
 
-class TensorNode : public TensorOperationNode {
+class Tensor : public TensorOperationNode {
  public:
   Function* function() const {
     return function_;
@@ -67,10 +67,16 @@ class TensorNode : public TensorOperationNode {
     return output_index_;
   }
 
- private:
-  friend class Tensor;
-  TensorNode(Function* function, int output_index)
+  Tensor(Function* function, int output_index)
       : function_(function), output_index_(output_index) {}
+  template <typename... Ts>
+  inline Expr operator()(const Ts&... ts);
+  template <typename T>
+  inline Expr call(const std::vector<T>& args);
+  template <typename... Ts>
+  inline Expr call(const Ts&... ts);
+
+ private:
   Function* function_;
   int output_index_;
 };
@@ -139,60 +145,6 @@ class TORCH_API TensorOperation {
   TensorOperationNode* node_ = nullptr;
 };
 
-class Tensor : public TensorOperation {
- public:
-  Tensor(Function* function, int output_index)
-      : TensorOperation(new TensorNode(function, output_index)) {}
-
-  explicit Tensor(TensorNode* tensor_node) : TensorOperation(tensor_node) {}
-
-  int ndim() const {
-    return node()->function()->ndim();
-  }
-  const Expr& dim(int index) const {
-    return node()->function()->dim(index);
-  }
-  const std::vector<Expr>& dims() const {
-    return node()->function()->dims();
-  }
-  Function* function() const {
-    return node()->function();
-  }
-  const Var& arg(int index) const {
-    return node()->function()->arg(index);
-  }
-  const std::vector<Var>& args() const {
-    return node()->function()->args();
-  }
-  int output_index() const {
-    return node()->output_index();
-  }
-  const Var& buffer_var() const {
-    return node()->function()->func_var();
-  }
-  Dtype dtype() const {
-    return node()->function()->body().dtype();
-  }
-
-  template <typename... Ts>
-  Expr operator()(const Ts&... ts) const;
-
-  template <typename T>
-  Expr call(const std::vector<T>& args) const;
-
-  TensorNode* node() {
-    // TODO: switch to dynamic_cast when it becomes available.
-    return static_cast<TensorNode*>(TensorOperation::node());
-  }
-
-  const TensorNode* node() const {
-    return const_cast<Tensor*>(this)->node();
-  }
-
- private:
-  friend class schedule::ScheduleNode;
-};
-
 // A helper structure to store the arguments to specify dimensions. In the
 // Compute arugments for dim_args, all of the following is supported. For
 // example:
@@ -217,24 +169,24 @@ class DimArg {
   std::string name_hint_;
 };
 
-TORCH_API Tensor Compute(
+TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&)> body_func);
-TORCH_API Tensor Compute(
+TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&)> body_func);
-TORCH_API Tensor Compute(
+TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&)> body_func);
-TORCH_API Tensor Compute(
+TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&, const Var&)>
         body_func);
-TORCH_API Tensor Compute(
+TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const std::vector<Var>&)> body_func);
@@ -242,14 +194,14 @@ TORCH_API Tensor Compute(
 class FunctionCall : public CallNode<FunctionCall> {
  public:
   using BaseClass = CallNode<FunctionCall>;
-  static Expr make(const Tensor& tensor, const std::vector<Expr>& params) {
+  static Expr make(Tensor* tensor, const std::vector<Expr>& params) {
     return Expr(new FunctionCall(tensor, params));
   }
 
-  const Tensor& tensor() const {
+  const Tensor* tensor() const {
     return tensor_;
   }
-  Tensor& tensor() {
+  Tensor* tensor() {
     return tensor_;
   }
 
@@ -259,27 +211,31 @@ class FunctionCall : public CallNode<FunctionCall> {
   }
 
   std::string func_name() const {
-    return tensor_.function()->func_var().name_hint();
+    return tensor_->function()->func_var().name_hint();
   }
 
-  FunctionCall(const Tensor& tensor, const std::vector<Expr>& params)
-      : BaseClass(tensor.function()->body().dtype(), kFunctionCall, params),
+  FunctionCall(Tensor* tensor, const std::vector<Expr>& params)
+      : BaseClass(tensor->function()->body().dtype(), kFunctionCall, params),
         tensor_(tensor) {}
-  Tensor tensor_;
+  Tensor* tensor_;
 };
+template <typename... Ts>
+inline Expr Tensor::operator()(const Ts&... ts) {
+  std::vector<Expr> params({Expr(ts)...});
+  return FunctionCall::make(this, std::move(params));
+}
 
 template <typename... Ts>
-inline Expr Tensor::operator()(const Ts&... ts) const {
+inline Expr Tensor::call(const Ts&... ts) {
   std::vector<Expr> params({Expr(ts)...});
-  return FunctionCall::make(*this, std::move(params));
+  return FunctionCall::make(this, std::move(params));
 }
 
 template <typename T>
-inline Expr Tensor::call(const std::vector<T>& args) const {
+inline Expr Tensor::call(const std::vector<T>& args) {
   std::vector<Expr> params(args.begin(), args.end());
-  return FunctionCall::make(*this, params);
+  return FunctionCall::make(this, params);
 }
-
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
