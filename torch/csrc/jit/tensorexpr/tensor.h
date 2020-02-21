@@ -60,32 +60,11 @@ class TORCH_API TensorOperationNode : public KernelScopedObject {
 
 class TensorNode : public TensorOperationNode {
  public:
-  int ndim() const {
-    return function_->ndim();
-  }
-  const Expr& dim(int index) const {
-    return function_->dim(index);
-  }
-  const std::vector<Expr>& dims() const {
-    return function_->dims();
-  }
   Function* function() const {
     return function_;
   }
   int output_index() const {
     return output_index_;
-  }
-  const Var& buffer_var() const {
-    return function_->func_var();
-  }
-  const Var& arg(int index) const {
-    return function_->arg(index);
-  }
-  const std::vector<Var>& args() const {
-    return function_->args();
-  }
-  Dtype dtype() const {
-    return function_->body().dtype();
   }
 
  private:
@@ -168,31 +147,31 @@ class Tensor : public TensorOperation {
   explicit Tensor(TensorNode* tensor_node) : TensorOperation(tensor_node) {}
 
   int ndim() const {
-    return node()->ndim();
+    return node()->function()->ndim();
   }
   const Expr& dim(int index) const {
-    return node()->dim(index);
+    return node()->function()->dim(index);
   }
   const std::vector<Expr>& dims() const {
-    return node()->dims();
+    return node()->function()->dims();
   }
   Function* function() const {
     return node()->function();
   }
   const Var& arg(int index) const {
-    return node()->arg(index);
+    return node()->function()->arg(index);
   }
   const std::vector<Var>& args() const {
-    return node()->args();
+    return node()->function()->args();
   }
   int output_index() const {
     return node()->output_index();
   }
   const Var& buffer_var() const {
-    return node()->buffer_var();
+    return node()->function()->func_var();
   }
   Dtype dtype() const {
-    return node()->dtype();
+    return node()->function()->body().dtype();
   }
 
   template <typename... Ts>
