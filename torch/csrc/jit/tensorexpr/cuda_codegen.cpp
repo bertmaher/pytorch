@@ -331,12 +331,12 @@ class HasRand : public IRVisitor {
 };
 
 void CudaCodeGen::Initialize() {
-  printer_.reset(new CudaPrinter(&oss_));
   // TODO: handle multiple kernels.
   // TODO: handle dynamic dimension.
   // TODO: call nvrtc.
   HasRand has_rand_func(stmt());
   has_random_ = has_rand_func.has_rand();
+  printer_.reset(new CudaPrinter(&oss_, has_random_));
   if (has_random_) {
     os() << philox_random_string << std::endl;
   }
@@ -369,8 +369,7 @@ void CudaCodeGen::Initialize() {
     Var idx{"idx", kInt32};
     os() << "int " << idx << " = blockIdx.x*blockDim.x + threadIdx.x;"
          << std::endl;
-    Var rand_func = Var{"rand", kHandle};
-    printer_->SetRandFunc(rand_func);
+    Var rand_func = printer_->rand_func();
     os() << "Philox " << rand_func << "(" << rand_seed << ", " << idx << ", "
          << rand_offset << ");" << std::endl;
     os() << std::endl;

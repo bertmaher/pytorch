@@ -22,7 +22,11 @@ namespace tensorexpr {
 // A class that overrides the underlying IRPrinter to produce Cuda C.
 class CudaPrinter : public IRPrinter {
  public:
-  explicit CudaPrinter(std::ostream* os) : IRPrinter(*os) {}
+  explicit CudaPrinter(std::ostream* os, bool has_random) : IRPrinter(*os) {
+    if (has_random) {
+      rand_func_ = Var{"rand", kHandle};
+    }
+  }
 
   void visit(const Cast* v) {
     auto dtype = v->dtype();
@@ -52,11 +56,11 @@ class CudaPrinter : public IRPrinter {
     return gpu_thread_extents_;
   }
 
-  using IRPrinter::name_manager;
-
-  void SetRandFunc(const Var& rand_func) {
-    rand_func_ = rand_func;
+  const Var& rand_func() const {
+    return rand_func_;
   }
+
+  using IRPrinter::name_manager;
 
  private:
   std::vector<Expr> gpu_block_extents_;
