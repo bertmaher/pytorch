@@ -20,7 +20,7 @@ namespace {
 
 // Evaluates a constant expression and returns its value.
 template <typename T>
-static T EvalConstExpr(const ExprHandler& expr) {
+static T EvalConstExpr(const ExprHandle& expr) {
   ExprEval<SimpleIREvaluator> eval(expr);
   return eval.value<T>();
 }
@@ -158,15 +158,15 @@ void ScheduleNode::ComputeInline(TensorExprNode* expr_node) {
 
 void ScheduleNode::GPUExecConfig(
     TensorExprNode* expr_node,
-    const std::vector<VarHandler>& blockIdx,
-    const std::vector<VarHandler>& threadIdx) {
+    const std::vector<VarHandle>& blockIdx,
+    const std::vector<VarHandle>& threadIdx) {
   // Extract all the ancestors into a var* to loop-axis lookup table
   std::unordered_map<const Var*, LoopAxis*> var_to_loop;
   TensorExprNode* node = expr_node;
   while (node != nullptr) {
     if (node->is_loop_axis()) {
       LoopAxis* loop_axis = node->loop_axis();
-      const VarHandler& loop_var = loop_axis->var();
+      const VarHandle& loop_var = loop_axis->var();
       var_to_loop[loop_var.node()] = loop_axis;
     }
     node = node->parent();
@@ -197,12 +197,12 @@ void ScheduleNode::GPUExecConfig(
 
 void ScheduleNode::SplitWithTail(
     TensorExprNode* expr_node,
-    const VarHandler& loop_var,
+    const VarHandle& loop_var,
     int factor,
     bool factor_on_inner,
-    VarHandler* outer_var,
-    VarHandler* inner_var,
-    VarHandler* tail_var,
+    VarHandle* outer_var,
+    VarHandle* inner_var,
+    VarHandle* tail_var,
     TensorExprNode** tail_op) {
   // find the loop_axis that contains loop_var in the ancestor
   TensorExprNode* loop_node = expr_node;
@@ -279,11 +279,11 @@ void ScheduleNode::SplitWithTail(
 // TODO: Merge with SplitWithTail
 void ScheduleNode::SplitWithMask(
     TensorExprNode* expr_node,
-    const VarHandler& loop_var,
+    const VarHandle& loop_var,
     int factor,
     bool factor_on_inner,
-    VarHandler* outer_var,
-    VarHandler* inner_var) {
+    VarHandle* outer_var,
+    VarHandle* inner_var) {
   // find the loop_axis that contains loop_var in the ancestor
   TensorExprNode* loop_node = expr_node;
   while (loop_node != nullptr) {
@@ -400,9 +400,9 @@ class Flattener : public IRMutator {
         v->tensor()->function()->body().dtype(),
         v->tensor()->function()->dims());
     const std::vector<const Expr*>& params = v->params();
-    std::vector<ExprHandler> params_expr(params.size());
+    std::vector<ExprHandle> params_expr(params.size());
     for (size_t i = 0; i < params.size(); i++) {
-      params_expr[i] = ExprHandler(params[i]);
+      params_expr[i] = ExprHandle(params[i]);
     }
     return buffer(params_expr).node();
   }
@@ -435,8 +435,8 @@ class FunctionInliner : public IRMutator {
       }
 
       // Call the actual replacement.
-      ExprHandler body = func->body();
-      ExprHandler result = ExprHandler(body.node()->accept_mutator(this));
+      ExprHandle body = func->body();
+      ExprHandle result = ExprHandle(body.node()->accept_mutator(this));
 
       // Remove the caller/callee relationship.
       for (int i = 0; i < func->ndim(); i++) {
@@ -586,7 +586,7 @@ Stmt* ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     Stmt* stmt = expr_op->ElementStmt();
     // TODO: the predicate should be hoisted to as high as possible in the
     // acestor chain.
-    const std::vector<ExprHandler>& predicates = expr_op->predicates();
+    const std::vector<ExprHandle>& predicates = expr_op->predicates();
     for (int i = 0; i < predicates.size(); i++) {
       stmt = Cond::make(predicates[i], stmt, nullptr);
     }
@@ -595,7 +595,7 @@ Stmt* ScheduleNode::LowerNoSibling(TensorExprNode* node) {
     CHECK(node->first_child() != nullptr);
     LoopAxis* loop_axis = node->loop_axis();
     Stmt* body = Lower(node->first_child());
-    const VarHandler& var = loop_axis->var();
+    const VarHandle& var = loop_axis->var();
     const Range& range = loop_axis->range();
     Stmt* for_stmt = For::make(
         var, range.start(), range.stop(), body, loop_axis->loop_options());
@@ -721,8 +721,8 @@ SplitAxisTransform::SplitAxisTransform(
       factor_(factor),
       factor_on_inner_(factor_on_inner) {
   const Range& loop_range = loop_axis->range();
-  const ExprHandler& start_expr = loop_range.start();
-  const ExprHandler& stop_expr = loop_range.stop();
+  const ExprHandle& start_expr = loop_range.start();
+  const ExprHandle& stop_expr = loop_range.stop();
 
   // For now, only support static sizes for split axes.
   // TODO: Add support for dynamic ranges.
@@ -748,15 +748,15 @@ SplitAxisWithTail::SplitAxisWithTail(
   const std::string& loop_var_name = loop_axis->var().name_hint();
   Dtype loop_var_dtype = loop_axis->var().dtype();
   LoopAxis* outer = this->NewAxis(
-      VarHandler(loop_var_name + "_outer", loop_var_dtype), Range(0, split_count));
+      VarHandle(loop_var_name + "_outer", loop_var_dtype), Range(0, split_count));
   LoopAxis* inner = this->NewAxis(
-      VarHandler(loop_var_name + "_inner", loop_var_dtype), Range(0, factor));
+      VarHandle(loop_var_name + "_inner", loop_var_dtype), Range(0, factor));
   this->set_output_group(0, {outer, inner});
 
   // The tail group
   if (tail_size) {
     LoopAxis* tail = this->NewAxis(
-        VarHandler(loop_var_name + "_tail", loop_var_dtype), Range(0, tail_size));
+        VarHandle(loop_var_name + "_tail", loop_var_dtype), Range(0, tail_size));
     this->set_output_group(1, {tail});
   }
 }
@@ -784,18 +784,18 @@ SplitAxisWithMask::SplitAxisWithMask(
   const std::string& loop_var_name = loop_axis->var().name_hint();
   Dtype loop_var_dtype = loop_axis->var().dtype();
   LoopAxis* outer = this->NewAxis(
-      VarHandler(loop_var_name + "_outer", loop_var_dtype), Range(0, split_count));
+      VarHandle(loop_var_name + "_outer", loop_var_dtype), Range(0, split_count));
   LoopAxis* inner = this->NewAxis(
-      VarHandler(loop_var_name + "_inner", loop_var_dtype), Range(0, factor));
+      VarHandle(loop_var_name + "_inner", loop_var_dtype), Range(0, factor));
   this->set_output_group(0, {outer, inner});
 }
 
-ExprHandler SplitAxisWithTail::combined_loop_index(int output_group) {
+ExprHandle SplitAxisWithTail::combined_loop_index(int output_group) {
   LoopAxis* original_axis = this->input(0);
-  VarHandler original_var = original_axis->var();
+  VarHandle original_var = original_axis->var();
   LoopAxis* outer = this->output(0, 0);
   LoopAxis* inner = this->output(0, 1);
-  ExprHandler combined_index;
+  ExprHandle combined_index;
   if (output_group == 0) {
     // x -> x.outer * inner.size + x.inner
     combined_index = outer->var() * inner->range().stop() + inner->var();
@@ -811,41 +811,41 @@ ExprHandler SplitAxisWithTail::combined_loop_index(int output_group) {
 }
 
 Stmt* SplitAxisWithTail::ConvertToNewArgs(Stmt* stmt, int output_group) {
-  ExprHandler combined_index = combined_loop_index(output_group);
+  ExprHandle combined_index = combined_loop_index(output_group);
   Stmt* new_stmt = Substitute(stmt, {{input(0)->var(), combined_index}});
   return new_stmt;
 }
 
-ExprHandler SplitAxisWithTail::ConvertToNewArgs(ExprHandler* expr, int output_group) {
-  ExprHandler combined_index = combined_loop_index(output_group);
-  ExprHandler new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
+ExprHandle SplitAxisWithTail::ConvertToNewArgs(ExprHandle* expr, int output_group) {
+  ExprHandle combined_index = combined_loop_index(output_group);
+  ExprHandle new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
   return new_expr;
 }
 
-ExprHandler SplitAxisWithMask::combined_loop_index(int output_group) {
+ExprHandle SplitAxisWithMask::combined_loop_index(int output_group) {
   DCHECK_EQ(output_group, 0) << "Ininvalid output group: " << output_group;
   LoopAxis* original_axis = this->input(0);
-  VarHandler original_var = original_axis->var();
+  VarHandle original_var = original_axis->var();
   LoopAxis* outer = this->output(0, 0);
   LoopAxis* inner = this->output(0, 1);
-  ExprHandler combined_index = outer->var() * inner->range().stop() + inner->var();
+  ExprHandle combined_index = outer->var() * inner->range().stop() + inner->var();
   return combined_index;
 }
 
 Stmt* SplitAxisWithMask::ConvertToNewArgs(Stmt* stmt, int output_group) {
-  ExprHandler combined_index = combined_loop_index(output_group);
+  ExprHandle combined_index = combined_loop_index(output_group);
   Stmt* new_stmt = Substitute(stmt, {{input(0)->var(), combined_index}});
   return new_stmt;
 }
 
-ExprHandler SplitAxisWithMask::ConvertToNewArgs(ExprHandler* expr, int output_group) {
-  ExprHandler combined_index = combined_loop_index(output_group);
-  ExprHandler new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
+ExprHandle SplitAxisWithMask::ConvertToNewArgs(ExprHandle* expr, int output_group) {
+  ExprHandle combined_index = combined_loop_index(output_group);
+  ExprHandle new_expr = Substitute(expr, {{input(0)->var(), combined_index}});
   return new_expr;
 }
 
 LoopAxis* LoopAxisTransform::NewAxis(
-    const VarHandler& loop_var,
+    const VarHandle& loop_var,
     const Range& loop_range) {
   ScheduleNode* schedule = this->schedule();
   LoopAxis* axis = schedule->NewAxis(loop_var, loop_range);

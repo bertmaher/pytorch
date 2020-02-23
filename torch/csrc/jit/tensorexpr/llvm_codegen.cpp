@@ -859,7 +859,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
 #undef BINARY_MATH_CASE
 
     default: {
-      LOG(FATAL) << "Unimplemented: Intrinsics: " << ExprHandler(v);
+      LOG(FATAL) << "Unimplemented: Intrinsics: " << ExprHandle(v);
     } break;
   }
 

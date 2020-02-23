@@ -658,14 +658,14 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
       internal_buffers_;
 };
 
-using VarMapping = std::vector<std::pair<ExprHandler, ExprHandler>>;
+using VarMapping = std::vector<std::pair<ExprHandle, ExprHandle>>;
 
 class VarSubMutator : public IRMutator {
  public:
   VarSubMutator(const VarMapping& var_mapping) {
     for (const auto& entry : var_mapping) {
-      const ExprHandler& key = entry.first;
-      const ExprHandler& value = entry.second;
+      const ExprHandle& key = entry.first;
+      const ExprHandle& value = entry.second;
       const Var* key_var = key.AsNode<Var>();
       CHECK(key_var != nullptr);
       var_mapping_[key_var] = value;
@@ -681,7 +681,7 @@ class VarSubMutator : public IRMutator {
   }
 
  private:
-  std::unordered_map<const Var*, ExprHandler> var_mapping_;
+  std::unordered_map<const Var*, ExprHandle> var_mapping_;
 };
 
 template <class CodeGenType>
@@ -691,9 +691,9 @@ class ExprEval {
   using CallArg = CodeGen::CallArg;
 
   template <typename... Ts>
-  ExprEval(const ExprHandler& expr, Ts... ts) : ExprEval(expr, {BufferArg(ts)...}) {}
+  ExprEval(const ExprHandle& expr, Ts... ts) : ExprEval(expr, {BufferArg(ts)...}) {}
 
-  ExprEval(const ExprHandler& expr, const std::vector<BufferArg>& buffer_args)
+  ExprEval(const ExprHandle& expr, const std::vector<BufferArg>& buffer_args)
       : dtype_(expr.dtype()) {
     std::vector<BufferArg> buffer_args_extended = buffer_args;
     Buffer ret_buf("ret_val", dtype_, {1});
@@ -745,9 +745,9 @@ class ExprEval {
   Value ret_value_;
 };
 
-inline ExprHandler Substitute(ExprHandler* expr, const VarMapping& var_mapping) {
+inline ExprHandle Substitute(ExprHandle* expr, const VarMapping& var_mapping) {
   VarSubMutator var_sub(var_mapping);
-  return ExprHandler(expr->node()->accept_mutator(&var_sub));
+  return ExprHandle(expr->node()->accept_mutator(&var_sub));
 }
 
 inline Stmt* Substitute(Stmt* stmt, const VarMapping& var_mapping) {

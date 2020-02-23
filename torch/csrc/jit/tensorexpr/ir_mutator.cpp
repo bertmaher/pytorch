@@ -83,10 +83,10 @@ const Expr* IRMutator::mutate(const CompareSelect* v) {
     return v;
   }
   return CompareSelect::make(
-             ExprHandler(lhs_new),
-             ExprHandler(rhs_new),
-             ExprHandler(retval1_new),
-             ExprHandler(retval2_new),
+             ExprHandle(lhs_new),
+             ExprHandle(rhs_new),
+             ExprHandle(retval1_new),
+             ExprHandle(retval2_new),
              v->compare_select_op())
       .node();
 }

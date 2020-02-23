@@ -4,7 +4,7 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-void IRPrinter::print(ExprHandler expr) {
+void IRPrinter::print(ExprHandle expr) {
   expr.node()->accept(this);
 }
 
@@ -153,9 +153,9 @@ void IRPrinter::visit(const Load* v) {
 
 void IRPrinter::visit(const For* v) {
   const Var* var = v->var();
-  VarHandler vv(var);
+  VarHandle vv(var);
   os() << "for (" << var->dtype().ToCppString() << " " << vv << " = "
-       << ExprHandler(v->start()) << "; " << vv << " < " << ExprHandler(v->stop()) << "; " << vv
+       << ExprHandle(v->start()) << "; " << vv << " < " << ExprHandle(v->stop()) << "; " << vv
        << "++) {";
   std::string loop_options_str = v->loop_options().ToString();
   if (!loop_options_str.empty()) {
@@ -236,7 +236,7 @@ void IRPrinter::visit(const Cond* v) {
   }
 }
 
-std::ostream& operator<<(std::ostream& stream, const ExprHandler& expr) {
+std::ostream& operator<<(std::ostream& stream, const ExprHandle& expr) {
   IRPrinter::PrinterStream* printer_stream =
       dynamic_cast<IRPrinter::PrinterStream*>(&stream);
   if (printer_stream != nullptr) {

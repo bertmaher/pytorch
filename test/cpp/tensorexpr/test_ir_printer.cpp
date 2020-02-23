@@ -13,8 +13,8 @@ using namespace torch::jit::tensorexpr;
 
 void testIRPrinterBasicValueTest() {
   KernelScope kernel_scope;
-  ExprHandler a = IntImm::make(2), b = IntImm::make(3);
-  ExprHandler c = Add::make(a, b);
+  ExprHandle a = IntImm::make(2), b = IntImm::make(3);
+  ExprHandle c = Add::make(a, b);
 
   std::stringstream ss;
   ss << c;
@@ -23,11 +23,11 @@ void testIRPrinterBasicValueTest() {
 
 void testIRPrinterBasicValueTest02() {
   KernelScope kernel_scope;
-  ExprHandler a(2.0f);
-  ExprHandler b(3.0f);
-  ExprHandler c(4.0f);
-  ExprHandler d(5.0f);
-  ExprHandler f = (a + b) - (c + d);
+  ExprHandle a(2.0f);
+  ExprHandle b(3.0f);
+  ExprHandle c(4.0f);
+  ExprHandle d(5.0f);
+  ExprHandle f = (a + b) - (c + d);
 
   std::stringstream ss;
   ss << f;
@@ -36,10 +36,10 @@ void testIRPrinterBasicValueTest02() {
 
 void testIRPrinterLetTest01() {
   KernelScope kernel_scope;
-  VarHandler x("x", kFloat32);
-  ExprHandler value = ExprHandler(3.f);
-  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f));
-  ExprHandler result = Let::make(x, ExprHandler(3.f), body);
+  VarHandle x("x", kFloat32);
+  ExprHandle value = ExprHandle(3.f);
+  ExprHandle body = ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f));
+  ExprHandle result = Let::make(x, ExprHandle(3.f), body);
 
   std::stringstream ss;
   ss << result;
@@ -48,12 +48,12 @@ void testIRPrinterLetTest01() {
 
 void testIRPrinterLetTest02() {
   KernelScope kernel_scope;
-  VarHandler x("x", kFloat32);
-  VarHandler y("y", kFloat32);
-  ExprHandler value = ExprHandler(3.f);
-  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f) * y);
-  ExprHandler e1 = Let::make(x, ExprHandler(3.f), body);
-  ExprHandler e2 = Let::make(y, ExprHandler(6.f), e1);
+  VarHandle x("x", kFloat32);
+  VarHandle y("y", kFloat32);
+  ExprHandle value = ExprHandle(3.f);
+  ExprHandle body = ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f) * y);
+  ExprHandle e1 = Let::make(x, ExprHandle(3.f), body);
+  ExprHandle e2 = Let::make(y, ExprHandle(6.f), e1);
 
   std::stringstream ss;
   ss << e2;
@@ -63,12 +63,12 @@ void testIRPrinterLetTest02() {
 
 void testIRPrinterCastTest() {
   KernelScope kernel_scope;
-  VarHandler x("x", kFloat32);
-  VarHandler y("y", kFloat32);
-  ExprHandler value = ExprHandler(3.f);
-  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f) * y);
-  ExprHandler e1 = Let::make(x, Cast::make(kInt32, ExprHandler(3.f)), body);
-  ExprHandler e2 = Let::make(y, ExprHandler(6.f), e1);
+  VarHandle x("x", kFloat32);
+  VarHandle y("y", kFloat32);
+  ExprHandle value = ExprHandle(3.f);
+  ExprHandle body = ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f) * y);
+  ExprHandle e1 = Let::make(x, Cast::make(kInt32, ExprHandle(3.f)), body);
+  ExprHandle e2 = Let::make(y, ExprHandle(6.f), e1);
 
   std::stringstream ss;
   ss << e2;

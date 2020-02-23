@@ -39,7 +39,7 @@ const std::string& UniqueNameManager::get_unique_name(const Var* v) {
   }
 }
 
-const std::string& UniqueNameManager::get_unique_name(const VarHandler& v) {
+const std::string& UniqueNameManager::get_unique_name(const VarHandle& v) {
   return get_unique_name(v.node());
 }
 

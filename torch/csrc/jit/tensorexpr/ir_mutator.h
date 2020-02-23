@@ -26,7 +26,7 @@ class Block;
 class Store;
 class Broadcast;
 class IfThenElse;
-class ExprHandler;
+class ExprHandle;
 class Expr;
 class BaseCallNode;
 class Intrinsics;

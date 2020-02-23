@@ -18,13 +18,13 @@ inline std::vector<int64_t> bufferSizes(const T& t) {
 }
 
 template <typename T>
-inline std::vector<ExprHandler> computeIndicesToBroadcast(
+inline std::vector<ExprHandle> computeIndicesToBroadcast(
     const std::vector<T>& output_axes,
     const std::vector<Expr>& input_sizes) {
   TORCH_CHECK(
       output_axes.size() >= input_sizes.size(),
       "Cannot broadcast to a lower rank tensor");
-  std::vector<ExprHandler> bcast;
+  std::vector<ExprHandle> bcast;
   auto axis_it = output_axes.rbegin();
   auto size_it = input_sizes.rbegin();
   while (size_it != input_sizes.rend()) {
@@ -55,15 +55,15 @@ class TensorExprKernel {
     kCudaCodeGen,
   };
 
-  ExprHandler constant(const torch::jit::Value* v);
+  ExprHandle constant(const torch::jit::Value* v);
 
   template <typename T, typename T1>
-  ExprHandler broadcast(const T& t, const std::vector<T1>& axes) {
+  ExprHandle broadcast(const T& t, const std::vector<T1>& axes) {
     return t->call(computeIndicesToBroadcast(axes, t->function()->dims()));
   }
 
   template <typename T, typename T1>
-  ExprHandler chunk(
+  ExprHandle chunk(
       const T& t,
       size_t chunk_idx,
       size_t dim,
@@ -72,7 +72,7 @@ class TensorExprKernel {
     auto sizes = bufferSizes(t);
     size_t step = sizes[dim] / chunks;
 
-    std::vector<ExprHandler> indices;
+    std::vector<ExprHandle> indices;
     for (size_t i = 0; i < axes.size(); ++i) {
       if (i == dim) {
         indices.push_back(axes[i] + IntImm::make(chunk_idx * step));
@@ -84,14 +84,14 @@ class TensorExprKernel {
     return t->call(indices);
   }
 
-  std::vector<ExprHandler> valueShape(const torch::jit::Value* v);
+  std::vector<ExprHandle> valueShape(const torch::jit::Value* v);
 
-  void promoteInputs(std::vector<ExprHandler>& inputs);
+  void promoteInputs(std::vector<ExprHandle>& inputs);
 
-  ExprHandler demoteOutput(const ExprHandler& e, const torch::jit::Value* v);
+  ExprHandle demoteOutput(const ExprHandle& e, const torch::jit::Value* v);
 
   template <typename T>
-  ExprHandler tensorOrConstant(
+  ExprHandle tensorOrConstant(
       const torch::jit::Value* v,
       const std::vector<T>& axes) {
     auto ti = tensors_.find(v->unique());
@@ -104,27 +104,27 @@ class TensorExprKernel {
   Tensor* ComputeOneOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandler(const ExprHandler&)> inner_expr);
+      std::function<ExprHandle(const ExprHandle&)> inner_expr);
 
   Tensor* ComputeTwoOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandler(const ExprHandler&, const ExprHandler&)> inner_expr);
+      std::function<ExprHandle(const ExprHandle&, const ExprHandle&)> inner_expr);
 
   Tensor* ComputeTwoOperandWithAlpha(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandler(const ExprHandler&, const ExprHandler&)> inner_expr);
+      std::function<ExprHandle(const ExprHandle&, const ExprHandle&)> inner_expr);
 
   Tensor* ComputeThreeOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandler(const ExprHandler&, const ExprHandler&, const ExprHandler&)> inner_expr);
+      std::function<ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)> inner_expr);
 
   Tensor* ComputeFourOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandler(const ExprHandler&, const ExprHandler&, const ExprHandler&, const ExprHandler&)>
+      std::function<ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&, const ExprHandle&)>
           inner_expr);
 
   Tensor* ComputeValue(const torch::jit::Value* v);
@@ -184,7 +184,7 @@ class TensorExprKernel {
   std::vector<KernelArg> kernelArgs_;
   std::vector<Tensor*> tensor_outputs_;
   std::unordered_map<int64_t, Tensor*> tensors_;
-  std::unordered_map<int64_t, VarHandler> scalars_;
+  std::unordered_map<int64_t, VarHandle> scalars_;
   std::unique_ptr<CodeGen> codegen_;
   KernelArena kernel_arena_;
   BackendType backend_type_ = BackendType::kUninitialized;

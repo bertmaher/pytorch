@@ -10,7 +10,7 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-class VarHandler;
+class VarHandle;
 class Var;
 
 using VarNameMap = std::unordered_map<const Var*, std::string>;
@@ -20,7 +20,7 @@ using VarNameMap = std::unordered_map<const Var*, std::string>;
 // hits a unique name.
 class TORCH_API UniqueNameManager {
  public:
-  const std::string& get_unique_name(const VarHandler& v);
+  const std::string& get_unique_name(const VarHandle& v);
 
   const std::string& get_unique_name(const Var* v);
 
