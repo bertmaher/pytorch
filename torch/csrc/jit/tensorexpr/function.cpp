@@ -11,13 +11,13 @@ namespace {
 
 static void unpack_dim_args(
     const std::vector<DimArg>& dim_args,
-    std::vector<Expr>* dims,
-    std::vector<Var>* vars) {
+    std::vector<ExprHandler>* dims,
+    std::vector<VarHandler>* vars) {
   dims->clear();
   vars->clear();
   for (size_t i = 0; i < dim_args.size(); i++) {
     dims->push_back(dim_args[i].dim());
-    vars->push_back(Var(dim_args[i].name_hint(), kInt32));
+    vars->push_back(VarHandler(dim_args[i].name_hint(), kInt32));
   }
 }
 
@@ -26,11 +26,11 @@ static void unpack_dim_args(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<Expr(const std::vector<Var>&)> body_func) {
-  std::vector<Expr> dims;
-  std::vector<Var> args;
+    std::function<ExprHandler(const std::vector<VarHandler>&)> body_func) {
+  std::vector<ExprHandler> dims;
+  std::vector<VarHandler> args;
   unpack_dim_args(dim_args, &dims, &args);
-  Expr body = body_func(args);
+  ExprHandler body = body_func(args);
   Function* func = new Function(
       func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
@@ -39,12 +39,12 @@ Tensor* Compute(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<Expr(const Var&)> body_func) {
+    std::function<ExprHandler(const VarHandler&)> body_func) {
   CHECK_EQ(dim_args.size(), 1ULL);
-  std::vector<Expr> dims;
-  std::vector<Var> args;
+  std::vector<ExprHandler> dims;
+  std::vector<VarHandler> args;
   unpack_dim_args(dim_args, &dims, &args);
-  Expr body = body_func(args[0]);
+  ExprHandler body = body_func(args[0]);
   Function* func =
       new Function(func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
@@ -53,12 +53,12 @@ Tensor* Compute(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<Expr(const Var&, const Var&)> body_func) {
+    std::function<ExprHandler(const VarHandler&, const VarHandler&)> body_func) {
   CHECK_EQ(dim_args.size(), 2ULL);
-  std::vector<Expr> dims;
-  std::vector<Var> args;
+  std::vector<ExprHandler> dims;
+  std::vector<VarHandler> args;
   unpack_dim_args(dim_args, &dims, &args);
-  Expr body = body_func(args[0], args[1]);
+  ExprHandler body = body_func(args[0], args[1]);
   Function* func = new Function(
       func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
@@ -67,12 +67,12 @@ Tensor* Compute(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<Expr(const Var&, const Var&, const Var&)> body_func) {
+    std::function<ExprHandler(const VarHandler&, const VarHandler&, const VarHandler&)> body_func) {
   CHECK_EQ(dim_args.size(), 3ULL);
-  std::vector<Expr> dims;
-  std::vector<Var> args;
+  std::vector<ExprHandler> dims;
+  std::vector<VarHandler> args;
   unpack_dim_args(dim_args, &dims, &args);
-  Expr body = body_func(args[0], args[1], args[2]);
+  ExprHandler body = body_func(args[0], args[1], args[2]);
   Function* func = new Function(
       func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
@@ -81,35 +81,35 @@ Tensor* Compute(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<Expr(const Var&, const Var&, const Var&, const Var&)>
+    std::function<ExprHandler(const VarHandler&, const VarHandler&, const VarHandler&, const VarHandler&)>
         body_func) {
   CHECK_EQ(dim_args.size(), 4ULL);
-  std::vector<Expr> dims;
-  std::vector<Var> args;
+  std::vector<ExprHandler> dims;
+  std::vector<VarHandler> args;
   unpack_dim_args(dim_args, &dims, &args);
-  Expr body = body_func(args[0], args[1], args[2], args[3]);
+  ExprHandler body = body_func(args[0], args[1], args[2], args[3]);
   Function* func = new Function(
       func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
 }
 
 Stmt* Function::ElementStmt() {
-  std::vector<Expr> strides(dims_.size());
+  std::vector<ExprHandler> strides(dims_.size());
   for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
-      strides[i] = Expr(1);
+      strides[i] = ExprHandler(1);
       continue;
     }
-    Expr stride = dims_[i + 1];
+    ExprHandler stride = dims_[i + 1];
     for (size_t j = i + 2; j < dims_.size(); j++) {
       stride = stride * dims_[j];
     }
     strides[i] = stride;
   }
 
-  Expr total_index;
+  ExprHandler total_index;
   for (size_t i = 0; i < dims_.size(); i++) {
-    Expr index = this->args_[i] * strides[i];
+    ExprHandler index = this->args_[i] * strides[i];
     if (i == 0) {
       total_index = index;
     } else {
@@ -117,7 +117,7 @@ Stmt* Function::ElementStmt() {
     }
   }
 
-  Expr mask = 1;
+  ExprHandler mask = 1;
 
   Stmt* update_stmt = Store::make(func_var(), total_index, body(), mask);
   return update_stmt;

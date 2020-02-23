@@ -14,60 +14,60 @@ namespace tensorexpr {
 class Range {
  public:
   Range() {}
-  Range(const Expr& start, const Expr& stop) : start_(start), stop_(stop) {}
-  const Expr& start() const {
+  Range(const ExprHandler& start, const ExprHandler& stop) : start_(start), stop_(stop) {}
+  const ExprHandler& start() const {
     return start_;
   }
-  const Expr& stop() const {
+  const ExprHandler& stop() const {
     return stop_;
   }
 
  private:
-  Expr start_;
-  Expr stop_;
+  ExprHandler start_;
+  ExprHandler stop_;
 };
 
 class Function : public KernelScopedObject {
  public:
   Function(
       const std::string& func_name,
-      const std::vector<Expr>& dims,
-      const std::vector<Var>& args,
-      const Expr& body)
+      const std::vector<ExprHandler>& dims,
+      const std::vector<VarHandler>& args,
+      const ExprHandler& body)
       : func_var_(func_name, kHandle), dims_(dims), args_(args), body_(body) {}
 
   int ndim() const {
     return dims_.size();
   }
-  const Expr& dim(int index) const {
+  const ExprHandler& dim(int index) const {
     CHECK_GE(index, 0) << "index out of lower bound";
     CHECK_LT(index, ndim()) << "index out of upper bound";
     return dims_[index];
   }
-  const std::vector<Expr>& dims() const {
+  const std::vector<ExprHandler>& dims() const {
     return dims_;
   }
-  const Var& arg(int index) const {
+  const VarHandler& arg(int index) const {
     CHECK_GE(index, 0) << "index out of lower bound";
     CHECK_LT(index, ndim()) << "index out of upper bound";
     return args_[index];
   }
-  const std::vector<Var>& args() const {
+  const std::vector<VarHandler>& args() const {
     return args_;
   }
-  const Expr& body() const {
+  const ExprHandler& body() const {
     return body_;
   }
-  const Var& func_var() const {
+  const VarHandler& func_var() const {
     return func_var_;
   }
   Stmt* ElementStmt();
 
  private:
-  Var func_var_;
-  std::vector<Expr> dims_;
-  std::vector<Var> args_;
-  Expr body_;
+  VarHandler func_var_;
+  std::vector<ExprHandler> dims_;
+  std::vector<VarHandler> args_;
+  ExprHandler body_;
 };
 
 } // namespace tensorexpr

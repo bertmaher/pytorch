@@ -33,21 +33,21 @@ class Buffer;
 
 class Cast : public ExprNode<Cast> {
  public:
-  const BaseExprNode* src_value() const {
+  const Expr* src_value() const {
     return src_value_;
   }
-  static Expr make(Dtype dtype, const Expr& src_value) {
-    return Expr(new Cast(dtype, src_value.node()));
+  static ExprHandler make(Dtype dtype, const ExprHandler& src_value) {
+    return ExprHandler(new Cast(dtype, src_value.node()));
   }
-  Cast(Dtype dtype, const BaseExprNode* src_value)
+  Cast(Dtype dtype, const Expr* src_value)
       : ExprNodeBase(dtype), src_value_(src_value) {}
 
  private:
-  const BaseExprNode* src_value_;
+  const Expr* src_value_;
 };
 
 template <typename T>
-Expr cast(const Expr& src_value) {
+ExprHandler cast(const ExprHandler& src_value) {
   return Cast::make(Dtype(ToDtype<T>(), src_value.dtype().lanes()), src_value);
 }
 
@@ -56,23 +56,23 @@ Expr cast(const Expr& src_value) {
 template <typename Op>
 class BinaryOpNode : public ExprNode<Op> {
  public:
-  const BaseExprNode* lhs() const {
+  const Expr* lhs() const {
     return this->lhs_;
   }
-  const BaseExprNode* rhs() const {
+  const Expr* rhs() const {
     return this->rhs_;
   }
   IRNodeType expr_type() const {
     return expr_type_;
   }
 
-  static Expr make(const Expr& lhs, const Expr& rhs) {
-    return Expr(new Op(lhs.node(), rhs.node()));
+  static ExprHandler make(const ExprHandler& lhs, const ExprHandler& rhs) {
+    return ExprHandler(new Op(lhs.node(), rhs.node()));
   }
 
   BinaryOpNode(
-      const BaseExprNode* lhs_v,
-      const BaseExprNode* rhs_v,
+      const Expr* lhs_v,
+      const Expr* rhs_v,
       IRNodeType expr_type,
       ReturnType ret_type = ReturnType::knone)
       : ExprNode<Op>(BinaryOpDtype(lhs_v->dtype(), rhs_v->dtype(), ret_type)),
@@ -81,45 +81,45 @@ class BinaryOpNode : public ExprNode<Op> {
         expr_type_(expr_type) {}
 
  private:
-  static const BaseExprNode* CastIfNeeded(const BaseExprNode* expr, Dtype dst_dtype) {
+  static const Expr* CastIfNeeded(const Expr* expr, Dtype dst_dtype) {
     if (expr->dtype() == dst_dtype) {
       return expr;
     }
-    return Cast::make(dst_dtype, Expr(expr)).node();
+    return Cast::make(dst_dtype, ExprHandler(expr)).node();
   }
 
-  const BaseExprNode* lhs_;
-  const BaseExprNode* rhs_;
+  const Expr* lhs_;
+  const Expr* rhs_;
   IRNodeType expr_type_;
 };
 
 class Add : public BinaryOpNode<Add> {
  public:
-  Add(const BaseExprNode* lhs, const BaseExprNode* rhs)
+  Add(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kAdd) {}
 };
 
 class Sub : public BinaryOpNode<Sub> {
  public:
-  Sub(const BaseExprNode* lhs, const BaseExprNode* rhs)
+  Sub(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kSub) {}
 };
 
 class Mul : public BinaryOpNode<Mul> {
  public:
-  Mul(const BaseExprNode* lhs, const BaseExprNode* rhs)
+  Mul(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kMul) {}
 };
 
 class Div : public BinaryOpNode<Div> {
  public:
-  Div(const BaseExprNode* lhs, const BaseExprNode* rhs)
+  Div(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kDiv) {}
 };
 
 class Mod : public BinaryOpNode<Mod> {
  public:
-  Mod(const BaseExprNode* lhs, const BaseExprNode* rhs)
+  Mod(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kMod) {}
 };
 
@@ -128,7 +128,7 @@ class Max : public BinaryOpNode<Max> {
   bool propagate_nans_;
 
  public:
-  Max(const BaseExprNode* lhs, const BaseExprNode* rhs, bool propagate_nans)
+  Max(const Expr* lhs, const Expr* rhs, bool propagate_nans)
       : BinaryOpNode(lhs, rhs, IRNodeType::kMax),
         propagate_nans_(propagate_nans) {}
 
@@ -136,9 +136,9 @@ class Max : public BinaryOpNode<Max> {
     return propagate_nans_;
   }
 
-  static Expr make(const Expr& lhs, const Expr& rhs) = delete;
-  static Expr make(const Expr& lhs, const Expr& rhs, bool propagate_nans) {
-    return Expr(new Max(lhs.node(), rhs.node(), propagate_nans));
+  static ExprHandler make(const ExprHandler& lhs, const ExprHandler& rhs) = delete;
+  static ExprHandler make(const ExprHandler& lhs, const ExprHandler& rhs, bool propagate_nans) {
+    return ExprHandler(new Max(lhs.node(), rhs.node(), propagate_nans));
   }
 };
 
@@ -147,7 +147,7 @@ class Min : public BinaryOpNode<Min> {
   bool propagate_nans_;
 
  public:
-  Min(const BaseExprNode* lhs, const BaseExprNode* rhs, bool propagate_nans)
+  Min(const Expr* lhs, const Expr* rhs, bool propagate_nans)
       : BinaryOpNode(lhs, rhs, IRNodeType::kMin),
         propagate_nans_(propagate_nans) {}
 
@@ -155,9 +155,9 @@ class Min : public BinaryOpNode<Min> {
     return propagate_nans_;
   }
 
-  static Expr make(const Expr& lhs, const Expr& rhs) = delete;
-  static Expr make(const Expr& lhs, const Expr& rhs, bool propagate_nans) {
-    return Expr(new Min(lhs.node(), rhs.node(), propagate_nans));
+  static ExprHandler make(const ExprHandler& lhs, const ExprHandler& rhs) = delete;
+  static ExprHandler make(const ExprHandler& lhs, const ExprHandler& rhs, bool propagate_nans) {
+    return ExprHandler(new Min(lhs.node(), rhs.node(), propagate_nans));
   }
 };
 
@@ -167,8 +167,8 @@ class IntImm : public ExprNode<IntImm> {
   int value() const {
     return value_;
   }
-  static Expr make(int value) {
-    return Expr(new IntImm(value));
+  static ExprHandler make(int value) {
+    return ExprHandler(new IntImm(value));
   }
 
  private:
@@ -182,8 +182,8 @@ class FloatImm : public ExprNode<FloatImm> {
   float value() const {
     return value_;
   }
-  static Expr make(float value) {
-    return Expr(new FloatImm(value));
+  static ExprHandler make(float value) {
+    return ExprHandler(new FloatImm(value));
   }
 
  private:
@@ -191,16 +191,16 @@ class FloatImm : public ExprNode<FloatImm> {
   float value_;
 };
 
-// The underlying representation node to a Variable.
-// Currently, each Variable object represents a unique variable, even though the
+// The underlying representation node to a Var.
+// Currently, each Var object represents a unique variable, even though the
 // names might be the same. We should consider add a unique_name as well.
-class Variable : public ExprNode<Variable> {
+class Var : public ExprNode<Var> {
  public:
-  static Expr make(const std::string& name_hint, Dtype dtype) {
-    return Expr(new Variable(name_hint, dtype));
+  static ExprHandler make(const std::string& name_hint, Dtype dtype) {
+    return ExprHandler(new Var(name_hint, dtype));
   }
-  static Expr make(Dtype dtype) {
-    return Expr(new Variable("", dtype));
+  static ExprHandler make(Dtype dtype) {
+    return ExprHandler(new Var("", dtype));
   }
 
   // TODO: unique_name
@@ -209,28 +209,28 @@ class Variable : public ExprNode<Variable> {
   }
 
  private:
-  Variable(const std::string& name_hint, Dtype dtype)
+  Var(const std::string& name_hint, Dtype dtype)
       : ExprNodeBase(dtype), name_hint_(name_hint) {}
   std::string name_hint_;
 };
 
 // An expression to construct the underlying variable node.
 // Note: do not store any info here, since it is often possible to slice this
-// object. For example: Var x('x'); Expr x2 = x;
-class Var : public Expr {
+// object. For example: VarHandler x('x'); ExprHandler x2 = x;
+class VarHandler : public ExprHandler {
  public:
-  Var() : Expr(nullptr) {}
-  explicit Var(Dtype dtype) : Expr(Variable::make(dtype)) {}
-  Var(const std::string& name_hint, Dtype dtype)
-      : Expr(Variable::make(name_hint, dtype)) {}
-  explicit Var(const Variable* node) : Expr(node) {}
-  const Variable* node() const {
-    return static_cast<const Variable*>(Expr::node());
+  VarHandler() : ExprHandler(nullptr) {}
+  explicit VarHandler(Dtype dtype) : ExprHandler(Var::make(dtype)) {}
+  VarHandler(const std::string& name_hint, Dtype dtype)
+      : ExprHandler(Var::make(name_hint, dtype)) {}
+  explicit VarHandler(const Var* node) : ExprHandler(node) {}
+  const Var* node() const {
+    return static_cast<const Var*>(ExprHandler::node());
   }
-  bool operator==(const Var& other) const {
+  bool operator==(const VarHandler& other) const {
     return this->node() == other.node();
   }
-  bool operator!=(const Var& other) const {
+  bool operator!=(const VarHandler& other) const {
     return !(*this == other);
   }
 
@@ -245,36 +245,36 @@ class Var : public Expr {
 // Bind the value to the var and evaluate the body.
 class Let : public ExprNode<Let> {
  public:
-  const BaseExprNode* var() const {
+  const Expr* var() const {
     return var_;
   }
-  const BaseExprNode* value() const {
+  const Expr* value() const {
     return value_;
   }
-  const BaseExprNode* body() const {
+  const Expr* body() const {
     return body_;
   }
 
-  static Expr make(const Expr& var, const Expr& value, const Expr& body) {
-    return Expr(new Let(var.node(), value.node(), body.node()));
+  static ExprHandler make(const ExprHandler& var, const ExprHandler& value, const ExprHandler& body) {
+    return ExprHandler(new Let(var.node(), value.node(), body.node()));
   }
 
-  Let(const BaseExprNode* var, const BaseExprNode* value, const BaseExprNode* body)
+  Let(const Expr* var, const Expr* value, const Expr* body)
       : ExprNodeBase(body->dtype()), var_(var), value_(value), body_(body) {}
 
  private:
-  const BaseExprNode* var_;
-  const BaseExprNode* value_;
-  const BaseExprNode* body_;
+  const Expr* var_;
+  const Expr* value_;
+  const Expr* body_;
 };
 
 class LetStmt : public StmtNode<LetStmt> {
  public:
-  const Variable* var() const {
+  const Var* var() const {
     return var_;
   }
 
-  const BaseExprNode* value() const {
+  const Expr* value() const {
     return value_;
   }
 
@@ -282,16 +282,16 @@ class LetStmt : public StmtNode<LetStmt> {
     return body_;
   }
 
-  static Stmt* make(const Var& var, const Expr& value, Stmt* body) {
+  static Stmt* make(const VarHandler& var, const ExprHandler& value, Stmt* body) {
     return new LetStmt(var.node(), value.node(), body);
   }
 
-  LetStmt(const Variable* var, const BaseExprNode* value, Stmt* body)
+  LetStmt(const Var* var, const Expr* value, Stmt* body)
       : var_(var), value_(value), body_(body) {}
 
  private:
-  const Variable* var_;
-  const BaseExprNode* value_;
+  const Var* var_;
+  const Expr* value_;
   Stmt* body_;
 };
 
@@ -403,22 +403,22 @@ class LoopOptions {
 
 class For : public StmtNode<For> {
  public:
-  const Variable* var() const {
+  const Var* var() const {
     return var_;
   }
-  const BaseExprNode* start() const {
+  const Expr* start() const {
     return start_;
   }
-  const BaseExprNode* stop() const {
+  const Expr* stop() const {
     return stop_;
   }
   Stmt* body() const {
     return body_;
   }
   static Stmt* make(
-      const Var& var,
-      const Expr& start,
-      const Expr& stop,
+      const VarHandler& var,
+      const ExprHandler& start,
+      const ExprHandler& stop,
       Stmt* body) {
     if (!body) {
       return nullptr;
@@ -426,9 +426,9 @@ class For : public StmtNode<For> {
     return new For(var.node(), start.node(), stop.node(), body);
   }
   static Stmt* make(
-      const Var& var,
-      const Expr& start,
-      const Expr& stop,
+      const VarHandler& var,
+      const ExprHandler& start,
+      const ExprHandler& stop,
       Stmt* body,
       const LoopOptions& loop_options) {
     if (!body) {
@@ -440,14 +440,14 @@ class For : public StmtNode<For> {
     return loop_options_;
   }
 
-  For(const Variable* var, const BaseExprNode* start, const BaseExprNode* stop, Stmt* body)
+  For(const Var* var, const Expr* start, const Expr* stop, Stmt* body)
       : var_(var), start_(start), stop_(stop), body_(body) {
           CHECK(var && start && stop && body);
       }
 
-  For(const Variable* var,
-      const BaseExprNode* start,
-      const BaseExprNode* stop,
+  For(const Var* var,
+      const Expr* start,
+      const Expr* stop,
       Stmt* body,
       const LoopOptions& loop_options)
       : var_(var),
@@ -459,9 +459,9 @@ class For : public StmtNode<For> {
         }
 
  private:
-  const Variable* var_;
-  const BaseExprNode* start_;
-  const BaseExprNode* stop_;
+  const Var* var_;
+  const Expr* start_;
+  const Expr* stop_;
   Stmt* body_;
   LoopOptions loop_options_;
 };
@@ -470,20 +470,20 @@ class For : public StmtNode<For> {
 //     [base, base + 1 * stride, ... , base + (lanes - 1) * stride]
 class Ramp : public ExprNode<Ramp> {
  public:
-  const BaseExprNode* base() const {
+  const Expr* base() const {
     return base_;
   }
-  const BaseExprNode* stride() const {
+  const Expr* stride() const {
     return stride_;
   }
-  static Expr make(const Expr& base, const Expr& stride, int lanes) {
-    return Expr(new Ramp(base.node(), stride.node(), lanes));
+  static ExprHandler make(const ExprHandler& base, const ExprHandler& stride, int lanes) {
+    return ExprHandler(new Ramp(base.node(), stride.node(), lanes));
   }
   int lanes() const {
     return lanes_;
   }
 
-  Ramp(const BaseExprNode* base, const BaseExprNode* stride, int lanes)
+  Ramp(const Expr* base, const Expr* stride, int lanes)
       : ExprNodeBase(Dtype(base->dtype(), lanes)),
         base_(base),
         stride_(stride),
@@ -492,96 +492,96 @@ class Ramp : public ExprNode<Ramp> {
   }
 
  private:
-  const BaseExprNode* base_;
-  const BaseExprNode* stride_;
+  const Expr* base_;
+  const Expr* stride_;
   int lanes_;
 };
 
 class TORCH_API Load : public ExprNode<Load> {
  public:
-  const Variable* base_handle() const {
+  const Var* base_handle() const {
     return base_handle_;
   }
-  const BaseExprNode* index() const {
+  const Expr* index() const {
     return index_;
   }
-  const BaseExprNode* mask() const {
+  const Expr* mask() const {
     return mask_;
   }
-  static Expr make(const Buffer& buffer, const Expr& index, const Expr& mask) {
-    return Expr(new Load(buffer, index.node(), mask.node()));
+  static ExprHandler make(const Buffer& buffer, const ExprHandler& index, const ExprHandler& mask) {
+    return ExprHandler(new Load(buffer, index.node(), mask.node()));
   }
-  static Expr make(
+  static ExprHandler make(
       Dtype dtype,
-      const Var& base_handle,
-      const Expr& index,
-      const Expr& mask) {
-    return Expr(new Load(dtype, base_handle.node(), index.node(), mask.node()));
+      const VarHandler& base_handle,
+      const ExprHandler& index,
+      const ExprHandler& mask) {
+    return ExprHandler(new Load(dtype, base_handle.node(), index.node(), mask.node()));
   }
 
-  Load(const Buffer& buffer, const BaseExprNode* index, const BaseExprNode* mask);
+  Load(const Buffer& buffer, const Expr* index, const Expr* mask);
   Load(
       Dtype dtype,
-      const Variable* base_handle,
-      const BaseExprNode* index,
-      const BaseExprNode* mask);
+      const Var* base_handle,
+      const Expr* index,
+      const Expr* mask);
 
  private:
-  const Variable* base_handle_;
-  const BaseExprNode* index_;
-  const BaseExprNode* mask_;
+  const Var* base_handle_;
+  const Expr* index_;
+  const Expr* mask_;
 };
 
 class TORCH_API Store : public StmtNode<Store> {
  public:
-  const Variable* base_handle() const {
+  const Var* base_handle() const {
     return base_handle_;
   }
-  const BaseExprNode* index() const {
+  const Expr* index() const {
     return index_;
   }
-  const BaseExprNode* value() const {
+  const Expr* value() const {
     return value_;
   }
-  const BaseExprNode* mask() const {
+  const Expr* mask() const {
     return mask_;
   }
 
   static Stmt* make(
       const Buffer& buffer,
-      const Expr& index,
-      const Expr& value,
-      const Expr& mask) {
+      const ExprHandler& index,
+      const ExprHandler& value,
+      const ExprHandler& mask) {
     return new Store(buffer, index.node(), value.node(), mask.node());
   }
 
   static Stmt* make(
-      const Var& base_handle,
-      const Expr& index,
-      const Expr& value,
-      const Expr& mask) {
+      const VarHandler& base_handle,
+      const ExprHandler& index,
+      const ExprHandler& value,
+      const ExprHandler& mask) {
     return new Store(base_handle.node(), index.node(), value.node(), mask.node());
   }
 
   static Stmt* make(
-      const Var& base_handle,
-      const Expr& index,
-      const Expr& value) {
-    return new Store(base_handle.node(), index.node(), value.node(), Expr(1).node());
+      const VarHandler& base_handle,
+      const ExprHandler& index,
+      const ExprHandler& value) {
+    return new Store(base_handle.node(), index.node(), value.node(), ExprHandler(1).node());
   }
 
   // TODO: merge this with Load.
   Store(
       const Buffer& buffer,
-      const BaseExprNode* index,
-      const BaseExprNode* value,
-      const BaseExprNode* mask);
+      const Expr* index,
+      const Expr* value,
+      const Expr* mask);
 
   Store(
-      const Variable* base_handle,
-      const BaseExprNode* index,
-      const BaseExprNode* value,
-      const BaseExprNode* mask)
+      const Var* base_handle,
+      const Expr* index,
+      const Expr* value,
+      const Expr* mask)
       : base_handle_(base_handle), index_(index), value_(value), mask_(mask) {
     CHECK_EQ(base_handle_->dtype(), kHandle);
     CHECK_EQ(index->dtype().lanes(), mask->dtype().lanes());
@@ -590,54 +590,54 @@ class TORCH_API Store : public StmtNode<Store> {
   }
  private:
 
-  const Variable* base_handle_;
-  const BaseExprNode* index_;
-  const BaseExprNode* value_;
-  const BaseExprNode* mask_;
+  const Var* base_handle_;
+  const Expr* index_;
+  const Expr* value_;
+  const Expr* mask_;
 };
 
 class Broadcast : public ExprNode<Broadcast> {
  public:
-  const BaseExprNode* value() const {
+  const Expr* value() const {
     return value_;
   }
   int lanes() const {
     return lanes_;
   }
-  static Expr make(const Expr& value, int lanes) {
-    return Expr(new Broadcast(value.node(), lanes));
+  static ExprHandler make(const ExprHandler& value, int lanes) {
+    return ExprHandler(new Broadcast(value.node(), lanes));
   }
-  Broadcast(const BaseExprNode* value, int lanes)
+  Broadcast(const Expr* value, int lanes)
       : ExprNodeBase(Dtype(value->dtype(), lanes)),
         value_(value),
         lanes_(lanes) {}
 
  private:
-  const BaseExprNode* value_;
+  const Expr* value_;
   int lanes_;
 };
 
 class IfThenElse : public ExprNode<IfThenElse> {
  public:
-  const BaseExprNode* condition() const {
+  const Expr* condition() const {
     return condition_;
   }
 
   // Lazily evaluated only if condition is true
-  const BaseExprNode* true_value() const {
+  const Expr* true_value() const {
     return true_;
   }
 
   // Lazily evaluated only if condition is false
-  const BaseExprNode* false_value() const {
+  const Expr* false_value() const {
     return false_;
   }
 
-  static Expr make(const Expr& c, const Expr& t, const Expr& f) {
-    return Expr(new IfThenElse(c.node(), t.node(), f.node()));
+  static ExprHandler make(const ExprHandler& c, const ExprHandler& t, const ExprHandler& f) {
+    return ExprHandler(new IfThenElse(c.node(), t.node(), f.node()));
   }
 
-  IfThenElse(const BaseExprNode* c, const BaseExprNode* t, const BaseExprNode* f)
+  IfThenElse(const Expr* c, const Expr* t, const Expr* f)
       : ExprNodeBase(t->dtype()), condition_(c), true_(t), false_(f) {
     CHECK_EQ(c->dtype().scalar_type(), kInt32);
     CHECK_EQ(c->dtype().lanes(), 1);
@@ -645,12 +645,12 @@ class IfThenElse : public ExprNode<IfThenElse> {
   }
 
  private:
-  const BaseExprNode* condition_;
-  const BaseExprNode* true_;
-  const BaseExprNode* false_;
+  const Expr* condition_;
+  const Expr* true_;
+  const Expr* false_;
 };
 
-class BaseCallNode : public BaseExprNode {
+class BaseCallNode : public Expr {
  public:
   enum CallType {
     kIntrinsics,
@@ -661,10 +661,10 @@ class BaseCallNode : public BaseExprNode {
     return params_.size();
   }
 
-  const BaseExprNode* param(int index) const {
+  const Expr* param(int index) const {
     return params_[index];
   }
-  const std::vector<const BaseExprNode*>& params() const {
+  const std::vector<const Expr*>& params() const {
     return params_;
   }
 
@@ -675,20 +675,20 @@ class BaseCallNode : public BaseExprNode {
   }
 
  protected:
-  BaseCallNode(Dtype dtype, CallType call_type, const std::vector<const BaseExprNode*>& params)
-      : BaseExprNode(dtype), call_type_(call_type), params_(params) {}
+  BaseCallNode(Dtype dtype, CallType call_type, const std::vector<const Expr*>& params)
+      : Expr(dtype), call_type_(call_type), params_(params) {}
 
  private:
   // The handler for the default ir_mutator to make a copy of this node with new
   // params.
-  virtual const BaseExprNode* DefaultMutator(const std::vector<const BaseExprNode*>& new_params) const = 0;
+  virtual const Expr* DefaultMutator(const std::vector<const Expr*>& new_params) const = 0;
 
   template <class U, class B>
   friend class ExprNode;
   friend class IRMutator;
 
   CallType call_type_;
-  std::vector<const BaseExprNode*> params_;
+  std::vector<const Expr*> params_;
 };
 
 template <typename Op>
@@ -703,25 +703,25 @@ class TORCH_API CompareSelect : public ExprNode<CompareSelect> {
   CompareSelectOperation compare_select_op() const {
     return compare_op_;
   }
-  const BaseExprNode* lhs() const {
+  const Expr* lhs() const {
     return this->lhs_;
   }
-  const BaseExprNode* rhs() const {
+  const Expr* rhs() const {
     return this->rhs_;
   }
-  const BaseExprNode* ret_val1() const {
+  const Expr* ret_val1() const {
     return this->ret_val1_;
   }
-  const BaseExprNode* ret_val2() const {
+  const Expr* ret_val2() const {
     return this->ret_val2_;
   }
 
-  static Expr make(
-      const Expr& lhs,
-      const Expr& rhs,
+  static ExprHandler make(
+      const ExprHandler& lhs,
+      const ExprHandler& rhs,
       CompareSelectOperation cmp_op) {
     CHECK_EQ(lhs.dtype(), rhs.dtype());
-    return Expr(new CompareSelect(
+    return ExprHandler(new CompareSelect(
         lhs.node(),
         rhs.node(),
         IntImm::make(1).node(),
@@ -729,29 +729,29 @@ class TORCH_API CompareSelect : public ExprNode<CompareSelect> {
         cmp_op));
   }
 
-  static Expr make(
-      const Expr& lhs,
-      const Expr& rhs,
-      const Expr& ret_val1,
-      const Expr& ret_val2,
+  static ExprHandler make(
+      const ExprHandler& lhs,
+      const ExprHandler& rhs,
+      const ExprHandler& ret_val1,
+      const ExprHandler& ret_val2,
       CompareSelectOperation cmp_op) {
     CHECK_EQ(lhs.dtype(), rhs.dtype());
     CHECK_EQ(ret_val1.dtype(), ret_val2.dtype());
-    return Expr(new CompareSelect(
+    return ExprHandler(new CompareSelect(
         lhs.node(), rhs.node(), ret_val1.node(), ret_val2.node(), cmp_op));
   }
 
  private:
-  const BaseExprNode* lhs_;
-  const BaseExprNode* rhs_;
-  const BaseExprNode* ret_val1_;
-  const BaseExprNode* ret_val2_;
+  const Expr* lhs_;
+  const Expr* rhs_;
+  const Expr* ret_val1_;
+  const Expr* ret_val2_;
   CompareSelectOperation compare_op_;
   CompareSelect(
-      const BaseExprNode* lhs,
-      const BaseExprNode* rhs,
-      const BaseExprNode* ret_val1,
-      const BaseExprNode* ret_val2,
+      const Expr* lhs,
+      const Expr* rhs,
+      const Expr* ret_val1,
+      const Expr* ret_val2,
       CompareSelectOperation cmp_op)
       : ExprNodeBase(ToDtype<int>()),
         lhs_(lhs),
@@ -797,24 +797,24 @@ enum IntrinsicsOp {
 
 class Intrinsics : public CallNode<Intrinsics> {
  public:
-  static Expr make(IntrinsicsOp op_type, const Expr& v1) {
-    return Expr(new Intrinsics(op_type, v1.node()));
+  static ExprHandler make(IntrinsicsOp op_type, const ExprHandler& v1) {
+    return ExprHandler(new Intrinsics(op_type, v1.node()));
   }
 
-  static Expr make(IntrinsicsOp op_type, const Expr& v1, const Expr& v2) {
-    return Expr(new Intrinsics(op_type, v1.node(), v2.node()));
+  static ExprHandler make(IntrinsicsOp op_type, const ExprHandler& v1, const ExprHandler& v2) {
+    return ExprHandler(new Intrinsics(op_type, v1.node(), v2.node()));
   }
 
-  static Expr make(IntrinsicsOp op_type, const std::vector<Expr>& params) {
-    std::vector<const BaseExprNode*> params_nodes(params.size());
+  static ExprHandler make(IntrinsicsOp op_type, const std::vector<ExprHandler>& params) {
+    std::vector<const Expr*> params_nodes(params.size());
     for (size_t i = 0; i < params.size(); i++) {
       params_nodes[i] = params[i].node();
     }
-    return Expr(new Intrinsics(op_type, params_nodes));
+    return ExprHandler(new Intrinsics(op_type, params_nodes));
   }
 
-  static Expr make(IntrinsicsOp op_type, Dtype dtype) {
-    return Expr(new Intrinsics(op_type, dtype));
+  static ExprHandler make(IntrinsicsOp op_type, Dtype dtype) {
+    return ExprHandler(new Intrinsics(op_type, dtype));
   }
 
   IntrinsicsOp op_type() const {
@@ -898,13 +898,13 @@ class Intrinsics : public CallNode<Intrinsics> {
     CHECK_EQ(OpArgCount(op_type), 0);
   }
 
-  Intrinsics(IntrinsicsOp op_type, const BaseExprNode* v1)
+  Intrinsics(IntrinsicsOp op_type, const Expr* v1)
       : BaseClass(IntrinsicsDtype(op_type, v1->dtype()), kIntrinsics, {v1}),
         op_type_(op_type) {
     CHECK_EQ(OpArgCount(op_type), 1);
   }
 
-  Intrinsics(IntrinsicsOp op_type, const BaseExprNode* v1, const BaseExprNode* v2)
+  Intrinsics(IntrinsicsOp op_type, const Expr* v1, const Expr* v2)
       : BaseClass(
             IntrinsicsDtype(op_type, v1->dtype(), v2->dtype()),
             kIntrinsics,
@@ -913,7 +913,7 @@ class Intrinsics : public CallNode<Intrinsics> {
     CHECK_EQ(OpArgCount(op_type), 2);
   }
 
-  Intrinsics(IntrinsicsOp op_type, const std::vector<const BaseExprNode*>& params)
+  Intrinsics(IntrinsicsOp op_type, const std::vector<const Expr*>& params)
       : BaseClass(IntrinsicsDtype(op_type, params), kIntrinsics, params),
         op_type_(op_type) {
     CHECK_EQ(OpArgCount(op_type), nparams());
@@ -923,7 +923,7 @@ class Intrinsics : public CallNode<Intrinsics> {
 
   TORCH_API static int OpArgCount(IntrinsicsOp op_type);
 
-  const BaseExprNode* DefaultMutator(const std::vector<const BaseExprNode*>& new_params) const override {
+  const Expr* DefaultMutator(const std::vector<const Expr*>& new_params) const override {
     return new Intrinsics(this->op_type(), new_params);
   }
 
@@ -934,7 +934,7 @@ class Intrinsics : public CallNode<Intrinsics> {
       Dtype dt2);
   TORCH_API static Dtype IntrinsicsDtype(
       IntrinsicsOp op_type,
-      const std::vector<const BaseExprNode*>& params);
+      const std::vector<const Expr*>& params);
 
   IntrinsicsOp op_type_;
 };
@@ -947,17 +947,17 @@ class FunctionCall;
 class Allocate : public StmtNode<Allocate> {
  public:
   static Stmt* make(
-      const Var& buffer_var,
+      const VarHandler& buffer_var,
       Dtype dtype,
-      const std::vector<Expr>& dims) {
-    std::vector<const BaseExprNode*> dims_nodes(dims.size());
+      const std::vector<ExprHandler>& dims) {
+    std::vector<const Expr*> dims_nodes(dims.size());
     for (size_t i = 0; i < dims.size(); i++) {
       dims_nodes[i] = dims[i].node();
     }
     return new Allocate(buffer_var.node(), dtype, dims_nodes);
   }
 
-  const Variable* buffer_var() const {
+  const Var* buffer_var() const {
     return buffer_var_;
   }
 
@@ -965,47 +965,47 @@ class Allocate : public StmtNode<Allocate> {
     return dtype_;
   }
 
-  const std::vector<const BaseExprNode*>& dims() const {
+  const std::vector<const Expr*>& dims() const {
     return dims_;
   }
 
-  Allocate(const Variable* buffer_var, Dtype dtype, const std::vector<const BaseExprNode*>& dims)
+  Allocate(const Var* buffer_var, Dtype dtype, const std::vector<const Expr*>& dims)
       : buffer_var_(buffer_var), dtype_(dtype), dims_(dims) {}
 
  private:
-  const Variable* buffer_var_;
+  const Var* buffer_var_;
   Dtype dtype_;
-  std::vector<const BaseExprNode*> dims_;
+  std::vector<const Expr*> dims_;
   // TODO: add memory types.
 };
 
 // Free the specific buffer. It is an error.
 class Free : public StmtNode<Free> {
  public:
-  static Stmt* make(const Var& buffer_var) {
+  static Stmt* make(const VarHandler& buffer_var) {
     return new Free(buffer_var.node());
   }
 
-  const Variable* buffer_var() const {
+  const Var* buffer_var() const {
     return buffer_var_;
   }
 
-  Free(const Variable* buffer_var) : buffer_var_(buffer_var) {}
+  Free(const Var* buffer_var) : buffer_var_(buffer_var) {}
 
  private:
-  const Variable* buffer_var_;
+  const Var* buffer_var_;
 };
 
 class Cond : public StmtNode<Cond> {
  public:
   static Stmt* make(
-      const Expr& condition,
+      const ExprHandler& condition,
       Stmt* true_stmt,
       Stmt* false_stmt) {
     return new Cond(condition.node(), true_stmt, false_stmt);
   }
 
-  const BaseExprNode* condition() const {
+  const Expr* condition() const {
     return condition_;
   }
 
@@ -1017,11 +1017,11 @@ class Cond : public StmtNode<Cond> {
     return false_stmt_;
   }
 
-  Cond(const BaseExprNode* condition, Stmt* true_stmt, Stmt* false_stmt)
+  Cond(const Expr* condition, Stmt* true_stmt, Stmt* false_stmt)
       : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {}
 
  private:
-  const BaseExprNode* condition_;
+  const Expr* condition_;
   Stmt* true_stmt_;
   Stmt* false_stmt_;
 };

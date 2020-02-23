@@ -13,8 +13,8 @@ using namespace torch::jit::tensorexpr;
 
 void testIRPrinterBasicValueTest() {
   KernelScope kernel_scope;
-  Expr a = IntImm::make(2), b = IntImm::make(3);
-  Expr c = Add::make(a, b);
+  ExprHandler a = IntImm::make(2), b = IntImm::make(3);
+  ExprHandler c = Add::make(a, b);
 
   std::stringstream ss;
   ss << c;
@@ -23,11 +23,11 @@ void testIRPrinterBasicValueTest() {
 
 void testIRPrinterBasicValueTest02() {
   KernelScope kernel_scope;
-  Expr a(2.0f);
-  Expr b(3.0f);
-  Expr c(4.0f);
-  Expr d(5.0f);
-  Expr f = (a + b) - (c + d);
+  ExprHandler a(2.0f);
+  ExprHandler b(3.0f);
+  ExprHandler c(4.0f);
+  ExprHandler d(5.0f);
+  ExprHandler f = (a + b) - (c + d);
 
   std::stringstream ss;
   ss << f;
@@ -36,10 +36,10 @@ void testIRPrinterBasicValueTest02() {
 
 void testIRPrinterLetTest01() {
   KernelScope kernel_scope;
-  Var x("x", kFloat32);
-  Expr value = Expr(3.f);
-  Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
-  Expr result = Let::make(x, Expr(3.f), body);
+  VarHandler x("x", kFloat32);
+  ExprHandler value = ExprHandler(3.f);
+  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f));
+  ExprHandler result = Let::make(x, ExprHandler(3.f), body);
 
   std::stringstream ss;
   ss << result;
@@ -48,12 +48,12 @@ void testIRPrinterLetTest01() {
 
 void testIRPrinterLetTest02() {
   KernelScope kernel_scope;
-  Var x("x", kFloat32);
-  Var y("y", kFloat32);
-  Expr value = Expr(3.f);
-  Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
-  Expr e1 = Let::make(x, Expr(3.f), body);
-  Expr e2 = Let::make(y, Expr(6.f), e1);
+  VarHandler x("x", kFloat32);
+  VarHandler y("y", kFloat32);
+  ExprHandler value = ExprHandler(3.f);
+  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f) * y);
+  ExprHandler e1 = Let::make(x, ExprHandler(3.f), body);
+  ExprHandler e2 = Let::make(y, ExprHandler(6.f), e1);
 
   std::stringstream ss;
   ss << e2;
@@ -63,12 +63,12 @@ void testIRPrinterLetTest02() {
 
 void testIRPrinterCastTest() {
   KernelScope kernel_scope;
-  Var x("x", kFloat32);
-  Var y("y", kFloat32);
-  Expr value = Expr(3.f);
-  Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
-  Expr e1 = Let::make(x, Cast::make(kInt32, Expr(3.f)), body);
-  Expr e2 = Let::make(y, Expr(6.f), e1);
+  VarHandler x("x", kFloat32);
+  VarHandler y("y", kFloat32);
+  ExprHandler value = ExprHandler(3.f);
+  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f) * y);
+  ExprHandler e1 = Let::make(x, Cast::make(kInt32, ExprHandler(3.f)), body);
+  ExprHandler e2 = Let::make(y, ExprHandler(6.f), e1);
 
   std::stringstream ss;
   ss << e2;

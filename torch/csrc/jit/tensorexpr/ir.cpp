@@ -10,7 +10,7 @@ static Dtype ChooseDtype(const Dtype& buffer_dtype, const Dtype& index_dtype) {
   return Dtype(buffer_dtype, index_dtype.lanes());
 }
 
-Load::Load(const Buffer& buffer, const BaseExprNode* index, const BaseExprNode* mask)
+Load::Load(const Buffer& buffer, const Expr* index, const Expr* mask)
     : Load(
           ChooseDtype(buffer.dtype(), index->dtype()),
           buffer.data().node(),
@@ -19,9 +19,9 @@ Load::Load(const Buffer& buffer, const BaseExprNode* index, const BaseExprNode* 
 
 Load::Load(
     Dtype dtype,
-    const Variable* base_handle,
-    const BaseExprNode* index,
-    const BaseExprNode* mask)
+    const Var* base_handle,
+    const Expr* index,
+    const Expr* mask)
     : ExprNodeBase(dtype),
       base_handle_(base_handle),
       index_(index),
@@ -33,9 +33,9 @@ Load::Load(
 
 Store::Store(
     const Buffer& buffer,
-    const BaseExprNode* index,
-    const BaseExprNode* value,
-    const BaseExprNode* mask)
+    const Expr* index,
+    const Expr* value,
+    const Expr* mask)
     : Store(buffer.data().node(), index, value, mask) {
   CHECK_EQ(buffer.dtype().scalar_type(), value->dtype().scalar_type());
   CHECK_EQ(buffer.dtype().scalar_type(), value->dtype().scalar_type());
@@ -53,7 +53,7 @@ Dtype Intrinsics::IntrinsicsDtype(IntrinsicsOp op_type, Dtype dt1, Dtype dt2) {
 
 Dtype Intrinsics::IntrinsicsDtype(
     IntrinsicsOp op_type,
-    const std::vector<const BaseExprNode*>& params) {
+    const std::vector<const Expr*>& params) {
   // TODO: check the op_type an dmake a real decision
   CHECK_GE(params.size(), 1ULL);
   return params[0]->dtype();

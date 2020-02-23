@@ -16,7 +16,7 @@ class CompareSelect;
 class IntImm;
 class FloatImm;
 class Cast;
-class Variable;
+class Var;
 class Let;
 class LetStmt;
 class Ramp;
@@ -26,8 +26,8 @@ class Block;
 class Store;
 class Broadcast;
 class IfThenElse;
+class ExprHandler;
 class Expr;
-class BaseExprNode;
 class BaseCallNode;
 class Intrinsics;
 class FunctionCall;
@@ -39,33 +39,33 @@ class Stmt;
 class TORCH_API IRMutator {
  public:
   virtual ~IRMutator() {}
-  virtual const BaseExprNode* mutate(const Add* v);
-  virtual const BaseExprNode* mutate(const Sub* v);
-  virtual const BaseExprNode* mutate(const Mul* v);
-  virtual const BaseExprNode* mutate(const Div* v);
-  virtual const BaseExprNode* mutate(const Mod* v);
-  virtual const BaseExprNode* mutate(const Max* v);
-  virtual const BaseExprNode* mutate(const Min* v);
-  virtual const BaseExprNode* mutate(const CompareSelect* v);
-  virtual const BaseExprNode* mutate(const IntImm* v);
-  virtual const BaseExprNode* mutate(const FloatImm* v);
-  virtual const BaseExprNode* mutate(const Cast* v);
-  virtual const BaseExprNode* mutate(const Variable* v);
-  virtual const BaseExprNode* mutate(const Let* v);
+  virtual const Expr* mutate(const Add* v);
+  virtual const Expr* mutate(const Sub* v);
+  virtual const Expr* mutate(const Mul* v);
+  virtual const Expr* mutate(const Div* v);
+  virtual const Expr* mutate(const Mod* v);
+  virtual const Expr* mutate(const Max* v);
+  virtual const Expr* mutate(const Min* v);
+  virtual const Expr* mutate(const CompareSelect* v);
+  virtual const Expr* mutate(const IntImm* v);
+  virtual const Expr* mutate(const FloatImm* v);
+  virtual const Expr* mutate(const Cast* v);
+  virtual const Expr* mutate(const Var* v);
+  virtual const Expr* mutate(const Let* v);
   virtual Stmt* mutate(const LetStmt* v);
-  virtual const BaseExprNode* mutate(const Ramp* v);
-  virtual const BaseExprNode* mutate(const Load* v);
-  virtual const BaseExprNode* mutate(const Broadcast* v);
-  virtual const BaseExprNode* mutate(const IfThenElse* v);
+  virtual const Expr* mutate(const Ramp* v);
+  virtual const Expr* mutate(const Load* v);
+  virtual const Expr* mutate(const Broadcast* v);
+  virtual const Expr* mutate(const IfThenElse* v);
   // BaseCallNode is the base class for all call nodes.
   // For any visitors that only needs the common behavior, only override this
   // function is enough. This is because all derived class handlers will call
   // this function by default.
   // Override the derived class handler only if the logic is more specific to
   // that.
-  virtual const BaseExprNode* mutate(const BaseCallNode* v);
-  virtual const BaseExprNode* mutate(const Intrinsics* v);
-  virtual const BaseExprNode* mutate(const FunctionCall* v);
+  virtual const Expr* mutate(const BaseCallNode* v);
+  virtual const Expr* mutate(const Intrinsics* v);
+  virtual const Expr* mutate(const FunctionCall* v);
 
   virtual Stmt* mutate(const For* v);
   virtual Stmt* mutate(const Block* v);

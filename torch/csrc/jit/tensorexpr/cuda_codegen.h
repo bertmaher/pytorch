@@ -24,7 +24,7 @@ class CudaPrinter : public IRPrinter {
  public:
   explicit CudaPrinter(std::ostream* os, bool has_random) : IRPrinter(*os) {
     if (has_random) {
-      rand_func_ = Var{"rand", kHandle};
+      rand_func_ = VarHandler{"rand", kHandle};
     }
   }
 
@@ -48,24 +48,24 @@ class CudaPrinter : public IRPrinter {
   void visit(const Min* v);
   void visit(const IfThenElse* v);
 
-  const std::vector<Expr>& gpu_block_extents() const {
+  const std::vector<ExprHandler>& gpu_block_extents() const {
     return gpu_block_extents_;
   }
 
-  const std::vector<Expr>& gpu_thread_extents() const {
+  const std::vector<ExprHandler>& gpu_thread_extents() const {
     return gpu_thread_extents_;
   }
 
-  const Var& rand_func() const {
+  const VarHandler& rand_func() const {
     return rand_func_;
   }
 
   using IRPrinter::name_manager;
 
  private:
-  std::vector<Expr> gpu_block_extents_;
-  std::vector<Expr> gpu_thread_extents_;
-  Var rand_func_;
+  std::vector<ExprHandler> gpu_block_extents_;
+  std::vector<ExprHandler> gpu_thread_extents_;
+  VarHandler rand_func_;
 };
 
 // Construct Cuda C from the buffer and tensor input, and invoke the kernel

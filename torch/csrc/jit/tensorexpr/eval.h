@@ -302,7 +302,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const Let* v) override {
-    const Variable* var = dynamic_cast<const Variable*>(v->var());
+    const Var* var = dynamic_cast<const Var*>(v->var());
     CHECK(var != nullptr);
     v->value()->accept(this);
     Value value = value_;
@@ -318,7 +318,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const LetStmt* v) override {
-    const Variable* var = v->var();
+    const Var* var = v->var();
     CHECK(var != nullptr);
     v->value()->accept(this);
     Value value = value_;
@@ -333,7 +333,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     eval_context_.erase(var);
   }
 
-  TORCH_API void visit(const Variable* v) override {
+  TORCH_API void visit(const Var* v) override {
     auto iter = eval_context_.find(v);
     CHECK(iter != eval_context_.end())
         << "var must be defined in the context before";
@@ -341,7 +341,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const Cast* v) override {
-    const BaseExprNode* src_value = v->src_value();
+    const Expr* src_value = v->src_value();
     src_value->accept(this);
     Dtype dst_dtype = v->dtype();
     Dtype src_dtype = src_value->dtype();
@@ -366,7 +366,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const For* v) override {
-    const BaseExprNode* var_node = v->var();
+    const Expr* var_node = v->var();
     v->start()->accept(this);
     int start = value_.as<int>();
     v->stop()->accept(this);
@@ -423,7 +423,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const Load* v) override {
-    const Variable* base_node = v->base_handle();
+    const Var* base_node = v->base_handle();
     auto iter = buffer_mapping_.find(base_node);
     CHECK(iter != buffer_mapping_.end())
         << "missing buffer binding: " << base_node->name_hint();
@@ -458,7 +458,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const Store* v) override {
-    const Variable* base_node = v->base_handle();
+    const Var* base_node = v->base_handle();
     auto iter = buffer_mapping_.find(base_node);
     CHECK(iter != buffer_mapping_.end());
     void* ptr = iter->second;
@@ -529,8 +529,8 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   void visit(const Allocate* v) override {
-    const Variable* buffer_var = v->buffer_var();
-    std::vector<const BaseExprNode*> dims = v->dims();
+    const Var* buffer_var = v->buffer_var();
+    std::vector<const Expr*> dims = v->dims();
     int total_byte_size = v->dtype().byte_size();
     for (size_t i = 0; i < dims.size(); i++) {
       dims[i]->accept(this);
@@ -549,7 +549,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   void visit(const Free* v) override {
-    const Variable* buffer_var = v->buffer_var();
+    const Var* buffer_var = v->buffer_var();
     int count = internal_buffers_.erase(buffer_var);
     if (count == 0) {
       throw std::runtime_error(
@@ -652,36 +652,36 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   Value value_;
-  std::unordered_map<const BaseExprNode*, Value> eval_context_;
-  std::unordered_map<const BaseExprNode*, void*> buffer_mapping_;
-  std::unordered_map<const Variable*, std::unique_ptr<std::vector<int>>>
+  std::unordered_map<const Expr*, Value> eval_context_;
+  std::unordered_map<const Expr*, void*> buffer_mapping_;
+  std::unordered_map<const Var*, std::unique_ptr<std::vector<int>>>
       internal_buffers_;
 };
 
-using VarMapping = std::vector<std::pair<Expr, Expr>>;
+using VarMapping = std::vector<std::pair<ExprHandler, ExprHandler>>;
 
 class VarSubMutator : public IRMutator {
  public:
   VarSubMutator(const VarMapping& var_mapping) {
     for (const auto& entry : var_mapping) {
-      const Expr& key = entry.first;
-      const Expr& value = entry.second;
-      const Variable* key_var = key.AsNode<Variable>();
+      const ExprHandler& key = entry.first;
+      const ExprHandler& value = entry.second;
+      const Var* key_var = key.AsNode<Var>();
       CHECK(key_var != nullptr);
       var_mapping_[key_var] = value;
     }
   }
 
-  const BaseExprNode* mutate(const Variable* var) override {
+  const Expr* mutate(const Var* var) override {
     auto iter = var_mapping_.find(var);
     if (iter == var_mapping_.end()) {
-      return const_cast<Variable*>(var);
+      return const_cast<Var*>(var);
     }
     return iter->second.node();
   }
 
  private:
-  std::unordered_map<const Variable*, Expr> var_mapping_;
+  std::unordered_map<const Var*, ExprHandler> var_mapping_;
 };
 
 template <class CodeGenType>
@@ -691,9 +691,9 @@ class ExprEval {
   using CallArg = CodeGen::CallArg;
 
   template <typename... Ts>
-  ExprEval(const Expr& expr, Ts... ts) : ExprEval(expr, {BufferArg(ts)...}) {}
+  ExprEval(const ExprHandler& expr, Ts... ts) : ExprEval(expr, {BufferArg(ts)...}) {}
 
-  ExprEval(const Expr& expr, const std::vector<BufferArg>& buffer_args)
+  ExprEval(const ExprHandler& expr, const std::vector<BufferArg>& buffer_args)
       : dtype_(expr.dtype()) {
     std::vector<BufferArg> buffer_args_extended = buffer_args;
     Buffer ret_buf("ret_val", dtype_, {1});
@@ -745,9 +745,9 @@ class ExprEval {
   Value ret_value_;
 };
 
-inline Expr Substitute(Expr* expr, const VarMapping& var_mapping) {
+inline ExprHandler Substitute(ExprHandler* expr, const VarMapping& var_mapping) {
   VarSubMutator var_sub(var_mapping);
-  return Expr(expr->node()->accept_mutator(&var_sub));
+  return ExprHandler(expr->node()->accept_mutator(&var_sub));
 }
 
 inline Stmt* Substitute(Stmt* stmt, const VarMapping& var_mapping) {

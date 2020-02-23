@@ -24,41 +24,41 @@ using SimpleIRExprEval = ExprEval<SimpleIREvaluator>;
 
 void testExprBasicValueTest() {
   KernelScope kernel_scope;
-  Expr a = IntImm::make(2), b = IntImm::make(3);
-  Expr c = Add::make(a, b);
+  ExprHandler a = IntImm::make(2), b = IntImm::make(3);
+  ExprHandler c = Add::make(a, b);
   SimpleIRExprEval eval(c);
   EXPECT_EQ(eval.value<int>(), 5);
 }
 
 void testExprBasicValueTest02() {
   KernelScope kernel_scope;
-  Expr a(2.0f);
-  Expr b(3.0f);
-  Expr c(4.0f);
-  Expr d(5.0f);
-  Expr f = (a + b) - (c + d);
+  ExprHandler a(2.0f);
+  ExprHandler b(3.0f);
+  ExprHandler c(4.0f);
+  ExprHandler d(5.0f);
+  ExprHandler f = (a + b) - (c + d);
   SimpleIRExprEval eval(f);
   EXPECT_EQ(eval.value<float>(), -4.0f);
 }
 
 void testExprLetTest01() {
   KernelScope kernel_scope;
-  Var x("x", kFloat32);
-  Expr value = Expr(3.f);
-  Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f));
-  Expr result = Let::make(x, Expr(3.f), body);
+  VarHandler x("x", kFloat32);
+  ExprHandler value = ExprHandler(3.f);
+  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f));
+  ExprHandler result = Let::make(x, ExprHandler(3.f), body);
   SimpleIRExprEval eval(result);
   EXPECT_EQ(eval.value<float>(), 2 + (3 * 3 + 4));
 }
 
 void testExprLetTest02() {
   KernelScope kernel_scope;
-  Var x("x", kFloat32);
-  Var y("y", kFloat32);
-  Expr value = Expr(3.f);
-  Expr body = Expr(2.f) + (x * Expr(3.f) + Expr(4.f) * y);
-  Expr e1 = Let::make(x, Expr(3.f), body);
-  Expr e2 = Let::make(y, Expr(6.f), e1);
+  VarHandler x("x", kFloat32);
+  VarHandler y("y", kFloat32);
+  ExprHandler value = ExprHandler(3.f);
+  ExprHandler body = ExprHandler(2.f) + (x * ExprHandler(3.f) + ExprHandler(4.f) * y);
+  ExprHandler e1 = Let::make(x, ExprHandler(3.f), body);
+  ExprHandler e2 = Let::make(y, ExprHandler(6.f), e1);
   SimpleIRExprEval eval(e2);
   EXPECT_EQ(eval.value<float>(), 2 + (3 * 3 + 4 * 6));
 }
@@ -68,8 +68,8 @@ void testExprLetStmtTest01() {
   Buffer a_buf("a", kFloat32, {1});
   Buffer b_buf("b", kFloat32, {1});
 
-  Expr load_a = Load::make(a_buf, 0, 1);
-  Var var = Var("v", kFloat32);
+  ExprHandler load_a = Load::make(a_buf, 0, 1);
+  VarHandler var = VarHandler("v", kFloat32);
   Stmt* store_b = Store::make(b_buf, 0, var, 1);
   Stmt* let_store = LetStmt::make(var, load_a, store_b);
   SimpleIREvaluator eval(let_store, a_buf, b_buf);
@@ -85,7 +85,7 @@ void testExprLetStmtTest01() {
   ExpectAllNear(b_v, b_ref, 1e-5);
 }
 
-static Expr test_01(const Expr& expr) {
+static ExprHandler test_01(const ExprHandler& expr) {
   return expr;
 }
 
@@ -95,9 +95,9 @@ void testExprVectorAdd01() {
   const int kVectorCount = 128;
   const int kTotalSize = kVectorSize * kVectorCount;
 
-  Buffer a_buf(Var("A", kHandle), kFloat32, {Expr(kTotalSize)});
-  Buffer b_buf(Var("B", kHandle), kFloat32, {Expr(kTotalSize)});
-  Buffer c_buf(Var("C", kHandle), kFloat32, {Expr(kTotalSize)});
+  Buffer a_buf(VarHandler("A", kHandle), kFloat32, {ExprHandler(kTotalSize)});
+  Buffer b_buf(VarHandler("B", kHandle), kFloat32, {ExprHandler(kTotalSize)});
+  Buffer c_buf(VarHandler("C", kHandle), kFloat32, {ExprHandler(kTotalSize)});
 
   /*
   Build the following:
@@ -107,16 +107,16 @@ void testExprVectorAdd01() {
             load(b_buf, ramp(index * 8, 1, 8))))
     }
   */
-  Var index = Var("index", kInt32);
-  Expr load_a = Load::make(
+  VarHandler index = VarHandler("index", kInt32);
+  ExprHandler load_a = Load::make(
       a_buf,
       Ramp::make(index * kVectorSize, 1, kVectorSize),
       Broadcast::make(1, kVectorSize));
-  Expr load_b = Load::make(
+  ExprHandler load_b = Load::make(
       b_buf,
       Ramp::make(index * kVectorSize, 1, kVectorSize),
       Broadcast::make(1, kVectorSize));
-  Expr value = load_a + load_b;
+  ExprHandler value = load_a + load_b;
   Stmt* store_c = Store::make(
       c_buf,
       Ramp::make(index * kVectorSize, 1, kVectorSize),
@@ -145,16 +145,16 @@ void testExprVectorAdd01() {
 void testExprCompareSelectEQ() {
   KernelScope kernel_scope;
   constexpr int N = 1024;
-  Buffer a(Var("A", kHandle), kInt32, {N});
-  Buffer b(Var("B", kHandle), kInt32, {N});
-  Buffer c(Var("C", kHandle), kInt32, {N});
+  Buffer a(VarHandler("A", kHandle), kInt32, {N});
+  Buffer b(VarHandler("B", kHandle), kInt32, {N});
+  Buffer c(VarHandler("C", kHandle), kInt32, {N});
   std::vector<int> a_buffer(N, 1);
   std::vector<int> b_buffer(N, 1);
   std::vector<int> c_buffer(N, 0);
   std::vector<int> c_ref(N, 0);
 
   auto mask = IntImm::make(1);
-  Var i("i", kInt32);
+  VarHandler i("i", kInt32);
   auto memcpy_expr = For::make(
       i,
       0,
@@ -182,13 +182,13 @@ void testExprCompareSelectEQ() {
 
 void testExprSubstitute01() {
   KernelScope kernel_scope;
-  Expr x = Variable::make("x", kFloat32);
-  Expr y = Variable::make("y", kFloat32);
-  Expr e = (x - 1.0f) * (x + y + 2.0f);
+  ExprHandler x = Var::make("x", kFloat32);
+  ExprHandler y = Var::make("y", kFloat32);
+  ExprHandler e = (x - 1.0f) * (x + y + 2.0f);
 
-  Expr z = Variable::make("z", kFloat32);
-  Expr e2 = Substitute(&e, {{x, z + 1.0f}});
-  Expr e2_ref = ((z + 1.0f) - 1.0f) * ((z + 1.0f) + y + 2.0f);
+  ExprHandler z = Var::make("z", kFloat32);
+  ExprHandler e2 = Substitute(&e, {{x, z + 1.0f}});
+  ExprHandler e2_ref = ((z + 1.0f) - 1.0f) * ((z + 1.0f) + y + 2.0f);
   std::ostringstream oss;
   oss << e2;
   std::string e2_str = oss.str();
@@ -201,7 +201,7 @@ void testExprSubstitute01() {
 
 void testExprMath01() {
   KernelScope kernel_scope;
-  Expr v = sin(Expr(1.0f));
+  ExprHandler v = sin(ExprHandler(1.0f));
 
   std::ostringstream oss;
   oss << v;
@@ -216,58 +216,58 @@ void testExprMath01() {
 void testExprUnaryMath01() {
   KernelScope kernel_scope;
   struct TestConfig {
-    std::function<Expr(const Expr&)> func;
+    std::function<ExprHandler(const ExprHandler&)> func;
     std::function<float(float)> ref_func;
   };
 
   std::vector<TestConfig> test_configs = {
-      {[](const Expr& v) { return sin(v); },
+      {[](const ExprHandler& v) { return sin(v); },
        [](float v) { return std::sin(v); }},
-      {[](const Expr& v) { return sin(v); },
+      {[](const ExprHandler& v) { return sin(v); },
        [](float v) { return std::sin(v); }},
-      {[](const Expr& v) { return tan(v); },
+      {[](const ExprHandler& v) { return tan(v); },
        [](float v) { return std::tan(v); }},
-      {[](const Expr& v) { return asin(v); },
+      {[](const ExprHandler& v) { return asin(v); },
        [](float v) { return std::asin(v); }},
-      {[](const Expr& v) { return acos(v); },
+      {[](const ExprHandler& v) { return acos(v); },
        [](float v) { return std::acos(v); }},
-      {[](const Expr& v) { return atan(v); },
+      {[](const ExprHandler& v) { return atan(v); },
        [](float v) { return std::atan(v); }},
-      {[](const Expr& v) { return sinh(v); },
+      {[](const ExprHandler& v) { return sinh(v); },
        [](float v) { return std::sinh(v); }},
-      {[](const Expr& v) { return cosh(v); },
+      {[](const ExprHandler& v) { return cosh(v); },
        [](float v) { return std::cosh(v); }},
-      {[](const Expr& v) { return tanh(v); },
+      {[](const ExprHandler& v) { return tanh(v); },
        [](float v) { return std::tanh(v); }},
-      {[](const Expr& v) { return exp(v); },
+      {[](const ExprHandler& v) { return exp(v); },
        [](float v) { return std::exp(v); }},
-      {[](const Expr& v) { return fabs(v); },
+      {[](const ExprHandler& v) { return fabs(v); },
        [](float v) { return std::fabs(v); }},
-      {[](const Expr& v) { return log(v); },
+      {[](const ExprHandler& v) { return log(v); },
        [](float v) { return std::log(v); }},
-      {[](const Expr& v) { return log2(v); },
+      {[](const ExprHandler& v) { return log2(v); },
        [](float v) { return std::log2(v); }},
-      {[](const Expr& v) { return log10(v); },
+      {[](const ExprHandler& v) { return log10(v); },
        [](float v) { return std::log10(v); }},
-      {[](const Expr& v) { return erf(v); },
+      {[](const ExprHandler& v) { return erf(v); },
        [](float v) { return std::erf(v); }},
-      {[](const Expr& v) { return sqrt(v); },
+      {[](const ExprHandler& v) { return sqrt(v); },
        [](float v) { return std::sqrt(v); }},
-      {[](const Expr& v) { return rsqrt(v); },
+      {[](const ExprHandler& v) { return rsqrt(v); },
        [](float v) { return 1.0f / std::sqrt(v); }},
-      {[](const Expr& v) { return ceil(v); },
+      {[](const ExprHandler& v) { return ceil(v); },
        [](float v) { return std::ceil(v); }},
-      {[](const Expr& v) { return floor(v); },
+      {[](const ExprHandler& v) { return floor(v); },
        [](float v) { return std::floor(v); }},
-      {[](const Expr& v) { return round(v); },
+      {[](const ExprHandler& v) { return round(v); },
        [](float v) { return std::round(v); }},
-      {[](const Expr& v) { return trunc(v); },
+      {[](const ExprHandler& v) { return trunc(v); },
        [](float v) { return std::trunc(v); }},
   };
 
   for (const TestConfig& test_config : test_configs) {
     const float input_v = 0.8765f;
-    Expr v = test_config.func(Expr(input_v));
+    ExprHandler v = test_config.func(ExprHandler(input_v));
     float v_ref = test_config.ref_func(input_v);
     SimpleIRExprEval eval(v);
     EXPECT_NEAR(eval.value<float>(), v_ref, 1e-6) << "fail: " << v;
@@ -277,21 +277,21 @@ void testExprUnaryMath01() {
 void testExprBinaryMath01() {
   KernelScope kernel_scope;
   struct TestConfig {
-    std::function<Expr(const Expr&, const Expr&)> func;
+    std::function<ExprHandler(const ExprHandler&, const ExprHandler&)> func;
     std::function<float(float, float)> ref_func;
   };
 
   std::vector<TestConfig> test_configs = {
-      {[](const Expr& v1, const Expr& v2) { return pow(v1, v2); },
+      {[](const ExprHandler& v1, const ExprHandler& v2) { return pow(v1, v2); },
        [](float v1, float v2) { return std::pow(v1, v2); }},
-      {[](const Expr& v1, const Expr& v2) { return fmod(v1, v2); },
+      {[](const ExprHandler& v1, const ExprHandler& v2) { return fmod(v1, v2); },
        [](float v1, float v2) { return std::fmod(v1, v2); }},
   };
 
   for (const TestConfig& test_config : test_configs) {
     const float v1 = 0.8765f;
     float v2 = 1.2345f;
-    Expr v_expr = test_config.func(Expr(v1), Expr(v2));
+    ExprHandler v_expr = test_config.func(ExprHandler(v1), ExprHandler(v2));
     float v_ref = test_config.ref_func(v1, v2);
     SimpleIRExprEval eval(v_expr);
     EXPECT_NEAR(eval.value<float>(), v_ref, 1e-6) << "fail: " << v_expr;
@@ -301,11 +301,11 @@ void testExprBinaryMath01() {
 void testExprDynamicShapeAdd() {
   KernelScope kernel_scope;
   auto testWithSize = [](int32_t size) {
-    Var n("n", kInt32);
-    Buffer a(Var("a", kHandle), kFloat32, {n});
-    Buffer b(Var("b", kHandle), kFloat32, {n});
-    Buffer c(Var("c", kHandle), kFloat32, {n});
-    Var i("i", kInt32);
+    VarHandler n("n", kInt32);
+    Buffer a(VarHandler("a", kHandle), kFloat32, {n});
+    Buffer b(VarHandler("b", kHandle), kFloat32, {n});
+    Buffer c(VarHandler("c", kHandle), kFloat32, {n});
+    VarHandler i("i", kInt32);
     Stmt* s = For::make(i, 0, n, Store::make(c, i, a(i) + b(i), 1));
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
@@ -323,10 +323,10 @@ void testCond01() {
   const int N = 16;
   PaddedBuffer<float> a_v(N);
   Buffer a_buf("a", kFloat32, {N});
-  Var index = Var("index", kInt32);
+  VarHandler index = VarHandler("index", kInt32);
   Stmt* assign_x2 = Store::make(a_buf.data(), index, cast<float>(index) * 2, 1);
   Stmt* assign_x3 = Store::make(a_buf.data(), index, cast<float>(index) * 3, 1);
-  Expr even_cond = CompareSelect::make(Mod::make(index, 2), 0, kEQ);
+  ExprHandler even_cond = CompareSelect::make(Mod::make(index, 2), 0, kEQ);
   Stmt* assign = Cond::make(even_cond, assign_x2, assign_x3);
   Stmt* for_stmt = For::make(index, 0, N, assign);
   SimpleIREvaluator(for_stmt, a_buf)(a_v);
@@ -344,7 +344,7 @@ void testCond01() {
 
 void testIfThenElse01() {
   KernelScope kernel_scope;
-  Expr v = ifThenElse(Expr(1), Expr(1.0f), Expr(2.0f));
+  ExprHandler v = ifThenElse(ExprHandler(1), ExprHandler(1.0f), ExprHandler(2.0f));
 
   std::ostringstream oss;
   oss << v;
@@ -356,7 +356,7 @@ void testIfThenElse01() {
 
 void testIfThenElse02() {
   KernelScope kernel_scope;
-  Expr v = ifThenElse(Expr(0), Expr(1.0f), Expr(2.0f));
+  ExprHandler v = ifThenElse(ExprHandler(0), ExprHandler(1.0f), ExprHandler(2.0f));
 
   std::ostringstream oss;
   oss << v;

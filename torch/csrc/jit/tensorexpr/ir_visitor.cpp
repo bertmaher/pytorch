@@ -53,7 +53,7 @@ void IRVisitor::visit(const FloatImm* v) {}
 void IRVisitor::visit(const Cast* v) {
   v->src_value()->accept(this);
 }
-void IRVisitor::visit(const Variable* v) {}
+void IRVisitor::visit(const Var* v) {}
 void IRVisitor::visit(const Let* v) {
   v->var()->accept(this);
   v->value()->accept(this);
@@ -126,21 +126,21 @@ void IRVisitor::visit(const FunctionCall* v) {
 }
 
 void IRVisitor::visit(const Allocate* v) {
-  const Variable* buffer_var = v->buffer_var();
+  const Var* buffer_var = v->buffer_var();
   buffer_var->accept(this);
-  std::vector<const BaseExprNode*> dims = v->dims();
-  for (const BaseExprNode* dim : dims) {
+  std::vector<const Expr*> dims = v->dims();
+  for (const Expr* dim : dims) {
     dim->accept(this);
   }
 }
 
 void IRVisitor::visit(const Free* v) {
-  const Variable* buffer_var = v->buffer_var();
+  const Var* buffer_var = v->buffer_var();
   buffer_var->accept(this);
 }
 
 void IRVisitor::visit(const Cond* v) {
-  const BaseExprNode* condition = v->condition();
+  const Expr* condition = v->condition();
   Stmt* true_stmt = v->true_stmt();
   Stmt* false_stmt = v->false_stmt();
   condition->accept(this);

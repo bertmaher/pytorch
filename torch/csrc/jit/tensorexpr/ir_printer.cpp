@@ -4,11 +4,11 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-void IRPrinter::print(Expr expr) {
+void IRPrinter::print(ExprHandler expr) {
   expr.node()->accept(this);
 }
 
-void IRPrinter::print(const BaseExprNode& expr) {
+void IRPrinter::print(const Expr& expr) {
   expr.accept(this);
 }
 
@@ -120,7 +120,7 @@ void IRPrinter::visit(const Cast* v) {
   os() << ")";
 }
 
-void IRPrinter::visit(const Variable* v) {
+void IRPrinter::visit(const Var* v) {
   os() << name_manager_.get_unique_name(v);
 }
 
@@ -135,7 +135,7 @@ void IRPrinter::visit(const Let* v) {
 }
 
 void IRPrinter::visit(const LetStmt* v) {
-  const Variable* var = v->var();
+  const Var* var = v->var();
   os() << var->dtype().ToCppString() << " " << var << " = " << v->value() << "; "
        << std::endl;
   v->body()->accept(this);
@@ -152,10 +152,10 @@ void IRPrinter::visit(const Load* v) {
 }
 
 void IRPrinter::visit(const For* v) {
-  const Variable* var = v->var();
-  Var vv(var);
+  const Var* var = v->var();
+  VarHandler vv(var);
   os() << "for (" << var->dtype().ToCppString() << " " << vv << " = "
-       << Expr(v->start()) << "; " << vv << " < " << Expr(v->stop()) << "; " << vv
+       << ExprHandler(v->start()) << "; " << vv << " < " << ExprHandler(v->stop()) << "; " << vv
        << "++) {";
   std::string loop_options_str = v->loop_options().ToString();
   if (!loop_options_str.empty()) {
@@ -202,7 +202,7 @@ void IRPrinter::visit(const BaseCallNode* v) {
 void IRPrinter::visit(const Allocate* v) {
   os() << "Allocate(" << *v->buffer_var() << ", " << v->dtype();
   os() << ", {";
-  const std::vector<const BaseExprNode*>& dims = v->dims();
+  const std::vector<const Expr*>& dims = v->dims();
   for (size_t i = 0; i < dims.size(); i++) {
     if (i != 0) {
       os() << ", ";
@@ -217,7 +217,7 @@ void IRPrinter::visit(const Free* v) {
 }
 
 void IRPrinter::visit(const Cond* v) {
-  const BaseExprNode* cond = v->condition();
+  const Expr* cond = v->condition();
   Stmt* true_stmt = v->true_stmt();
   Stmt* false_stmt = v->false_stmt();
   if (!true_stmt) {
@@ -236,7 +236,7 @@ void IRPrinter::visit(const Cond* v) {
   }
 }
 
-std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
+std::ostream& operator<<(std::ostream& stream, const ExprHandler& expr) {
   IRPrinter::PrinterStream* printer_stream =
       dynamic_cast<IRPrinter::PrinterStream*>(&stream);
   if (printer_stream != nullptr) {
@@ -248,7 +248,7 @@ std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const BaseExprNode& expr) {
+std::ostream& operator<<(std::ostream& stream, const Expr& expr) {
   IRPrinter::PrinterStream* printer_stream =
       dynamic_cast<IRPrinter::PrinterStream*>(&stream);
   if (printer_stream != nullptr) {

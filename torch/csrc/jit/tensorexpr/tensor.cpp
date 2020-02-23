@@ -9,12 +9,12 @@ using schedule::TensorExprNode;
 // using schedule::ScheduleNode;
 
 void TensorOperation::SplitWithTail(
-    const Var& loop_var,
+    const VarHandler& loop_var,
     int factor,
     bool factor_on_inner,
-    Var* outer_var,
-    Var* inner_var,
-    Var* tail_var,
+    VarHandler* outer_var,
+    VarHandler* inner_var,
+    VarHandler* tail_var,
     TensorOperation** tail_op) {
   check_expr_node();
   schedule::ScheduleNode* schedule = expr_node_->schedule();
@@ -34,11 +34,11 @@ void TensorOperation::SplitWithTail(
 }
 
 void TensorOperation::SplitWithMask(
-    const Var& loop_var,
+    const VarHandler& loop_var,
     int factor,
     bool factor_on_inner,
-    Var* outer_var,
-    Var* inner_var) {
+    VarHandler* outer_var,
+    VarHandler* inner_var) {
   check_expr_node();
   schedule::ScheduleNode* schedule = expr_node_->schedule();
   schedule::TensorExprNode* tail_expr_node = nullptr;
@@ -47,8 +47,8 @@ void TensorOperation::SplitWithMask(
 }
 
 void TensorOperation::GPUExecConfig(
-    const std::vector<Var>& blockIdx,
-    const std::vector<Var>& threadIdx) {
+    const std::vector<VarHandler>& blockIdx,
+    const std::vector<VarHandler>& threadIdx) {
   check_expr_node();
   schedule::ScheduleNode* schedule = expr_node_->schedule();
   schedule->GPUExecConfig(expr_node_, blockIdx, threadIdx);

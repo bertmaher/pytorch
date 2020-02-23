@@ -69,7 +69,7 @@ class Cloneable : public Base {
 /// Loop Axis
 class LoopAxisTransform;
 
-// A loop axis in the Tensor Expr trees.
+// A loop axis in the Tensor ExprHandler trees.
 // Even if two loops are identical in shapes, the should have separate loop
 // axis. In other words, loop axes should be be shared among differnt loops.
 class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
@@ -79,7 +79,7 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
     kReduction, // a redution axis
   };
 
-  const Var& var() const {
+  const VarHandler& var() const {
     return loop_var_;
   }
   const Range& range() const {
@@ -113,7 +113,7 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
   friend class LoopAxisTransform;
 
   LoopAxis(
-      const Var& loop_var,
+      const VarHandler& loop_var,
       const Range& loop_range,
       AxisType axis_type,
       LoopAxisTransform* transform)
@@ -144,7 +144,7 @@ class TORCH_API LoopAxis : public Cloneable<LoopAxis, ScheduleObject> {
     loop_options_.set_gpu_thread_index(thread_index);
   }
 
-  Var loop_var_;
+  VarHandler loop_var_;
   Range loop_range_;
   AxisType axis_type_;
   // TODO: check that only leaf axis can be used in axis tranforms.
@@ -170,9 +170,9 @@ class TORCH_API LoopAxisTransform
     return nullptr;
   }
 
-  virtual Expr ConvertToNewArgs(Expr* stmt, int group_index) {
+  virtual ExprHandler ConvertToNewArgs(ExprHandler* stmt, int group_index) {
     LOG(FATAL) << "unmiplemented";
-    return Expr();
+    return ExprHandler();
   }
 
   int output_group_count() const {
@@ -229,7 +229,7 @@ class TORCH_API LoopAxisTransform
   }
 
   // Override Schedule::NewAxis, but also sets current transform as the source.
-  LoopAxis* NewAxis(const Var& loop_var, const Range& loop_range);
+  LoopAxis* NewAxis(const VarHandler& loop_var, const Range& loop_range);
 
  private:
   std::vector<LoopAxis*> inputs_; // not owned
@@ -273,13 +273,13 @@ class SplitAxisWithTail
   using BaseClass = Cloneable<SplitAxisWithTail, SplitAxisTransform>;
   void CloneFrom(const SplitAxisWithTail* other);
   Stmt* ConvertToNewArgs(Stmt* stmt, int output_group) override;
-  Expr ConvertToNewArgs(Expr* stmt, int output_group) override;
+  ExprHandler ConvertToNewArgs(ExprHandler* stmt, int output_group) override;
   SplitAxisWithTail() {}
 
  private:
   friend class ScheduleNode;
   SplitAxisWithTail(LoopAxis* loop_axis, int factor, bool factor_on_inner);
-  Expr combined_loop_index(int output_group);
+  ExprHandler combined_loop_index(int output_group);
 };
 
 class SplitAxisWithMask
@@ -288,23 +288,23 @@ class SplitAxisWithMask
   using BaseClass = Cloneable<SplitAxisWithMask, SplitAxisTransform>;
   void CloneFrom(const SplitAxisWithMask* other);
   Stmt* ConvertToNewArgs(Stmt* stmt, int output_group) override;
-  Expr ConvertToNewArgs(Expr* stmt, int output_group) override;
+  ExprHandler ConvertToNewArgs(ExprHandler* stmt, int output_group) override;
   SplitAxisWithMask() {}
-  const Expr& predicate() const {
+  const ExprHandler& predicate() const {
     return predicate_;
   }
 
  private:
   friend class ScheduleNode;
   SplitAxisWithMask(LoopAxis* loop_axis, int factor, bool factor_on_inner);
-  Expr combined_loop_index(int output_group);
+  ExprHandler combined_loop_index(int output_group);
 
-  Expr predicate_; // original predicate
+  ExprHandler predicate_; // original predicate
 };
 
 class FuseAxisTransform;
 
-// Section: Tensor Expr Tree
+// Section: Tensor ExprHandler Tree
 
 // A tensor expr operation within the expression tree.
 // This is often a leaf node that corresponds subset of the operations from a
@@ -313,11 +313,11 @@ class FuseAxisTransform;
 // the semantics of this operation.
 class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
  public:
-  const Var& expr_var() const {
+  const VarHandler& expr_var() const {
     return func_->func_var();
   }
 
-  const Expr& body() const {
+  const ExprHandler& body() const {
     return func_->body();
   }
 
@@ -344,13 +344,13 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
     }
   }
 
-  void AddPredicate(const Expr& predicate) {
+  void AddPredicate(const ExprHandler& predicate) {
     if (!predicate.empty()) {
       predicates_.push_back(predicate);
     }
   }
 
-  const std::vector<Expr>& predicates() const {
+  const std::vector<ExprHandler>& predicates() const {
     return predicates_;
   }
 
@@ -365,7 +365,7 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
   // We still need to know the buffer this writes to.
   Function* func_;
   Stmt* element_stmt_;
-  std::vector<Expr> predicates_;
+  std::vector<ExprHandler> predicates_;
 };
 
 // Part of the recursive node structure in the tensor expr tree.
@@ -491,7 +491,7 @@ class TORCH_API ScheduleNode : public KernelScopedObject {
   ~ScheduleNode();
 
   // Section: for schedule related internal functions.
-  LoopAxis* NewAxis(const Var& loop_var, const Range& loop_range) {
+  LoopAxis* NewAxis(const VarHandler& loop_var, const Range& loop_range) {
     return NewObject<LoopAxis>(
         loop_var, loop_range, LoopAxis::kRegular, nullptr);
   }
@@ -529,28 +529,28 @@ class TORCH_API ScheduleNode : public KernelScopedObject {
 
   void SplitWithTail(
       TensorExprNode* expr_node,
-      const Var& loop_var,
+      const VarHandler& loop_var,
       int factor,
       bool factor_on_inner,
-      Var* outer_var,
-      Var* inner_var,
-      Var* tail_var,
+      VarHandler* outer_var,
+      VarHandler* inner_var,
+      VarHandler* tail_var,
       TensorExprNode** tail_op);
 
   void SplitWithMask(
       TensorExprNode* expr_node,
-      const Var& loop_var,
+      const VarHandler& loop_var,
       int factor,
       bool factor_on_inner,
-      Var* outer_var,
-      Var* inner_var);
+      VarHandler* outer_var,
+      VarHandler* inner_var);
 
   void ComputeInline(TensorExprNode* expr_node);
 
   void GPUExecConfig(
       TensorExprNode* expr_node,
-      const std::vector<Var>& blockIdx,
-      const std::vector<Var>& threadIdx);
+      const std::vector<VarHandler>& blockIdx,
+      const std::vector<VarHandler>& threadIdx);
 
   Stmt* Lower();
 

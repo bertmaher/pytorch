@@ -33,12 +33,12 @@ void testCudaTestVectorAdd01() {
           {block_count, "b_id"},
           {block_size, "t_id"},
       },
-      [&](const Var& n, const Var& b_id, const Var& t_id) {
+      [&](const VarHandler& n, const VarHandler& b_id, const VarHandler& t_id) {
         return a_buf(n, b_id, t_id) + b_buf(n, b_id, t_id);
       });
   Schedule sch({c});
-  const Var& b_id = c->arg(1);
-  const Var& t_id = c->arg(2);
+  const VarHandler& b_id = c->arg(1);
+  const VarHandler& t_id = c->arg(2);
   c->GPUExecConfig({b_id}, {t_id});
   Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
@@ -88,11 +88,11 @@ static void testCudaTestVectorAdd02_impl(int N, int block_size) {
       {
           {N, "N"},
       },
-      [&](const Var& n) { return a_buf(n) + b_buf(n); });
+      [&](const VarHandler& n) { return a_buf(n) + b_buf(n); });
   Schedule sch({c});
-  const Var& n = c->arg(0);
-  Var n_outer;
-  Var n_inner;
+  const VarHandler& n = c->arg(0);
+  VarHandler n_outer;
+  VarHandler n_inner;
   c->SplitWithMask(n, block_size, true, &n_outer, &n_inner);
   c->GPUExecConfig({n_outer}, {n_inner});
   Stmt* stmt = sch.Lower();
@@ -141,12 +141,12 @@ void testCudaTestVectorAdd02() {
 void testCudaDynamicShape2D() {
   KernelScope kernel_scope;
   auto testWithSize = [](int32_t M, int32_t N) {
-    Var m("m", kInt32);
-    Var n("n", kInt32);
-    Buffer a(Var("a", kHandle), kFloat32, {m, n});
-    Buffer b(Var("b", kHandle), kFloat32, {m, n});
+    VarHandler m("m", kInt32);
+    VarHandler n("n", kInt32);
+    Buffer a(VarHandler("a", kHandle), kFloat32, {m, n});
+    Buffer b(VarHandler("b", kHandle), kFloat32, {m, n});
     Tensor* c =
-        Compute("c", {{m, "m"}, {n, "n"}}, [&](const Var& i, const Var& j) {
+        Compute("c", {{m, "m"}, {n, "n"}}, [&](const VarHandler& i, const VarHandler& j) {
           return a(i, j) + b(i, j);
         });
     auto sch = Schedule::make({c});
@@ -212,12 +212,12 @@ void testCudaTestRand01() {
           {block_count, "b_id"},
           {block_size, "t_id"},
       },
-      [&](const Var& n, const Var& b_id, const Var& t_id) {
+      [&](const VarHandler& n, const VarHandler& b_id, const VarHandler& t_id) {
         return Intrinsics::make(IntrinsicsOp::kRand, kFloat32);
       });
   Schedule sch({c});
-  const Var& b_id = c->arg(1);
-  const Var& t_id = c->arg(2);
+  const VarHandler& b_id = c->arg(1);
+  const VarHandler& t_id = c->arg(2);
   c->GPUExecConfig({b_id}, {t_id});
   Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c);

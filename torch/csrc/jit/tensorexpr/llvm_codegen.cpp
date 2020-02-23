@@ -438,7 +438,7 @@ void LLVMCodeGen::visit(const Cast* v) {
   LOG(FATAL) << "Unsupported cast!";
 }
 
-void LLVMCodeGen::visit(const Variable* v) {
+void LLVMCodeGen::visit(const Var* v) {
   if (varToArg_.count(v)) {
     auto idx = varToArg_.at(v);
     auto arg = fn_->arg_begin() + idx;
@@ -449,7 +449,7 @@ void LLVMCodeGen::visit(const Variable* v) {
 }
 
 void LLVMCodeGen::visit(const Let* v) {
-  const Variable* var = dynamic_cast<const Variable*>(v->var());
+  const Var* var = dynamic_cast<const Var*>(v->var());
   CHECK(var != nullptr);
   v->value()->accept(this);
   auto value = value_;
@@ -468,7 +468,7 @@ void LLVMCodeGen::visit(const Let* v) {
 
 // TODO: refactor this and merge with Let
 void LLVMCodeGen::visit(const LetStmt* v) {
-  const Variable* var = v->var();
+  const Var* var = v->var();
   CHECK(var != nullptr);
   v->value()->accept(this);
   auto value = value_;
@@ -859,7 +859,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
 #undef BINARY_MATH_CASE
 
     default: {
-      LOG(FATAL) << "Unimplemented: Intrinsics: " << Expr(v);
+      LOG(FATAL) << "Unimplemented: Intrinsics: " << ExprHandler(v);
     } break;
   }
 
