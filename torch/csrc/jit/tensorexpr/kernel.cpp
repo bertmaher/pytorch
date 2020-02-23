@@ -532,7 +532,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
 
             const Cast* float_cast = rhs.AsNode<Cast>();
             if (float_cast) {
-              const IntImm* int_imm = float_cast->src_value().AsNode<IntImm>();
+              const IntImm* int_imm = dynamic_cast<const IntImm*>(float_cast->src_value());
               if (int_imm) {
                 float imm = int_imm->value();
                 if (imm == 1) {

@@ -168,9 +168,9 @@ void CudaPrinter::visit(const Max* v) {
     os() << "fmaxf";
   }
   os() << "(";
-  v->lhs().accept(this);
+  v->lhs()->accept(this);
   os() << ",";
-  v->rhs().accept(this);
+  v->rhs()->accept(this);
   os() << ")";
 }
 
@@ -180,19 +180,19 @@ void CudaPrinter::visit(const Min* v) {
     os() << "fminf";
   }
   os() << "(";
-  v->lhs().accept(this);
+  v->lhs()->accept(this);
   os() << ",";
-  v->rhs().accept(this);
+  v->rhs()->accept(this);
   os() << ")";
 }
 
 void CudaPrinter::visit(const IfThenElse* v) {
   os() << "(";
-  v->condition().accept(this);
+  v->condition().node()->accept(this);
   os() << ") ? ";
-  v->true_value().accept(this);
+  v->true_value().node()->accept(this);
   os() << " : ";
-  v->false_value().accept(this);
+  v->false_value().node()->accept(this);
 }
 
 class PrioritizeLoad : public IRMutator {

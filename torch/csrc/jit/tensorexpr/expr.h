@@ -23,7 +23,7 @@ class BaseExprNode : public KernelScopedObject {
     return dtype_;
   }
   TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
-  virtual Expr accept_mutator(IRMutator* mutator) = 0;
+  virtual const BaseExprNode* accept_mutator(IRMutator* mutator) const = 0;
 
  private:
   Dtype dtype_;
@@ -46,7 +46,7 @@ class ExprNode : public Base {
   void accept(IRVisitor* visitor) const override {
     visitor->visit(static_cast<const Op*>(this));
   }
-  Expr accept_mutator(IRMutator* mutator) override;
+  const BaseExprNode* accept_mutator(IRMutator* mutator) const override;
   // pass the constructor to the base class
   using Base::Base;
 };
@@ -80,23 +80,6 @@ class TORCH_API Expr {
 
   bool empty() const {
     return base_expr_node_ == nullptr;
-  }
-
-  void accept(IRVisitor* visitor) const {
-    // TODO: Consider implement this without using recursion. Otherwise,
-    // if the expression tree is degenerate and too long, it could cause a
-    // stack overflow.
-    if (node() == nullptr) {
-      return;
-    }
-    node()->accept(visitor);
-  }
-
-  Expr accept_mutator(IRMutator* mutator) {
-    if (node() == nullptr) {
-      return Expr();
-    }
-    return node()->accept_mutator(mutator);
   }
 
   Expr(int v);
@@ -133,7 +116,7 @@ class TORCH_API Expr {
 };
 
 template <class Op, class Base>
-Expr ExprNode<Op, Base>::accept_mutator(IRMutator* mutator) {
+const BaseExprNode* ExprNode<Op, Base>::accept_mutator(IRMutator* mutator) const {
   ExprNode* this_mutable = const_cast<ExprNode*>(this);
   return mutator->mutate(static_cast<Op*>(this_mutable));
 }

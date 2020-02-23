@@ -131,7 +131,11 @@ class FunctionCall : public CallNode<FunctionCall> {
  public:
   using BaseClass = CallNode<FunctionCall>;
   static Expr make(Tensor* tensor, const std::vector<Expr>& params) {
-    return Expr(new FunctionCall(tensor, params));
+    std::vector<const BaseExprNode*> params_nodes(params.size());
+    for (size_t i = 0; i < params.size(); i++) {
+      params_nodes[i] = params[i].node();
+    }
+    return Expr(new FunctionCall(tensor, params_nodes));
   }
 
   const Tensor* tensor() const {
@@ -141,18 +145,18 @@ class FunctionCall : public CallNode<FunctionCall> {
     return tensor_;
   }
 
+  FunctionCall(Tensor* tensor, const std::vector<const BaseExprNode*>& params)
+      : BaseClass(tensor->function()->body().dtype(), kFunctionCall, params),
+        tensor_(tensor) {}
  private:
-  Expr DefaultMutator(const std::vector<Expr>& new_params) const override {
-    return FunctionCall::make(tensor_, new_params);
+  const BaseExprNode* DefaultMutator(const std::vector<const BaseExprNode*>& new_params) const override {
+    return new FunctionCall(tensor_, new_params);
   }
 
   std::string func_name() const {
     return tensor_->function()->func_var().name_hint();
   }
 
-  FunctionCall(Tensor* tensor, const std::vector<Expr>& params)
-      : BaseClass(tensor->function()->body().dtype(), kFunctionCall, params),
-        tensor_(tensor) {}
   Tensor* tensor_;
 };
 template <typename... Ts>

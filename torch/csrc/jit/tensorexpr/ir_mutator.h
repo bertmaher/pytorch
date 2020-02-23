@@ -27,6 +27,7 @@ class Store;
 class Broadcast;
 class IfThenElse;
 class Expr;
+class BaseExprNode;
 class BaseCallNode;
 class Intrinsics;
 class FunctionCall;
@@ -38,33 +39,33 @@ class Stmt;
 class TORCH_API IRMutator {
  public:
   virtual ~IRMutator() {}
-  virtual Expr mutate(const Add* v);
-  virtual Expr mutate(const Sub* v);
-  virtual Expr mutate(const Mul* v);
-  virtual Expr mutate(const Div* v);
-  virtual Expr mutate(const Mod* v);
-  virtual Expr mutate(const Max* v);
-  virtual Expr mutate(const Min* v);
-  virtual Expr mutate(const CompareSelect* v);
-  virtual Expr mutate(const IntImm* v);
-  virtual Expr mutate(const FloatImm* v);
-  virtual Expr mutate(const Cast* v);
-  virtual Expr mutate(const Variable* v);
-  virtual Expr mutate(const Let* v);
+  virtual const BaseExprNode* mutate(const Add* v);
+  virtual const BaseExprNode* mutate(const Sub* v);
+  virtual const BaseExprNode* mutate(const Mul* v);
+  virtual const BaseExprNode* mutate(const Div* v);
+  virtual const BaseExprNode* mutate(const Mod* v);
+  virtual const BaseExprNode* mutate(const Max* v);
+  virtual const BaseExprNode* mutate(const Min* v);
+  virtual const BaseExprNode* mutate(const CompareSelect* v);
+  virtual const BaseExprNode* mutate(const IntImm* v);
+  virtual const BaseExprNode* mutate(const FloatImm* v);
+  virtual const BaseExprNode* mutate(const Cast* v);
+  virtual const BaseExprNode* mutate(const Variable* v);
+  virtual const BaseExprNode* mutate(const Let* v);
   virtual Stmt* mutate(const LetStmt* v);
-  virtual Expr mutate(const Ramp* v);
-  virtual Expr mutate(const Load* v);
-  virtual Expr mutate(const Broadcast* v);
-  virtual Expr mutate(const IfThenElse* v);
+  virtual const BaseExprNode* mutate(const Ramp* v);
+  virtual const BaseExprNode* mutate(const Load* v);
+  virtual const BaseExprNode* mutate(const Broadcast* v);
+  virtual const BaseExprNode* mutate(const IfThenElse* v);
   // BaseCallNode is the base class for all call nodes.
   // For any visitors that only needs the common behavior, only override this
   // function is enough. This is because all derived class handlers will call
   // this function by default.
   // Override the derived class handler only if the logic is more specific to
   // that.
-  virtual Expr mutate(const BaseCallNode* v);
-  virtual Expr mutate(const Intrinsics* v);
-  virtual Expr mutate(const FunctionCall* v);
+  virtual const BaseExprNode* mutate(const BaseCallNode* v);
+  virtual const BaseExprNode* mutate(const Intrinsics* v);
+  virtual const BaseExprNode* mutate(const FunctionCall* v);
 
   virtual Stmt* mutate(const For* v);
   virtual Stmt* mutate(const Block* v);

@@ -49,7 +49,7 @@ class ScheduleNode::DependencyTracker : public IRVisitor {
       Tensor* tensor_node = const_cast<Tensor*>(to_process_.front());
       to_process_.pop();
       current_consumer_ = tensor_node;
-      tensor_node->function()->body().accept(this);
+      tensor_node->function()->body().node()->accept(this);
     }
 
     // Topologically sorted all the tensors in encountered_
@@ -394,12 +394,17 @@ ScheduleObject* ScheduleNode::CloneScheduleObject(ScheduleObject* object) {
 
 class Flattener : public IRMutator {
  private:
-  Expr mutate(const FunctionCall* v) override {
+  BaseExprNode* mutate(const FunctionCall* v) override {
     Buffer buffer(
         v->tensor()->function()->func_var(),
         v->tensor()->function()->body().dtype(),
         v->tensor()->function()->dims());
-    return buffer(v->params());
+    const std::vector<const BaseExprNode*>& params = v->params();
+    std::vector<Expr> params_expr(params.size());
+    for (size_t i = 0; i < params.size(); i++) {
+      params_expr[i] = Expr(params[i]);
+    }
+    return buffer(params_expr).node();
   }
 };
 
@@ -414,13 +419,13 @@ class FunctionInliner : public IRMutator {
  private:
   // For the target function, insert the caller/callee pair into the replacement
   // mapping.
-  Expr mutate(const FunctionCall* v) override {
+  const BaseExprNode* mutate(const FunctionCall* v) override {
     Function* func = v->tensor()->function();
     if (func_var_set_.count(func->func_var().node()) > 0) {
       // Insert the caller/callee pair into the mapping.
       for (int i = 0; i < func->ndim(); i++) {
         const Variable* func_callee_arg = func->arg(i).AsNode<Variable>();
-        const Expr& func_caller_param = v->param(i);
+        const BaseExprNode* func_caller_param = v->param(i);
         auto iter = inline_mapping_.find(func_callee_arg);
         if (iter != inline_mapping_.end()) {
           throw std::runtime_error(
@@ -431,7 +436,7 @@ class FunctionInliner : public IRMutator {
 
       // Call the actual replacement.
       Expr body = func->body();
-      Expr result = body.accept_mutator(this);
+      Expr result = Expr(body.node()->accept_mutator(this));
 
       // Remove the caller/callee relationship.
       for (int i = 0; i < func->ndim(); i++) {
@@ -443,34 +448,34 @@ class FunctionInliner : public IRMutator {
         }
         inline_mapping_.erase(iter);
       }
-      return result;
+      return result.node();
     } else {
       return IRMutator::mutate(v);
     }
   }
 
   // Replace the target variable with the caller expressions.
-  Expr mutate(const Variable* v) {
+  const BaseExprNode* mutate(const Variable* v) {
     auto iter = inline_mapping_.find(v);
     if (iter == inline_mapping_.end()) {
       return IRMutator::mutate(v);
     } else {
-      Expr expr = iter->second;
+      const BaseExprNode* expr = iter->second;
       // Continue to transform the value from the lookup table.
-      return expr.accept_mutator(this);
+      return expr->accept_mutator(this);
     }
   }
 
   // Remove the buffer write the inlined function.
   Stmt* mutate(const Store* v) override {
-    if (func_var_set_.count(v->base_handle().node()) > 0) {
+    if (func_var_set_.count(v->base_handle()) > 0) {
       return nullptr;
     } else {
       return IRMutator::mutate(v);
     }
   }
 
-  std::unordered_map<const Variable*, Expr> inline_mapping_;
+  std::unordered_map<const Variable*, const BaseExprNode*> inline_mapping_;
   std::vector<Function*> funcs_;
   std::unordered_set<const Variable*> func_var_set_;
 };
