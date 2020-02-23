@@ -497,7 +497,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
 
     case aten::rand_like: {
       return ComputeOneOperand(
-          "aten_rand_like", v, [](const Expr& a) {
+          "aten_rand_like", v, [](const ExprHandler& a) {
 	    return Intrinsics::make(IntrinsicsOp::kRand, a.dtype());
 	  });
     } break;

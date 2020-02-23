@@ -136,7 +136,7 @@ void IRPrinter::visit(const Let* v) {
 
 void IRPrinter::visit(const LetStmt* v) {
   const Var* var = v->var();
-  os() << var->dtype().ToCppString() << " " << var << " = " << v->value() << "; "
+  os() << var->dtype().ToCppString() << " " << *var << " = " << *v->value() << "; "
        << std::endl;
   v->body()->accept(this);
 }

@@ -208,9 +208,10 @@ class Var : public ExprNode<Var> {
     return name_hint_;
   }
 
- private:
   Var(const std::string& name_hint, Dtype dtype)
       : ExprNodeBase(dtype), name_hint_(name_hint) {}
+
+ private:
   std::string name_hint_;
 };
 
