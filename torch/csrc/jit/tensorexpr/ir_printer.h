@@ -66,6 +66,9 @@ class TORCH_API IRPrinter : public IRVisitor {
   }
 
  private:
+  template <typename Op>
+  void visitBinaryOp(const BinaryOpNode<Op>* v, const std::string& op_str);
+
   PrinterStream printer_os_;
   UniqueNameManager name_manager_;
 };
