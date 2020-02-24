@@ -314,14 +314,14 @@ class FuseAxisTransform;
 class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
  public:
   const Var& expr_var() const {
-    return func_.func_var();
+    return func_->func_var();
   }
 
   const Expr& body() const {
-    return func_.body();
+    return func_->body();
   }
 
-  const Function& func() const {
+  Function* func() const {
     return func_;
   }
 
@@ -357,13 +357,13 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
  private:
   friend class ScheduleNode;
   TensorExprOp() {}
-  explicit TensorExprOp(const Function& func)
-      : func_(func), element_stmt_(func_.ElementStmt()) {}
+  explicit TensorExprOp(Function* func)
+      : func_(func), element_stmt_(func_->ElementStmt()) {}
 
   // TODO: this needs more work.
   // The ancestor-axes mark the region to evaluate expression.
   // We still need to know the buffer this writes to.
-  Function func_;
+  Function* func_;
   Stmt element_stmt_;
   std::vector<Expr> predicates_;
 };
@@ -510,7 +510,7 @@ class TORCH_API ScheduleNode : public KernelScopedObject {
     return NewObject<SplitAxisWithMask>(loop_axis, factor, factor_on_inner);
   }
 
-  TensorExprOp* NewTensorExprOp(const Function& func) {
+  TensorExprOp* NewTensorExprOp(Function* func) {
     return NewObject<TensorExprOp>(func);
   }
 
@@ -592,15 +592,15 @@ class TORCH_API ScheduleNode : public KernelScopedObject {
 
  private:
   friend class Schedule;
-  explicit ScheduleNode(const std::vector<Tensor>& funcs);
+  explicit ScheduleNode(const std::vector<Tensor*>& funcs);
   ScheduleObject* CloneScheduleObject(ScheduleObject* object);
   ScheduleObject* LookUpCloneScheduleObject(ScheduleObject* object);
   Stmt Lower(TensorExprNode* node);
   Stmt LowerNoSibling(TensorExprNode* node);
 
-  std::vector<Tensor> output_tensors_;
-  std::vector<Tensor> internal_tensors_;
-  std::vector<Function> inlined_functions_;
+  std::vector<Tensor*> output_tensors_;
+  std::vector<Tensor*> internal_tensors_;
+  std::vector<Function*> inlined_functions_;
   TensorExprNode* root_node_ = nullptr; // not owned
   std::vector<ScheduleObject*> schedule_objects_; // Owned
   // a mapping between old and new objects during the clone process.
@@ -633,11 +633,11 @@ Object* CloneObject(Object* object) {
 
 class TORCH_API Schedule {
  public:
-  static Schedule make(const std::vector<Tensor>& funcs) {
+  static Schedule make(const std::vector<Tensor*>& funcs) {
     return Schedule(new ScheduleNode(funcs));
   }
 
-  explicit Schedule(const std::vector<Tensor>& funcs)
+  explicit Schedule(const std::vector<Tensor*>& funcs)
       : node_(new ScheduleNode(funcs)) {}
 
   Stmt Lower() {

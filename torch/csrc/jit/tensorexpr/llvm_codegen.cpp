@@ -853,6 +853,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
   } break;
       BINARY_MATH_CASE(kRemainder, "remainderf", floatTy_)
       BINARY_MATH_CASE(kAtan2, "atan2f", floatTy_)
+      BINARY_MATH_CASE(kPow, "powf", floatTy_)
 #undef BINARY_MATH_CASE
 
     default: {

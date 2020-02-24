@@ -23,7 +23,7 @@ static void unpack_dim_args(
 
 } // namespace
 
-Tensor Compute(
+Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const std::vector<Var>&)> body_func) {
@@ -31,12 +31,12 @@ Tensor Compute(
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
   Expr body = body_func(args);
-  Function func =
-      Function(func_name, std::move(dims), std::move(args), std::move(body));
-  return Tensor(func, 0);
+  Function* func = new Function(
+      func_name, std::move(dims), std::move(args), std::move(body));
+  return new Tensor(func, 0);
 }
 
-Tensor Compute(
+Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&)> body_func) {
@@ -45,12 +45,12 @@ Tensor Compute(
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
   Expr body = body_func(args[0]);
-  Function func =
-      Function(func_name, std::move(dims), std::move(args), std::move(body));
-  return Tensor(func, 0);
+  Function* func =
+      new Function(func_name, std::move(dims), std::move(args), std::move(body));
+  return new Tensor(func, 0);
 }
 
-Tensor Compute(
+Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&)> body_func) {
@@ -59,12 +59,12 @@ Tensor Compute(
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
   Expr body = body_func(args[0], args[1]);
-  Function func =
-      Function(func_name, std::move(dims), std::move(args), std::move(body));
-  return Tensor(func, 0);
+  Function* func = new Function(
+      func_name, std::move(dims), std::move(args), std::move(body));
+  return new Tensor(func, 0);
 }
 
-Tensor Compute(
+Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&)> body_func) {
@@ -73,12 +73,12 @@ Tensor Compute(
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
   Expr body = body_func(args[0], args[1], args[2]);
-  Function func =
-      Function(func_name, std::move(dims), std::move(args), std::move(body));
-  return Tensor(func, 0);
+  Function* func = new Function(
+      func_name, std::move(dims), std::move(args), std::move(body));
+  return new Tensor(func, 0);
 }
 
-Tensor Compute(
+Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
     std::function<Expr(const Var&, const Var&, const Var&, const Var&)>
@@ -88,12 +88,12 @@ Tensor Compute(
   std::vector<Var> args;
   unpack_dim_args(dim_args, &dims, &args);
   Expr body = body_func(args[0], args[1], args[2], args[3]);
-  Function func =
-      Function(func_name, std::move(dims), std::move(args), std::move(body));
-  return Tensor(func, 0);
+  Function* func = new Function(
+      func_name, std::move(dims), std::move(args), std::move(body));
+  return new Tensor(func, 0);
 }
 
-Stmt FunctionNode::ElementStmt() {
+Stmt Function::ElementStmt() {
   std::vector<Expr> strides(dims_.size());
   for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
