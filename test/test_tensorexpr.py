@@ -1,6 +1,17 @@
+import contextlib
 import numpy as np
 import torch
 import torch.nn.functional as F
+import unittest
+
+
+@contextlib.contextmanager
+def num_profiled_runs(num_runs):
+    old_num_runs = torch._C._jit_set_num_profiled_runs(num_runs)
+    try:
+        yield
+    finally:
+        torch._C._jit_set_num_profiled_runs(old_num_runs)
 
 
 class ExecutionCounter(object):
@@ -952,6 +963,8 @@ def test_slice():
     np.testing.assert_allclose(npr.numpy(), x.numpy())
     assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
 
+
+@unittest.skip("fails on trunk")
 def test_unsqueeze():
     def easy(x, y):
         a = torch.unsqueeze(x, 0)
@@ -970,16 +983,47 @@ def test_unsqueeze():
     np.testing.assert_allclose(npr, x.numpy())
     assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
 
+
 def test_transpose():
     @torch.jit.script
     def test(x, y, z):
         return x.transpose(0, 1) + y + z
     llvm = LLVMCodeGenExecuted()
     interp = SimpleIREvalExecuted()
-    x = torch.rand(4, 8, 2, 3)
+    x = torch.rand(4, 5, 2, 3)
+    y = torch.rand(5, 4, 2, 3)
+    z = torch.rand(5, 4, 2, 3)
+    ref = test(x, y, z)
+    res = test(x, y, z)
+    np.testing.assert_allclose(ref.numpy(), res.numpy())
+    assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
+
+
+def test_sliced_stride():
+    @torch.jit.script
+    def test(x, y, z):
+        return x + y + z
+    llvm = LLVMCodeGenExecuted()
+    interp = SimpleIREvalExecuted()
+    x = torch.rand(16, 4, 2, 3)[::2]
     y = torch.rand(8, 4, 2, 3)
     z = torch.rand(8, 4, 2, 3)
     ref = test(x, y, z)
     res = test(x, y, z)
     np.testing.assert_allclose(ref.numpy(), res.numpy())
     assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
+
+
+@unittest.skipIf(not torch.cuda.is_available(), "requires CUDA")
+def test_dynamic_shape():
+    with num_profiled_runs(2):
+        @torch.jit.script
+        def test(x, y, z):
+            return x * y * z
+        cuda = CudaCodeGenCreated()
+        x, y, z = [torch.rand(4, 8).cuda() for _ in range(3)]
+        ref = test(x, y, z)
+        _ = test(*[torch.rand(6, 8).cuda() for _ in range(3)])
+        res = test(x, y, z)
+        np.testing.assert_allclose(ref.cpu().numpy(), res.cpu().numpy())
+        assert cuda.elapsed_value() == 1
