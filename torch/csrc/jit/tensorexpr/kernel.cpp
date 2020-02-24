@@ -1026,7 +1026,7 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
 }
 
 TensorExprKernel::TensorExprKernel(const Graph& subgraph) {
-  KernelScope kernel_scope(kernel_arena_);
+  KernelScope kernel_scope(&kernel_arena_);
 
   // Bind inputs to buffers.
   n_inputs_ = subgraph.inputs().size();
@@ -1056,7 +1056,7 @@ TensorExprKernel::TensorExprKernel(const Graph& subgraph) {
 }
 
 void TensorExprKernel::run(Stack& stack) {
-  KernelScope kernel_scope(kernel_arena_);
+  KernelScope kernel_scope(&kernel_arena_);
   // Set up arguments (inputs, then outputs) for kernel call.
   auto inputs = last(stack, n_inputs_);
   PickAndCheckBackendType(inputs);
