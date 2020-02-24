@@ -924,34 +924,34 @@ void TensorExprKernel::CodeGenRun(
   }
 }
 
-Expr TensorExprKernel::createInputIndexExpr(
+ExprHandle TensorExprKernel::createInputIndexExpr(
     const Buffer& buffer,
-    const std::vector<Var>& axes,
+    const std::vector<VarHandle>& axes,
     const c10::VaryingShape& sizes,
     const c10::VaryingStrides& strides,
     const c10::VaryingStrides& contiguity,
-    const std::unordered_map<int64_t, Var>& sizeVars) {
+    const std::unordered_map<int64_t, VarHandle>& sizeVars) {
   TORCH_CHECK(
       axes.size() == strides.size(), "strides and axes are not the same size");
 
   std::vector<ShapeArg> strideArgs;
   std::vector<ShapeArg> sizeArgs;
-  Expr stride = 1;
-  Expr index = 0;
+  ExprHandle stride = 1;
+  ExprHandle index = 0;
   int n = axes.size() - 1;
 
   for (int i = 0; i < axes.size(); i++) {
     // For discontiguous tensors, create a parameter to represent stride.
     if (!*contiguity[i]) {
-      Var v =
-          Var{"stride_" + buffer.data().name_hint() + "_" + std::to_string(i),
+      VarHandle v =
+          VarHandle{"stride_" + buffer.data().name_hint() + "_" + std::to_string(i),
               kInt32};
       strideArgs.emplace_back(n - i, v);
       stride = v;
     }
 
     // If size is dynamic (indicated by negative value) create a size param.
-    Expr size;
+    ExprHandle size;
     auto sizeVal = *sizes[n - i];
     if (sizeVal < 0) {
       auto it = sizeVars.find(sizeVal);
@@ -979,11 +979,11 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
       Buffer in_buffer(
           "t" + input->debugName(), texprType(tt->scalarType()), {0});
       std::vector<DimArg> inputTensorDims;
-      std::unordered_map<int64_t, Var> sizeVars;
+      std::unordered_map<int64_t, VarHandle> sizeVars;
       for (int i = 0; i < *tt->sizes().size(); i++) {
         auto const& size = *tt->sizes()[i];
         if (size < 0) {
-          Var v(
+          VarHandle v(
               "size_" + std::to_string(input->unique()) + "_" +
                   std::to_string(i),
               kInt32);
@@ -1061,7 +1061,7 @@ void TensorExprKernel::run(Stack& stack) {
   auto inputs = last(stack, n_inputs_);
   PickAndCheckBackendType(inputs);
 
-  std::map<const BaseExprNode*, int32_t> varToSize;
+  std::map<const Expr*, int32_t> varToSize;
 
   std::vector<CodeGen::CallArg> run_args;
   for (int i = 0; i < inputs.size(); i++) {

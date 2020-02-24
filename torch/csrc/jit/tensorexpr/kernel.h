@@ -20,7 +20,7 @@ inline std::vector<int64_t> bufferSizes(const T& t) {
 template <typename T>
 inline std::vector<ExprHandle> computeIndicesToBroadcast(
     const std::vector<T>& output_axes,
-    const std::vector<Expr>& input_sizes) {
+    const std::vector<ExprHandle>& input_sizes) {
   TORCH_CHECK(
       output_axes.size() >= input_sizes.size(),
       "Cannot broadcast to a lower rank tensor");
@@ -137,20 +137,20 @@ class TensorExprKernel {
 
   void bindInput(const torch::jit::Value* input);
 
-  Expr createInputIndexExpr(
+  ExprHandle createInputIndexExpr(
       const Buffer& buffer,
-      const std::vector<Var>& axes,
+      const std::vector<VarHandle>& axes,
       const c10::VaryingShape& sizes,
       const c10::VaryingStrides& strides,
       const c10::VaryingStrides& contiguity,
-      const std::unordered_map<int64_t, Var>& sizeVars);
+      const std::unordered_map<int64_t, VarHandle>& sizeVars);
 
  private:
   struct ShapeArg {
     size_t idx;
-    Var var;
+    VarHandle var;
 
-    ShapeArg(size_t i, Var v) : idx(i), var(v) {}
+    ShapeArg(size_t i, VarHandle v) : idx(i), var(v) {}
   };
 
   struct KernelArg {
