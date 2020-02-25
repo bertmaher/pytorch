@@ -583,37 +583,37 @@ class TestTensorExprFuser(BaseTestClass):
             c = torch.pow(torch.add(x, y), 2.0)
             return c
 
-    	def test_sigmoid_backward(x, y):
-    	    x_2 = torch.mul(x, x)
-    	    c = torch.sigmoid(x_2)
-    	    torch.autograd.backward(c, y)
-    	    return c.detach()
+        def test_sigmoid_backward(x, y):
+            x_2 = torch.mul(x, x)
+            c = torch.sigmoid(x_2)
+            torch.autograd.backward(c, y)
+            return c.detach()
 
-    	def test_tanh_backward(x, y):
-    	    x_2 = torch.mul(x, x)
-    	    c = torch.tanh(x_2)
-    	    torch.autograd.backward(c, y)
-    	    return c.detach()
+        def test_tanh_backward(x, y):
+           x_2 = torch.mul(x, x)
+           c = torch.tanh(x_2)
+           torch.autograd.backward(c, y)
+           return c.detach()
 
-    	fns = {
-    	    test_atan2,
-    	    test_gt,
-    	    test_ge,
-    	    test_lt,
-    	    test_le,
-    	    test_lerp,
-    	    test_mul,
-    	    test_ne,
-    	    test_div,
-    	    test_eq,
-    	    test_fmod,
-    	    test_sub,
-    	    test_remainder,
-    	    test_pow,
-    	    # to fix the backward path, need script instead of trace
-    	    # test_sigmoid_backward,
-    	    # test_tanh_backward,
-    	}
+        fns = {
+            test_atan2,
+            test_gt,
+            test_ge,
+            test_lt,
+            test_le,
+            test_lerp,
+            test_mul,
+            test_ne,
+            test_div,
+            test_eq,
+            test_fmod,
+            test_sub,
+            test_remainder,
+            test_pow,
+            # to fix the backward path, need script instead of trace
+            # test_sigmoid_backward,
+            # test_tanh_backward,
+        }
         device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
         for torch_fn in fns:
             for dev in device_options:
@@ -627,7 +627,7 @@ class TestTensorExprFuser(BaseTestClass):
                 np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy(), atol=2e-3)
 
     def test_unary_ops(self):
-    	def test_cast_float(x,  y):
+        def test_cast_float(x,  y):
             c = torch.ops.aten._cast_Float(torch.add(x, y))
             return c
 
