@@ -13,6 +13,16 @@ def num_profiled_runs(num_runs):
     finally:
         torch._C._jit_set_num_profiled_runs(old_num_runs)
 
+@contextlib.contextmanager
+def existing_fuser_disabled():
+    # TODO: read the old value and restore it rather than always set to True on
+    # exit
+    torch._C._jit_override_can_fuse_on_gpu(False)
+    try:
+        yield
+    finally:
+        torch._C._jit_override_can_fuse_on_gpu(True)
+
 
 class ExecutionCounter(object):
     def __init__(self, name):
@@ -139,7 +149,8 @@ def test_three_arg_cuda():
     a = torch.rand(M, N, device="cuda")
     b = torch.rand(M, N, device="cuda")
     c = torch.rand(M, N, device="cuda")
-    x = traced(a, b, c)
+    with existing_fuser_disabled():
+        x = traced(a, b, c)
     npr = a.cpu().numpy() + b.cpu().numpy() + c.cpu().numpy()
     np.testing.assert_allclose(npr, x.cpu().numpy())
     assert cuda_cg_executed.elapsed_value() >= 1
@@ -176,7 +187,8 @@ def test_broadcast_cuda():
         a = torch.rand(*a_shape, device="cuda")
         b = torch.rand(*b_shape, device="cuda")
         c = torch.rand(*c_shape, device="cuda")
-        x = traced(a, b, c)
+        with existing_fuser_disabled():
+            x = traced(a, b, c)
         npr = a.cpu().numpy() + b.cpu().numpy() + c.cpu().numpy()
         np.testing.assert_allclose(npr, x.cpu().numpy())
         assert cuda_cg_executed.elapsed_value() >= 1
@@ -777,7 +789,8 @@ def test_unary_ops():
             cc.fill(np.nan)
             nans = torch.from_numpy(cc).to(dev)
             traced = torch.jit.trace(torch_fn, (ins, ins))
-            x = traced(rand_a, rand_b)
+            with existing_fuser_disabled():
+                x = traced(rand_a, rand_b)
             y = torch_fn(rand_a, rand_b)
             np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy(), atol=2e-3)
             # nans
@@ -1021,9 +1034,10 @@ def test_dynamic_shape():
         def test(x, y, z):
             return x * y * z
         cuda = CudaCodeGenCreated()
-        x, y, z = [torch.rand(4, 8).cuda() for _ in range(3)]
-        ref = test(x, y, z)
-        _ = test(*[torch.rand(6, 8).cuda() for _ in range(3)])
-        res = test(x, y, z)
+        with existing_fuser_disabled():
+            x, y, z = [torch.rand(4, 8).cuda() for _ in range(3)]
+            ref = test(x, y, z)
+            _ = test(*[torch.rand(6, 8).cuda() for _ in range(3)])
+            res = test(x, y, z)
         np.testing.assert_allclose(ref.cpu().numpy(), res.cpu().numpy())
         assert cuda.elapsed_value() == 1
