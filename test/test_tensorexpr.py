@@ -1057,9 +1057,8 @@ class TestTensorExprFuser(BaseTestClass):
             np.testing.assert_allclose(ref.cpu().numpy(), res.cpu().numpy())
             assert cuda.elapsed_value() == 1
 
-    @unittest.skipIf(not torch.cuda.is_available(), "requires CUDA")
     def test_bitwise_ops(self):
-        devices = ["cpu"] if torch.cuda.is_available() else []
+        devices = ["cuda", "cpu"] if torch.cuda.is_available() else ["cpu"]
         def run_and(x, y):
             return x & (x & y)
 
