@@ -780,7 +780,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
     default: {
       throw std::runtime_error("Unhandled node kind");
     }
-    }
+  }
 }
 
 void TensorExprKernel::LowerToBackend(BackendType backend_type) {
