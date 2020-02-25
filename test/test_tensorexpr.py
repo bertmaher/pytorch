@@ -389,7 +389,6 @@ class TestTensorExprFuser(BaseTestClass):
         np.testing.assert_allclose(np.ones(1024), x.numpy())
 
 
-<<<<<<< HEAD
     def test_ne(self):
         def easy(x, y):
             c = torch.ne(x, y)
@@ -427,139 +426,6 @@ class TestTensorExprFuser(BaseTestClass):
         x = traced(a, b)
         np.testing.assert_allclose(np.ones(1024), x.numpy())
 
-=======
-def test_add_const_rhs():
-    def test(x):
-        return x + 3.0
-
-    traced = torch.jit.trace(test, torch.rand(4))
-    x = torch.rand(4)
-    y = traced(x)
-    np.testing.assert_allclose(x.numpy() + 3.0, y.numpy())
-
-
-def test_int_output():
-    def test(x, y, z):
-        return x * y * z
-
-    xs = [(torch.rand(4) * 3 + 1).to(torch.int32) for i in range(3)]
-    x, y, z = xs
-    xn, yn, zn = [t.numpy() for t in xs]
-    traced = torch.jit.trace(test, (x, y, z))
-    res = traced(x, y, z)
-    np.testing.assert_allclose(xn * yn * zn, res.numpy())
-
-
-def test_binary_ops():
-    def test_atan2(x, y):
-        c = torch.atan2(torch.add(x, y), y)
-        return c
-
-    def test_gt(x, y):
-        c = torch.gt(torch.add(x, y), y)
-        return c
-
-    def test_ge(x, y):
-        c = torch.ge(torch.add(x, y), y)
-        return c
-
-    def test_lt(x, y):
-        c = torch.lt(torch.add(x, y), y)
-        return c
-
-    def test_le(x, y):
-        c = torch.le(torch.add(x, y), y)
-        return c
-
-    def test_lerp(x, y):
-        c = torch.lerp(torch.add(x, 1), x, 2.0)
-        return c
-
-    def test_mul(x, y):
-        c = torch.mul(torch.add(x, y), y)
-        return c
-
-    def test_ne(x, y):
-        c = torch.ne(torch.add(x, y), y)
-        return c
-
-    def test_div(x, y):
-        c = torch.div(torch.add(x, y), 2)
-        return c
-
-    def test_eq(x, y):
-        c = torch.eq(torch.add(x, y), y)
-        return c
-
-    def test_fmod(x, y):
-        c = torch.fmod(torch.add(x, y), 2)
-        return c
-
-    def test_sub(x, y):
-        c = torch.sub(torch.add(x, y), x)
-        return c
-
-    def test_remainder(x, y):
-        c = torch.remainder(torch.add(x, y), 3.0)
-        return c
-
-    def test_pow(x, y):
-        c = torch.pow(torch.add(x, y), 2.0)
-        return c
-
-    def test_sigmoid_backward(x, y):
-        x_2 = torch.mul(x, x)
-        c = torch.sigmoid(x_2)
-        torch.autograd.backward(c, y)
-        return c.detach()
-
-    def test_tanh_backward(x, y):
-        x_2 = torch.mul(x, x)
-        c = torch.tanh(x_2)
-        torch.autograd.backward(c, y)
-        return c.detach()
-
-    fns = {
-        test_atan2,
-        test_gt,
-        test_ge,
-        test_lt,
-        test_le,
-        test_lerp,
-        test_mul,
-        test_ne,
-        test_div,
-        test_eq,
-        test_fmod,
-        test_sub,
-        test_remainder,
-        test_pow,
-        # to fix the backward path
-        test_sigmoid_backward,
-        test_tanh_backward,
-    }
-
-    device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
-    for torch_fn in fns:
-        for dev in device_options:
-            rand_a = torch.rand(1024, device=dev, requires_grad=True)
-            rand_b = torch.rand(1024, device=dev)
-            traced = torch.jit.script(torch_fn)
-            x = traced(rand_a, rand_b)
-            y = torch_fn(rand_a, rand_b)
-            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy(), atol=2e-3)
-
-
-def test_unary_ops():
-
-    def test_cast_float(x,  y):
-        c = torch.ops.aten._cast_Float(torch.add(x, y))
-        return c
-
-    def test_round(x, y):
-        c = torch.round(torch.add(x, y))
-        return c
->>>>>>> Add the cast_float, backward ops and also fix the remainder
 
     def test_le(self):
         def easy(x, y):
@@ -607,7 +473,6 @@ def test_unary_ops():
 
         device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ["cpu"]
 
-<<<<<<< HEAD
         for dev in device_options:
             traced = torch.jit.trace(test, (torch.zeros(1024, device=dev)))
             a = 20.0 * torch.rand(1024, device=dev) - 10.0
@@ -624,263 +489,6 @@ def test_unary_ops():
             a = 20.0 * torch.rand(1024, device=dev) - 10.0
             an = a.cpu().numpy()
             np.testing.assert_allclose(traced(a).cpu(), np.clip((np.maximum(0, an)), 0, 0.5))
-=======
-    def test_tan(x, y):
-        c = torch.tan(torch.add(x, y))
-        return c
-
-    def test_atan(x, y):
-        c = torch.atan(torch.add(x, y))
-        return c
-
-    def test_tanh(x, y):
-        c = torch.tanh(torch.add(x, y))
-        return c
-
-    def test_sqrt(x, y):
-        c = torch.sqrt(torch.add(x, y))
-        return c
-
-    def test_rsqrt(x, y):
-        c = torch.rsqrt(torch.add(x, y))
-        return c
-
-    def test_floor(x, y):
-        c = torch.floor(torch.add(x, y))
-        return c
-
-    def test_ceil(x, y):
-        c = torch.ceil(torch.add(x, y))
-        return c
-
-    def test_trunc(x, y):
-        c = torch.trunc(torch.add(x, y))
-        return c
-
-    def test_abs(x, y):
-        c = torch.abs(torch.add(x, y))
-        return c
-
-    def test_log(x, y):
-        c = torch.log(torch.add(x, y))
-        return c
-
-    def test_log2(x, y):
-        c = torch.log2(torch.add(x, y))
-        return c
-
-    def test_log10(x, y):
-        c = torch.log10(torch.add(x, y))
-        return c
-
-    def test_log1p(x, y):
-        c = torch.log1p(torch.add(x, y))
-        return c
-
-    def test_rqrt(x, y):
-        c = torch.rsqrt(torch.add(x, y))
-        return c
-
-    def test_erf(x, y):
-        c = torch.erf(torch.add(x, y))
-        return c
-
-    def test_exp(x, y):
-        c = torch.exp(torch.add(x, y))
-        return c
-
-    def test_expm1(x, y):
-        c = torch.expm1(torch.add(x, y))
-        return c
-
-    def test_erfc(x, y):
-        c = torch.erfc(torch.add(x, y))
-        return c
-
-    def test_frac(x, y):
-        c = torch.frac(torch.add(x, y))
-        return c
-
-    def test_lgamma(x, y):
-        c = torch.lgamma(torch.add(x, y))
-        return c
-
-    def test_sigmoid(x, y):
-        c = torch.sigmoid(torch.add(x, y))
-        return c
-
-    def test_reciprocal(x, y):
-        c = torch.reciprocal(torch.add(x, y))
-        return c
-
-    def test_neg(x, y):
-        c = torch.neg(torch.add(x, y))
-        return c
-
-    def test_relu(x, y):
-        c = torch.relu(torch.add(x, y))
-        return c
-
-    def test_threshold(x, y):
-        c = F.threshold(torch.add(x, y), 0.5, 10)
-        return c
-
-    fns = {
-        test_cast_float,
-        test_round,
-        test_sin,
-        test_asin,
-        test_sinh,
-        test_cos,
-        test_acos,
-        test_cosh,
-        test_tan,
-        test_atan,
-        test_tanh,
-        test_sqrt,
-        test_floor,
-        test_ceil,
-        test_trunc,
-        test_abs,
-        test_log,
-        test_log2,
-        test_log10,
-        test_log1p,
-        test_rsqrt,
-        test_exp,
-        test_expm1,
-        test_erf,
-        test_erfc,
-        test_frac,
-        test_lgamma,
-        test_sigmoid,
-        test_reciprocal,
-        test_threshold,
-        test_neg,
-        test_relu,
-    }
-    device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
-
-    for torch_fn in fns:
-        torch_fn = test_cast_float
-        for dev in device_options:
-            rand_a = torch.rand((1024, 2), device=dev)
-            rand_b = torch.rand((1024, 2), device=dev)
-            ins = 20 * torch.rand((1024, 2), device=dev)
-            cc = np.array(1024, dtype=float)
-            cc.fill(np.nan)
-            nans = torch.from_numpy(cc).to(dev)
-            traced = torch.jit.trace(torch_fn, (ins, ins))
-            x = traced(rand_a, rand_b)
-            y = torch_fn(rand_a, rand_b)
-            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy(), atol=2e-3)
-            # nans
-            traced = torch.jit.trace(torch_fn, (ins, ins))
-            x = traced(nans, rand_b)
-            y = torch_fn(nans, rand_b)
-            np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy())
-        exit()
-
-
-def test_nans():
-    def test_max(x, y):
-        return torch.max(2 * x, 2 * y)
-
-    def test_min(x, y):
-        return torch.min(2 * x, 2 * y)
-
-    tmax = torch.jit.trace(test_max, (torch.rand(1), torch.rand(1)))
-    tmin = torch.jit.trace(test_min, (torch.rand(1), torch.rand(1)))
-
-    x = torch.tensor([np.nan])
-    y = torch.tensor([1.0])
-
-    assert not np.isnan(tmin(x, y).item())
-    assert np.isnan(tmin(y, x).item())
-    assert not np.isnan(tmax(x, y).item())
-    assert np.isnan(tmax(y, x).item())
-
-
-def test_remainder():
-    def run_remainder(x, y):
-        c = torch.remainder(torch.add(x, y), x)
-        return c
-
-    a = torch.rand(1024, dtype=float)
-    b = torch.rand(1024, dtype=float)
-    zeros = torch.zeros(1024, dtype=float)
-    cc = np.array(1024, dtype=float)
-    cc.fill(np.nan)
-    nans = torch.from_numpy(cc)
-
-    # random floats
-    traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
-    x = traced(a, b)
-    y = run_remainder(a, b)
-    np.testing.assert_allclose(x.numpy(), y.numpy())
-
-    # div by 0
-    traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
-    x = traced(zeros, a)
-    y = run_remainder(zeros, a)
-    np.testing.assert_allclose(x.numpy(), y.numpy())
-
-    # numerators and denominatos are nan
-    traced = torch.jit.trace(run_remainder, (torch.zeros(1024), torch.zeros(1024)))
-    x = traced(nans, a)
-    y = run_remainder(nans, a)
-    np.testing.assert_allclose(x.numpy(), y.numpy())
-
-
-def test_multioutput():
-    def easy(x):
-        b = x + 1
-        c = b + b
-        return (b, c)
-
-    traced = torch.jit.trace(easy, (torch.zeros(1024)))
-
-    a = torch.zeros(1024)
-    b, c = traced(a)
-    bp = a.numpy() + 1
-    cp = bp + bp
-    np.testing.assert_allclose(b.numpy(), bp)
-    np.testing.assert_allclose(c.numpy(), cp)
-
-
-def test_chunk():
-    def easy(x):
-        y = x + 1
-        aaa, bbb = torch.chunk(y, 2)
-        return aaa + bbb
-
-    traced = torch.jit.trace(easy, (torch.zeros(1024, 1024)))
-
-    a = torch.zeros(1024, 1024)
-    x = traced(a)
-    npr = a.numpy()
-    npr2 = npr + 1
-    npr_a, npr_b = np.array_split(npr2, 2)
-    np.testing.assert_allclose(npr_a + npr_b, x.numpy())
-
-
-def test_cat():
-    def easy(x, y):
-        a = x + 1
-        b = y + 2
-        c = torch.cat([a, b], dim=1)
-        return c
-
-    traced = torch.jit.trace(easy, (torch.zeros(1024, 1024), torch.zeros(1024, 1024)))
-
-    a = torch.zeros(1024, 1024)
-    x = traced(a, a)
-    npr = a.numpy()
-    npr_x = npr + 1
-    npr_y = npr + 2
-    npr_c = np.concatenate((npr_x, npr_y), axis=1)
-    np.testing.assert_allclose(npr_c, x.numpy())
->>>>>>> Add the cast_float, backward ops and also fix the remainder
 
 
     def test_reps(self):
@@ -975,23 +583,37 @@ def test_cat():
             c = torch.pow(torch.add(x, y), 2.0)
             return c
 
-        fns = {
-            test_atan2,
-            test_gt,
-            test_ge,
-            test_lt,
-            test_le,
-            test_lerp,
-            test_mul,
-            test_ne,
-            test_div,
-            test_eq,
-            #test_fmod,
-            test_sub,
-            # test_remainder,
-            test_pow,
-        }
+    	def test_sigmoid_backward(x, y):
+    	    x_2 = torch.mul(x, x)
+    	    c = torch.sigmoid(x_2)
+    	    torch.autograd.backward(c, y)
+    	    return c.detach()
 
+    	def test_tanh_backward(x, y):
+    	    x_2 = torch.mul(x, x)
+    	    c = torch.tanh(x_2)
+    	    torch.autograd.backward(c, y)
+    	    return c.detach()
+
+    	fns = {
+    	    test_atan2,
+    	    test_gt,
+    	    test_ge,
+    	    test_lt,
+    	    test_le,
+    	    test_lerp,
+    	    test_mul,
+    	    test_ne,
+    	    test_div,
+    	    test_eq,
+    	    test_fmod,
+    	    test_sub,
+    	    test_remainder,
+    	    test_pow,
+    	    # to fix the backward path, need script instead of trace
+    	    # test_sigmoid_backward,
+    	    # test_tanh_backward,
+    	}
         device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
         for torch_fn in fns:
             for dev in device_options:
@@ -1005,6 +627,9 @@ def test_cat():
                 np.testing.assert_allclose(x.cpu().numpy(), y.cpu().numpy(), atol=2e-3)
 
     def test_unary_ops(self):
+    	def test_cast_float(x,  y):
+            c = torch.ops.aten._cast_Float(torch.add(x, y))
+            return c
 
         def test_round(x, y):
             c = torch.round(torch.add(x, y))
@@ -1346,7 +971,6 @@ def test_cat():
 #    r = test(x, y, z)
 #    assert llvm.elapsed_value == 1 or interp.elapsed_value() == 1
 
-<<<<<<< HEAD
     def test_slice(self):
         def easy(x, y):
             a = x[0:512:2]
@@ -1432,58 +1056,3 @@ def test_cat():
 
 if __name__ == '__main__':
     unittest.main()
-=======
-def test_slice():
-    def easy(x, y):
-        a = x[0:512:2]
-        b = y[0:512:2]
-        return a + b
-
-    traced = torch.jit.trace(easy, (torch.ones(1024, 1024), torch.zeros(1024, 1024)))
-
-    llvm = LLVMCodeGenExecuted()
-    interp = SimpleIREvalExecuted()
-
-    a = torch.ones(1024, 1024)
-    x = traced(a, a)
-    npr = a[0:512:2]
-    npr = npr + npr
-    np.testing.assert_allclose(npr.numpy(), x.numpy())
-    assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
-
-def test_unsqueeze():
-    def easy(x, y):
-        a = torch.unsqueeze(x, 0)
-        b = torch.unsqueeze(y, 0)
-        return a + b
-
-    traced = torch.jit.trace(easy, (torch.ones(1024, 1024), torch.zeros(1024, 1024)))
-
-    llvm = LLVMCodeGenExecuted()
-    interp = SimpleIREvalExecuted()
-
-    a = torch.rand(1024, 1024)
-    x = traced(a, a)
-    npr = np.expand_dims(a, 0)
-    npr = npr + npr
-    np.testing.assert_allclose(npr, x.numpy())
-    assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
-
-def test_transpose():
-    @torch.jit.script
-    def test(x, y, z):
-        return x.transpose(0, 1) + y + z
-    llvm = LLVMCodeGenExecuted()
-    interp = SimpleIREvalExecuted()
-    x = torch.rand(4, 8, 2, 3)
-    y = torch.rand(8, 4, 2, 3)
-    z = torch.rand(8, 4, 2, 3)
-    ref = test(x, y, z)
-    res = test(x, y, z)
-    np.testing.assert_allclose(ref.numpy(), res.numpy())
-    assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
-
-if __name__ == "__main__":
-    test_binary_ops()
-
->>>>>>> Add the cast_float, backward ops and also fix the remainder
