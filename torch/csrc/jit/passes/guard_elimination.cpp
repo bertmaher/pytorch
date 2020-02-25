@@ -390,6 +390,9 @@ struct GuardElimination {
       case aten::lgamma:
       case aten::reciprocal:
       case aten::addcmul:
+      case aten::_cast_Float:
+      case aten::_sigmoid_backward:
+      case aten::_tanh_backward:
       case prim::inflate: {
         // auto ttype = type->cast<TensorType>();
         // TORCH_INTERNAL_ASSERT(ttype);
