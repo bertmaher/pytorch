@@ -86,21 +86,22 @@ void testExprSimple02() {
     VarHandle x_tail("x_tail", kInt32);
     VarHandle f("f", kHandle);
     ExprHandle x_1 = x_outer * 4 + x_inner;
+    ExprHandle x_outer_end = (ExprHandle(26) - 0) / 4;
     Stmt* stmt1 = For::make(
         x_outer,
         0,
-        6,
+        x_outer_end,
         For::make(
             x_inner,
             0,
             4,
             For::make(
                 y, 0, 5, Store::make(f, x_1 * 5 + y * 1, func(x_1, y), 1))));
-    ExprHandle x_2 = x_tail + ExprHandle(6) * 4;
+    ExprHandle x_2 = x_tail + x_outer_end * 4;
     Stmt* stmt2 = For::make(
         x_tail,
         0,
-        2,
+        (ExprHandle(26) - 0) % 4,
         For::make(y, 0, 5, Store::make(f, x_2 * 5 + y * 1, func(x_2, y), 1)));
     Stmt* stmt = Block::make({stmt1, stmt2});
 
@@ -117,6 +118,70 @@ void testExprSimple02() {
     ir_eval(f_v);
 
     for (int x = 0; x < 26; x++) {
+      for (int y = 0; y < 5; y++) {
+        f_ref(x, y) = 1 + x * x + y * y;
+      }
+    }
+
+    ExpectAllNear(f_v, f_ref, 1e-5);
+  }
+}
+
+void testExprSplitWithTailNone() {
+  KernelScope kernel_scope;
+  auto func = [](const ExprHandle& x, const ExprHandle& y) {
+    return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
+  };
+  Tensor* tensor = Compute("f", {{24, "x"}, {5, "y"}}, func);
+  VarHandle x = tensor->function()->arg(0);
+  VarHandle y = tensor->function()->arg(1);
+  Schedule sch = Schedule::make({tensor});
+  VarHandle x_outer;
+  VarHandle x_inner;
+  VarHandle x_tail;
+  TensorOperation* tail_op;
+  tensor->SplitWithTail(x, 4, true, &x_outer, &x_inner, &x_tail, &tail_op);
+
+  Stmt* stmt = sch.Lower();
+  std::ostringstream oss;
+  oss << stmt;
+  ASSERT_GT(oss.str().size(), 200);
+  ASSERT_LT(oss.str().size(), 600);
+
+  {
+    // Compare to a reference loop structure structure.
+    VarHandle x_outer("x_outer", kInt32);
+    VarHandle x_inner("x_inner", kInt32);
+    VarHandle y("y", kInt32);
+    VarHandle x_tail("x_tail", kInt32);
+    VarHandle f("f", kHandle);
+    ExprHandle x_1 = x_outer * 4 + x_inner;
+    ExprHandle x_outer_end = (ExprHandle(24) - 0) / 4;
+    Stmt* stmt = For::make(
+        x_outer,
+        0,
+        x_outer_end,
+        For::make(
+            x_inner,
+            0,
+            4,
+            For::make(
+                y, 0, 5, Store::make(f, x_1 * 5 + y * 1, func(x_1, y), 1))));
+    //Stmt stmt = Block::make({stmt1, stmt2});
+
+    std::ostringstream oss_ref;
+    oss_ref << stmt;
+    ASSERT_EQ(oss.str(), oss_ref.str());
+  }
+
+  {
+    PaddedBuffer<float> f_v(24, 5, "f_v");
+    PaddedBuffer<float> f_ref(24, 5, "f_res");
+
+    SimpleIREvaluator ir_eval(stmt, tensor);
+    ir_eval(f_v);
+
+    for (int x = 0; x < 24; x++) {
       for (int y = 0; y < 5; y++) {
         f_ref(x, y) = 1 + x * x + y * y;
       }

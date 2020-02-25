@@ -22,6 +22,10 @@ ExprHandle ExprHandle::operator/(const ExprHandle& other) const {
   return Div::make(*this, other);
 }
 
+ExprHandle ExprHandle::operator%(const ExprHandle& other) const {
+  return Mod::make(*this, other);
+}
+
 ExprHandle ExprHandle::operator==(const ExprHandle& other) const {
   return CompareSelect::make(*this, other, CompareSelectOperation::kEQ);
 }
