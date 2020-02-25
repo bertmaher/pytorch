@@ -49,3 +49,48 @@ This step creates a `For` statement for each loop-axis and emits `element_stmt` 
 
 ## Step 5: Pass the final statement for codegen (LLVM/CUDA/IREval)
 Codegen is implemented as an IR visitor over the statements produced in the previous step.
+
+# Tensor Expressions Language
+There are several core concepts in the Tensor Expression engine, this section defines them and shows how they connect to each other.
+
+## Expr
+Expr represents a node in the abstract syntax tree of a tensor expression. Leaf nodes in such tree are either a symbolic variable (`Var`), a constant (`IntImm` or `FloatImm`), `Buffer`, or a `Tensor`. Non-leaf nodes refer to other expressions and represent various operations. E.g. `Add` has two operands: `lhs` and `rhs`, both of which are also `Expr`.
+
+## Tensor
+`Tensor` is a bundle of
+1) a variable `Var` defining which tensor this `Tensor` expression is describing
+2) a list of indices `args` (each of them is `Var`)
+3) a list of expressions for dimensions `dims` (each of them is `Expr`)
+4) a computational expression `body` (of `Expr` type)
+
+## Buffer
+`Buffer`s are essentially `Tensor`s without a `body` - they represent an indexed access to something not defined in the tensor-expression.
+`Buffer` is a bundle of
+1) a `Var` defining which buffer this `Buffer` expression is defining
+2) a list of indices `args` (each of them is `Var`)
+3) a list of expressions for dimensions `dims` (each of them is `Expr`)
+
+## Example
+Suppose we'd like to represent the following expression:
+```
+A[i,j] = B[i,j] + 7
+```
+where both `A` and `B` are 100x100 tensors.
+On the top level we would have a single `Tensor` expression with:
+1) a variable referring to "A"
+2) list of two indices referring to "i" and "j"
+3) list of two `IntImm` constants describing sizes (both of them would carry the value of 100)
+4) a body expression which is an `Add` with two operands: `Buffer` describing `B[i,j]` access and an `IntImm` constant `7`.
+
+The buffer expression describing `B[i,j]` would have similar properties:
+1) a variable referring to "B"
+2) list of two indices referring to "i" and "j"
+3) list of two `IntImm` constants describing sizes (both of them would carry the value of 100)
+
+In contrast to the tensor expression, the buffer expression would not have a body - it represents a symbolic access.
+
+## Function
+`Function` represents several tensor computations bundled together. In fact, `Tensor`s are implemented via `Function`s. A function allows us to specify that several different tensor expressions operate over the same set of indices and dimensions.
+
+# Memory model
+TBD
