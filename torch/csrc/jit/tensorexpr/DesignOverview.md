@@ -12,7 +12,7 @@ User construct a kernel from tensor expressions, like:
     Tensor* x = Compute(
         "x",
         {{M, "m1"}, {N, "n1"}, {K, "k1"}},
-        [&](const Var& m, const Var& n, const Var& k) {
+        [&](const VarHandle& m, const VarHandle& n, const VarHandle& k) {
           return a_buf(m, n) * b_buf(n, k);
         });
     Tensor* y = ...;
@@ -64,7 +64,7 @@ Expr represents a node in the abstract syntax tree of a tensor expression. Leaf 
 4) a computational expression `body` (of `Expr` type)
 
 ## Buffer
-`Buffer`s are essentially `Tensor`s without a `body` - they represent an indexed access to something not defined in the tensor-expression.
+`Buffer`s are essentially `Tensor`s without a `body` - they represent an indexed access to "tensors" that is outsied the tensor-expression system.
 `Buffer` is a bundle of
 1) a `Var` defining which buffer this `Buffer` expression is defining
 2) a list of indices `args` (each of them is `Var`)
@@ -89,8 +89,25 @@ The buffer expression describing `B[i,j]` would have similar properties:
 
 In contrast to the tensor expression, the buffer expression would not have a body - it represents a symbolic access.
 
+The code for constructing such an expression could look like this:
+
+```
+    Buffer B("B", kFloat32, {100, 100});
+    Tensor* A = Compute(
+        "A",
+        {{100, "i"}, {100, "j"}},
+        [&](const VarHandle& i, const VarHandle& j) {
+          return B(i, j) + 7;
+        });
+```
+
 ## Function
 `Function` represents several tensor computations bundled together. In fact, `Tensor`s are implemented via `Function`s. A function allows us to specify that several different tensor expressions operate over the same set of indices and dimensions.
+
+## Stmt
+`Stmt`s are what tensor expressions are lowered to before the codegen. They represent the computation in a less abstract way, compared to pure tensor expressions. Statements are built upon expressions, i.e. they can contain expressions as operands. Statement is a unit that a codegen works with, it is incorrect to try to pass an expression to a codegen.
+An example of statements are `Store` and `For`.
+TODO: provide more detailed example/description for the stmt.
 
 # Memory model
 TBD
