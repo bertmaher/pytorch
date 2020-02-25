@@ -724,10 +724,8 @@ SplitAxisTransform::SplitAxisTransform(
   const ExprHandle& start_expr = loop_range.start();
   const ExprHandle& stop_expr = loop_range.stop();
 
-  // For now, only support static sizes for split axes.
-  // TODO: Add support for dynamic ranges.
-  start_ = EvalConstExpr<int>(start_expr);
-  stop_ = EvalConstExpr<int>(stop_expr);
+  start_ = start_expr;
+  stop_ = stop_expr;
 }
 
 SplitAxisWithTail::SplitAxisWithTail(
@@ -738,10 +736,19 @@ SplitAxisWithTail::SplitAxisWithTail(
   // TODO: support factor_on_inner == false;
   CHECK(factor_on_inner) << "only factor_on_inner = True is supported for now";
 
-  int size = this->stop() - this->start();
-  int split_count = size / factor;
-  int tail_size = size % factor;
-  int output_group_count = (tail_size > 0) ? 2 : 1;
+  auto const& size = this->stop() - this->start();
+  int output_group_count = 2;
+  if (this->stop().AsNode<IntImm>() && this->start().AsNode<IntImm>()) {
+    int startVal = this->start().AsNode<IntImm>()->value();
+    int stopVal = this->stop().AsNode<IntImm>()->value();
+    int sizeVal = stopVal - startVal;
+    int tail_size = sizeVal % factor;
+    if (tail_size == 0) {
+      output_group_count = 1;
+    }
+  }
+  auto const& split_count = size / factor;
+  auto const& tail_size = size % factor;
 
   this->set_output_group_count(output_group_count);
   // The main group
@@ -754,7 +761,7 @@ SplitAxisWithTail::SplitAxisWithTail(
   this->set_output_group(0, {outer, inner});
 
   // The tail group
-  if (tail_size) {
+  if (output_group_count == 2) {
     LoopAxis* tail = this->NewAxis(
         VarHandle(loop_var_name + "_tail", loop_var_dtype), Range(0, tail_size));
     this->set_output_group(1, {tail});
@@ -771,14 +778,20 @@ SplitAxisWithMask::SplitAxisWithMask(
   CHECK(factor_on_inner) << "only factor_on_inner = True is supported for now";
 
   // TODO: Support dynamic shapes
-  int size = this->stop() - this->start();
-  if (size % factor != 0) {
-    CHECK(this->start() == 0) << "Non-zero start is not implemented yet";
-    if (this->stop() % factor != 0) {
-      predicate_ = CompareSelect::make(loop_axis->var(), this->stop(), kLT);
+  auto const& sizeExpr = this->stop() - this->start();
+  bool needsPredicate = true;
+  if (this->stop().AsNode<IntImm>() && this->start().AsNode<IntImm>()) {
+    int size = stop().AsNode<IntImm>()->value() - start().AsNode<IntImm>()->value();
+    if ((size % factor) == 0) {
+      needsPredicate = false;
     }
   }
-  int split_count = (size + factor - 1) / factor;
+  if (needsPredicate) {
+    IntImm* start = this->start().AsNode<IntImm>();
+    CHECK(start && start->value() == 0) << "Non-zero start is not implemented yet";
+    predicate_ = CompareSelect::make(loop_axis->var(), this->stop(), kLT);
+  }
+  auto const& split_count = (sizeExpr + factor - 1) / factor;
 
   this->set_output_group_count(1);
   const std::string& loop_var_name = loop_axis->var().name_hint();

@@ -1056,5 +1056,48 @@ class TestTensorExprFuser(BaseTestClass):
             np.testing.assert_allclose(ref.cpu().numpy(), res.cpu().numpy())
             assert cuda.elapsed_value() == 1
 
+            # A wild broadcast appears.
+            x = torch.rand(4, 8).cuda()
+            y = torch.rand(1, 8).cuda()
+            z = torch.rand(4, 1).cuda()
+            res = test(x, y, z)
+            xn, yn, zn = [t.cpu().numpy() for t in (x, y, z)]
+            np.testing.assert_allclose(res.cpu().numpy(), xn * yn * zn)
+            assert cuda.elapsed_value() == 1
+
+            # Mismatched shapes shouldn't reach codegen.
+            x = torch.rand(4, 8).cuda()
+            y = torch.rand(4, 8).cuda()
+            z = torch.rand(5, 8).cuda()
+            try:
+                res = test(x, y, z)
+            except RuntimeError as e:
+                assert "The size of tensor a (4) must match" in e.args[0]
+            assert cuda.elapsed_value() == 1
+
+            # Changing a static dimension fails guards.
+            # x, y, z = [torch.rand(4, 7).cuda() for _ in range(3)]
+            # xn, yn, zn = [t.cpu().numpy() for t in (x, y, z)]
+            # res = test(x, y, z)
+            # print(test.graph_for(x, y, z))
+            # np.testing.assert_allclose(res.cpu().numpy(), xn * yn * zn)
+            # assert cuda.elapsed_value() == 1
+
+    @unittest.skip("guarding on static shapes is not working")
+    def test_guard_fails():
+        @torch.jit.script
+        def test(x, y, z):
+            return x * y * z
+        cuda = CudaCodeGenExecuted()
+        _ = test(*[torch.rand(4).cuda() for _ in range(3)])
+        assert cuda.elapsed_value() == 0
+        _ = test(*[torch.rand(4).cuda() for _ in range(3)])
+        assert cuda.elapsed_value() == 1
+        _ = test(*[torch.rand(4).cuda() for _ in range(3)])
+        assert cuda.elapsed_value() == 2
+        _ = test(*[torch.rand(7).cuda() for _ in range(3)])
+        print(test.graph_for(*[torch.rand(7).cuda() for _ in range(3)]))
+        assert cuda.elapsed_value() == 2
+
 if __name__ == '__main__':
     unittest.main()

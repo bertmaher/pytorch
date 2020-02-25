@@ -18,6 +18,7 @@ class FloatImm;
 class Cast;
 class Var;
 class Let;
+class ExprStmt;
 class LetStmt;
 class Ramp;
 class Load;
@@ -53,6 +54,7 @@ class TORCH_API IRMutator {
   virtual const Expr* mutate(const Var* v);
   virtual const Expr* mutate(const Let* v);
   virtual Stmt* mutate(const LetStmt* v);
+  virtual Stmt* mutate(const ExprStmt* v);
   virtual const Expr* mutate(const Ramp* v);
   virtual const Expr* mutate(const Load* v);
   virtual const Expr* mutate(const Broadcast* v);

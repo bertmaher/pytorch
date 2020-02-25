@@ -140,6 +140,10 @@ void IRPrinter::visit(const Let* v) {
   os() << ")";
 }
 
+void IRPrinter::visit(const ExprStmt* v) {
+  v->expr()->accept(this);
+}
+
 void IRPrinter::visit(const LetStmt* v) {
   const Var* var = v->var();
   os() << var->dtype().ToCppString() << " " << *var << " = " << *v->value() << "; "

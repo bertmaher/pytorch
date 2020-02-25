@@ -126,6 +126,15 @@ const Expr* IRMutator::mutate(const Let* v) {
   return new Let(var_new, value_new, body_new);
 }
 
+Stmt* IRMutator::mutate(const ExprStmt* v) {
+  const Expr* expr = v->expr();
+  const Expr* newExpr = expr->accept_mutator(this);
+  if (expr == newExpr) {
+    return (Stmt*)v;
+  }
+  return new ExprStmt(newExpr);
+}
+
 Stmt* IRMutator::mutate(const LetStmt* v) {
   const Var* var = v->var();
   const Expr* value = v->value();

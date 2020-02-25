@@ -3,6 +3,7 @@
 #include "ATen/CUDAGenerator.h"
 #include "c10/cuda/CUDAFunctions.h"
 #include "torch/csrc/jit/tensorexpr/cuda_random.h"
+#include "torch/csrc/jit/tensorexpr/eval.h"
 #include "torch/csrc/jit/tensorexpr/execution_counter.h"
 
 #define DEBUG_PRINT 0
@@ -51,7 +52,9 @@ class ScopedVarName {
 };
 
 static int as_int(const Expr* expr) {
-  return dynamic_cast<const IntImm*>(expr)->value();
+  auto v = dynamic_cast<const IntImm*>(expr);
+  TORCH_CHECK(v, "Expression is not an integer constant");
+  return v->value();
 }
 
 static bool is_zero(const Expr* expr) {
@@ -419,7 +422,6 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   CHECK_EQ(args.size(), buffer_args().size());
 
   // TODO: move as much of this into the constructors.
-  // TODO: handle dynamic shapes.
   const std::vector<const Expr*>& gpu_block_extents = printer_->gpu_block_extents();
   const std::vector<const Expr*>& gpu_thread_extents = printer_->gpu_thread_extents();
   CHECK(gpu_block_extents.size() <= 3);
@@ -427,11 +429,19 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   std::vector<int> gpu_block_extents_v(3, 1);
   std::vector<int> gpu_thread_extents_v(3, 1);
   // evaluate all the block/thread extents into values
+  // TODO: eventually, codegen these calculations and make them part of the
+  // module.
   for (int i = 0; i < gpu_block_extents.size(); i++) {
-    gpu_block_extents_v[i] = as_int(gpu_block_extents[i]);
+    auto const& blocks = new ExprStmt(gpu_block_extents[i]);
+    SimpleIREvaluator eval(blocks, buffer_args());
+    eval.call(args);
+    gpu_block_extents_v[i] = eval.value().as<int>();
   }
   for (int i = 0; i < gpu_thread_extents.size(); i++) {
-    gpu_thread_extents_v[i] = as_int(gpu_thread_extents[i]);
+    auto const& thread = new ExprStmt(gpu_thread_extents[i]);
+    SimpleIREvaluator eval(thread, buffer_args());
+    eval.call(args);
+    gpu_thread_extents_v[i] = eval.value().as<int>();
   }
 
   // Bind the buffer addresses into arguments

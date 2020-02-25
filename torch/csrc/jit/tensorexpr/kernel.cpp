@@ -808,18 +808,6 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
     for (int i = 0; i < tensor_outputs_.size(); i++) {
       tensor_outputs_[i]->ComputeInline();
 
-      // TODO: implement splitting of variable axes.  Until then, skip this
-      // optimization when axes are dynamic.
-      bool dynamicShapes = false;
-      for (auto const& dim : tensor_outputs_[i]->function()->dims()) {
-        if (!dim.AsNode<IntImm>()) {
-          dynamicShapes = true;
-          break;
-        }
-      }
-      if (dynamicShapes) {
-        continue;
-      }
       Tensor* tensor = tensor_outputs[i];
       VarHandle index = tensor->function()->arg(0);
       int loop_levels = GetTECudaPointwiseLoopLevels();
