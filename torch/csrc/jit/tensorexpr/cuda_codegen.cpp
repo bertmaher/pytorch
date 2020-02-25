@@ -5,7 +5,7 @@
 #include "torch/csrc/jit/tensorexpr/cuda_random.h"
 #include "torch/csrc/jit/tensorexpr/execution_counter.h"
 
-#define DEBUG_PRINT 1
+#define DEBUG_PRINT 0
 
 namespace torch {
 namespace jit {
