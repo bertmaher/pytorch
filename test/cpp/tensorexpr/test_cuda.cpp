@@ -26,21 +26,21 @@ void testCudaTestVectorAdd01() {
   const int block_size = 128;
   Buffer a_buf("a", kFloat32, {num_iter, block_count, block_size});
   Buffer b_buf("b", kFloat32, {num_iter, block_count, block_size});
-  Tensor c = Compute(
+  Tensor* c = Compute(
       "c",
       {
           {num_iter, "n"},
           {block_count, "b_id"},
           {block_size, "t_id"},
       },
-      [&](const Var& n, const Var& b_id, const Var& t_id) {
+      [&](const VarHandle& n, const VarHandle& b_id, const VarHandle& t_id) {
         return a_buf(n, b_id, t_id) + b_buf(n, b_id, t_id);
       });
   Schedule sch({c});
-  const Var& b_id = c.arg(1);
-  const Var& t_id = c.arg(2);
-  c.GPUExecConfig({b_id}, {t_id});
-  Stmt stmt = sch.Lower();
+  const VarHandle& b_id = c->arg(1);
+  const VarHandle& t_id = c->arg(2);
+  c->GPUExecConfig({b_id}, {t_id});
+  Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
   const int N = block_count * block_size * num_iter;
   PaddedBuffer<float> a_v(N);
@@ -83,19 +83,19 @@ static void testCudaTestVectorAdd02_impl(int N, int block_size) {
   KernelScope kernel_scope;
   Buffer a_buf("a", kFloat32, {N});
   Buffer b_buf("b", kFloat32, {N});
-  Tensor c = Compute(
+  Tensor* c = Compute(
       "c",
       {
           {N, "N"},
       },
-      [&](const Var& n) { return a_buf(n) + b_buf(n); });
+      [&](const VarHandle& n) { return a_buf(n) + b_buf(n); });
   Schedule sch({c});
-  const Var& n = c.arg(0);
-  Var n_outer;
-  Var n_inner;
-  c.SplitWithMask(n, block_size, true, &n_outer, &n_inner);
-  c.GPUExecConfig({n_outer}, {n_inner});
-  Stmt stmt = sch.Lower();
+  const VarHandle& n = c->arg(0);
+  VarHandle n_outer;
+  VarHandle n_inner;
+  c->SplitWithMask(n, block_size, true, &n_outer, &n_inner);
+  c->GPUExecConfig({n_outer}, {n_inner});
+  Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
   PaddedBuffer<float> a_v(N);
   PaddedBuffer<float> b_v(N);
@@ -141,16 +141,16 @@ void testCudaTestVectorAdd02() {
 void testCudaDynamicShape2D() {
   KernelScope kernel_scope;
   auto testWithSize = [](int32_t M, int32_t N) {
-    Var m("m", kInt32);
-    Var n("n", kInt32);
-    Buffer a(Var("a", kHandle), kFloat32, {m, n});
-    Buffer b(Var("b", kHandle), kFloat32, {m, n});
-    Tensor c =
-        Compute("c", {{m, "m"}, {n, "n"}}, [&](const Var& i, const Var& j) {
+    VarHandle m("m", kInt32);
+    VarHandle n("n", kInt32);
+    Buffer a(VarHandle("a", kHandle), kFloat32, {m, n});
+    Buffer b(VarHandle("b", kHandle), kFloat32, {m, n});
+    Tensor* c =
+        Compute("c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
           return a(i, j) + b(i, j);
         });
     auto sch = Schedule::make({c});
-    Stmt s = sch.Lower();
+    Stmt* s = sch.Lower();
     CudaCodeGen cg(s, {a, b, c, m, n});
 
     std::vector<float> aData(M * N, 1.0f);
@@ -198,6 +198,64 @@ void testCudaDynamicShape2D() {
   testWithSize(32, 32);
   testWithSize(1, 16);
   testWithSize(27, 13);
+}
+
+void testCudaTestRand01() {
+  KernelScope kernel_scope;
+  const int num_iter = 3;
+  const int block_count = 16;
+  const int block_size = 128;
+  Tensor* c = Compute(
+      "c",
+      {
+          {num_iter, "n"},
+          {block_count, "b_id"},
+          {block_size, "t_id"},
+      },
+      [&](const VarHandle& n, const VarHandle& b_id, const VarHandle& t_id) {
+        return Intrinsics::make(IntrinsicsOp::kRand, kFloat32);
+      });
+  Schedule sch({c});
+  const VarHandle& b_id = c->arg(1);
+  const VarHandle& t_id = c->arg(2);
+  c->GPUExecConfig({b_id}, {t_id});
+  Stmt* stmt = sch.Lower();
+  CudaCodeGen cuda_cg(stmt, c);
+  const int N = block_count * block_size * num_iter;
+  PaddedBuffer<float> c_v(N);
+
+  // TODO: move gpu support into PaddedBuffer
+  float* c_dev = nullptr;
+  cudaMalloc(&c_dev, N * sizeof(float));
+  cudaDeviceSynchronize();
+
+  cuda_cg(c_dev);
+
+  cudaDeviceSynchronize();
+  cudaMemcpy(c_v.data(), c_dev, N * sizeof(float), cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+
+  float sum1 = 0;
+  float sum2 = 0;
+  float sum3 = 0;
+  for (int i = 0; i < N; i++) {
+    float v = c_v.data()[i];
+    sum1 += v;
+    sum2 += v * v;
+    sum3 += v * v * v;
+    EXPECT_TRUE(v >= 0 && v < 1) << "invalid value: " << i << ", " << v;
+  }
+  sum1 /= N;
+  sum2 /= N;
+  sum3 /= N;
+  float sum1_mean = 1.f / 2;
+  float sum2_mean = 1.f / 3;
+  float sum3_mean = 1.f / 4;
+
+  EXPECT_NEAR(sum1, sum1_mean, 2e-2);
+  EXPECT_NEAR(sum2, sum2_mean, 2e-2);
+  EXPECT_NEAR(sum3, sum3_mean, 2e-2);
+  cudaFree(c_dev);
 }
 
 } // namespace jit
