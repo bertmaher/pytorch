@@ -46,6 +46,22 @@ ExprHandle ExprHandle::operator<=(const ExprHandle& other) const {
   return CompareSelect::make(*this, other, CompareSelectOperation::kLE);
 }
 
+ExprHandle ExprHandle::operator&(const ExprHandle& other) const {
+  return And::make(*this, other);
+}
+
+ExprHandle ExprHandle::operator^(const ExprHandle& other) const {
+  return Xor::make(*this, other);
+}
+
+ExprHandle ExprHandle::operator<<(const ExprHandle& other) const {
+  return Lshift::make(*this, other);
+}
+
+ExprHandle ExprHandle::operator>>(const ExprHandle& other) const {
+  return Rshift::make(*this, other);
+}
+
 ExprHandle::ExprHandle(int v) : ExprHandle(IntImm::make(v)) {}
 
 ExprHandle::ExprHandle(float v) : ExprHandle(FloatImm::make(v)) {}

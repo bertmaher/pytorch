@@ -287,6 +287,70 @@ void LLVMCodeGen::visit(const Div* v) {
   }
 }
 
+void LLVMCodeGen::visit(const And* v) {
+  v->lhs()->accept(this);
+  auto lhs = this->value_;
+  bool lfp = lhs->getType()->isFloatingPointTy();
+  v->rhs()->accept(this);
+  auto rhs = this->value_;
+  bool rfp = rhs->getType()->isFloatingPointTy();
+
+  // TODO: Handle arg promotion.
+  if (!lfp && !rfp) {
+    value_ = irb_.CreateAnd(lhs, rhs);
+  } else {
+    LOG(FATAL) << "Unhandled mismatch And arg types";
+  }
+}
+
+void LLVMCodeGen::visit(const Xor* v) {
+  v->lhs()->accept(this);
+  auto lhs = this->value_;
+  bool lfp = lhs->getType()->isFloatingPointTy();
+  v->rhs()->accept(this);
+  auto rhs = this->value_;
+  bool rfp = rhs->getType()->isFloatingPointTy();
+
+  // TODO: Handle arg promotion.
+  if (!lfp && !rfp) {
+    value_ = irb_.CreateXor(lhs, rhs);
+  } else {
+    LOG(FATAL) << "Unhandled mismatch And arg types";
+  }
+}
+
+void LLVMCodeGen::visit(const Lshift* v) {
+  v->lhs()->accept(this);
+  auto lhs = this->value_;
+  bool lfp = lhs->getType()->isFloatingPointTy();
+  v->rhs()->accept(this);
+  auto rhs = this->value_;
+  bool rfp = rhs->getType()->isFloatingPointTy();
+
+  // TODO: Handle arg promotion.
+  if (!lfp && !rfp) {
+    value_ = irb_.CreateShl(lhs, rhs);
+  } else {
+    LOG(FATAL) << "Unhandled mismatch And arg types";
+  }
+}
+
+void LLVMCodeGen::visit(const Rshift* v) {
+  v->lhs()->accept(this);
+  auto lhs = this->value_;
+  bool lfp = lhs->getType()->isFloatingPointTy();
+  v->rhs()->accept(this);
+  auto rhs = this->value_;
+  bool rfp = rhs->getType()->isFloatingPointTy();
+
+  // TODO: Handle arg promotion.
+  if (!lfp && !rfp) {
+    value_ = irb_.CreateLShr(lhs, rhs);
+  } else {
+    LOG(FATAL) << "Unhandled mismatch And arg types";
+  }
+}
+
 void LLVMCodeGen::visit(const Mod* v) {
   throw std::runtime_error("Mod unsupported in LLVM codegen yet");
 }

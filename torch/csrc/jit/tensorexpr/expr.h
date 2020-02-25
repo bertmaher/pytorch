@@ -110,6 +110,10 @@ class TORCH_API ExprHandle {
   ExprHandle operator>=(const ExprHandle& other) const;
   ExprHandle operator<(const ExprHandle& other) const;
   ExprHandle operator<=(const ExprHandle& other) const;
+  ExprHandle operator&(const ExprHandle& other) const;
+  ExprHandle operator^(const ExprHandle& other) const;
+  ExprHandle operator<<(const ExprHandle& other) const;
+  ExprHandle operator>>(const ExprHandle& other) const;
 
  private:
   Expr* base_expr_node_ = nullptr;

@@ -334,6 +334,34 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
           });
     } break;
 
+    case aten::__and__: {
+      return ComputeTwoOperand(
+          "aten_and", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
+            return lhs & rhs;
+          });
+    } break;
+
+    case aten::__xor__: {
+      return ComputeTwoOperand(
+          "aten_xor", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
+            return lhs ^ rhs;
+          });
+    } break;
+
+    case aten::__lshift__: {
+      return ComputeTwoOperand(
+          "aten_lshift", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
+            return lhs << rhs;
+          });
+    } break;
+
+    case aten::__rshift__: {
+      return ComputeTwoOperand(
+          "aten_rshift", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
+            return lhs >> rhs;
+          });
+    } break;
+
     case aten::addcmul: {
       return ComputeFourOperand(
           "aten_addcmul",

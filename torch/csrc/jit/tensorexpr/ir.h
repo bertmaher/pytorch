@@ -17,6 +17,10 @@ enum IRNodeType {
   kMod,
   kMax,
   kMin,
+  kAnd,
+  kLshift,
+  kRshift,
+  kXor,
   kCompareSelect,
 };
 
@@ -121,6 +125,42 @@ class Mod : public BinaryOpNode<Mod> {
  public:
   Mod(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kMod) {}
+};
+
+class And : public BinaryOpNode<And> {
+ public:
+  And(const Expr* lhs, const Expr* rhs)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kAnd) {
+    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype(), rhs->dtype());
+  }
+};
+
+class Xor : public BinaryOpNode<Xor> {
+ public:
+  Xor(const Expr* lhs, const Expr* rhs)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kXor) {
+    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype(), rhs->dtype());
+  }
+};
+
+class Lshift : public BinaryOpNode<Lshift> {
+ public:
+  Lshift(const Expr* lhs, const Expr* rhs)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kLshift) {
+    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype(), rhs->dtype());
+  }
+};
+
+class Rshift : public BinaryOpNode<Rshift> {
+ public:
+  Rshift(const Expr* lhs, const Expr* rhs)
+      : BinaryOpNode(lhs, rhs, IRNodeType::kRshift) {
+    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype(), rhs->dtype());
+  }
 };
 
 class Max : public BinaryOpNode<Max> {
