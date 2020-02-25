@@ -55,6 +55,7 @@ bool isSupported(Node* node) {
   // TODO:
   switch (node->kind()) {
     case aten::add:
+    case aten::_cast_Float:
     case aten::sub:
     case aten::mul:
     case aten::div:
@@ -109,6 +110,8 @@ bool isSupported(Node* node) {
     case aten::unsqueeze:
     case aten::frac:
     case aten::rand_like:
+    case aten::_sigmoid_backward:
+    case aten::_tanh_backward:
       return true;
     default:
       return false;
