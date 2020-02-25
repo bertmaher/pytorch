@@ -228,11 +228,11 @@ void IRPrinter::visit(const Cond* v) {
   Stmt* false_stmt = v->false_stmt();
   if (!true_stmt) {
     os() << "if(!" << *cond << ") {" << std::endl;
-    os() << false_stmt << std::endl;
+    os() << *false_stmt << std::endl;
     os() << "}";
   } else {
     os() << "if(" << *cond << ") {" << std::endl;
-    os() << true_stmt << std::endl;
+    os() << *true_stmt << std::endl;
     os() << "}";
     if (false_stmt) {
       os() << " else {" << std::endl;
