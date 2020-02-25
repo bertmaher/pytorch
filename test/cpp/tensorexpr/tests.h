@@ -160,7 +160,8 @@ namespace jit {
   _(LLVMBindDynamicShapeAdd)    \
   _(LLVMTensorDynamicShapeAdd)  \
   _(LLVMDynamicShape2D)         \
-  _(LLVMIfThenElseTest)
+  _(LLVMIfThenElseTest)         \
+  _(LLVMVectorizerLoadStoreTest)
 
 #define TH_FORALL_TESTS_CUDA(_) \
   _(CudaTestVectorAdd01)        \
