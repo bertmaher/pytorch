@@ -63,9 +63,6 @@ class Tensor : public TensorOperation {
   int output_index() const {
     return output_index_;
   }
-  const Var* arg(int index) const {
-    return function_->arg(index);
-  }
 
   Tensor(Function* function, int output_index)
       : function_(function), output_index_(output_index) {}
@@ -146,7 +143,7 @@ class FunctionCall : public CallNode<FunctionCall> {
   }
 
   FunctionCall(Tensor* tensor, const std::vector<const Expr*>& params)
-      : BaseClass(tensor->function()->body()->dtype(), kFunctionCall, params),
+      : BaseClass(tensor->function()->body(tensor->output_index())->dtype(), kFunctionCall, params),
         tensor_(tensor) {}
  private:
   const Expr* DefaultMutator(const std::vector<const Expr*>& new_params) const override {
@@ -154,7 +151,7 @@ class FunctionCall : public CallNode<FunctionCall> {
   }
 
   std::string func_name() const {
-    return tensor_->function()->func_var()->name_hint();
+    return tensor_->function()->func_var(tensor_->output_index())->name_hint();
   }
 
   Tensor* tensor_;

@@ -43,7 +43,7 @@ static Dtype texprType(const c10::optional<at::ScalarType>& st) {
 }
 
 static at::ScalarType tensorType(Tensor* t) {
-  auto const& stype = t->function()->body()->dtype().scalar_type();
+  auto const& stype = t->function()->body(t->output_index())->dtype().scalar_type();
   if (stype == kInt32) {
     return at::ScalarType::Int;
   } else if (stype == kFloat32) {
@@ -851,7 +851,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       // Flatten the index for GPU kernels.
       // TODO: move this to fusing axis when it is ready.
       Tensor* new_out = Compute(
-          tensor->function()->func_var()->name_hint() + "_flat",
+          tensor->function()->func_var(tensor->output_index())->name_hint() + "_flat",
           {total_count},
           [tensor](const VarHandle& index) -> ExprHandle {
             std::vector<ExprHandle> dims;

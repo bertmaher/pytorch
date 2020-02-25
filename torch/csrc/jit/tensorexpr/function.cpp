@@ -94,7 +94,7 @@ Tensor* Compute(
   return new Tensor(func, 0);
 }
 
-Stmt* Function::ElementStmt() {
+Stmt* Function::ElementStmt(size_t index) {
   std::vector<ExprHandle> strides(dims_.size());
   for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
@@ -120,7 +120,7 @@ Stmt* Function::ElementStmt() {
 
   const Expr* mask = new IntImm(1);
 
-  Stmt* update_stmt = new Store(func_var(), total_index.node(), body(), mask);
+  Stmt* update_stmt = new Store(func_var(index), total_index.node(), body(index), mask);
   return update_stmt;
 }
 
