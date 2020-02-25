@@ -308,7 +308,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
     } break;
 
     case aten::_cast_Float: {
-      return ComputeOneOperand("aten_cast_float", v, [](const Expr& a) {
+      return ComputeOneOperand("aten_cast_float", v, [](const ExprHandle& a) {
         return cast<float>(a);
       });
     } break;
@@ -578,7 +578,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
     } break;
     case aten::remainder: {
       return ComputeTwoOperand(
-          "aten_remainder", v, [](const Expr& lhs, const Expr& rhs) {
+          "aten_remainder", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
             return fmod((rhs + fmod(lhs, rhs)), rhs);
           });
 
@@ -747,15 +747,15 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
 
     case aten::_sigmoid_backward: {
       return ComputeTwoOperand(
-          "aten_sigmoid_backward", v, [](const Expr& lhs, const Expr& rhs) {
-            return lhs * rhs * (Expr(1.0f) - rhs);
+          "aten_sigmoid_backward", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
+            return lhs * rhs * (ExprHandle(1.0f) - rhs);
           });
     }
 
     case aten::_tanh_backward: {
       return ComputeTwoOperand(
-          "aten_tanh_backward", v, [](const Expr& lhs, const Expr& rhs) {
-            return lhs * (Expr(1.0f) - rhs * rhs);
+          "aten_tanh_backward", v, [](const ExprHandle& lhs, const ExprHandle& rhs) {
+            return lhs * (ExprHandle(1.0f) - rhs * rhs);
           });
     }
 
