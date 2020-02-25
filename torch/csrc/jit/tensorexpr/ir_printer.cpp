@@ -64,9 +64,9 @@ void IRPrinter::visit(const Rshift* v) {
 }
 
 void IRPrinter::visit(const Mod* v) {
-  if (v->dtype() == kInt32) {
+  if (v->dtype().is_integral()) {
     visitBinaryOp(v, "%", this);
-  } else if (v->dtype() == kFloat32) {
+  } else if (v->dtype().is_floating_point()) {
     os() << "mod(" << v->lhs() << ", " << v->rhs() << ")";
   } else {
     throw std::runtime_error("invalid dtype: " + std::to_string(v->dtype()));
@@ -119,21 +119,25 @@ void IRPrinter::visit(const CompareSelect* v) {
   os() << ")";
 }
 
-void IRPrinter::visit(const IntImm* v) {
-  os() << v->value();
-}
 
-void IRPrinter::visit(const FloatImm* v) {
-  std::ostringstream oss;
-  oss << v->value();
-  std::string s = oss.str();
-  if (s.find('.') == std::string::npos) {
-    s += ".f";
-  } else {
-    s += "f";
+#define IMM_PRINT_VISIT(Type, Name)           \
+  void IRPrinter::visit(const Name##Imm* v) { \
+    if (v->dtype().is_floating_point()) {     \
+      std::ostringstream oss;                 \
+      oss << v->value();                      \
+      std::string s = oss.str();              \
+      if (s.find('.') == std::string::npos) { \
+        s += ".f";                            \
+      } else {                                \
+        s += "f";                             \
+      }                                       \
+      os() << s;                              \
+    } else {                                  \
+      os() << v->value();                     \
+    }                                         \
   }
-  os() << s;
-}
+AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
+#undef IMM_PRINT_VISIT
 
 void IRPrinter::visit(const Cast* v) {
   auto dtype = v->dtype();

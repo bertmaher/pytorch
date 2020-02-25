@@ -79,7 +79,7 @@ class BinaryOpNode : public ExprNode<Op> {
       const Expr* lhs_v,
       const Expr* rhs_v,
       IRNodeType expr_type,
-      ReturnType ret_type = ReturnType::knone)
+      ScalarType ret_type = ScalarType::None)
       : ExprNode<Op>(BinaryOpDtype(lhs_v->dtype(), rhs_v->dtype(), ret_type)),
         lhs_(CastIfNeeded(lhs_v, ExprNode<Op>::dtype())),
         rhs_(CastIfNeeded(rhs_v, ExprNode<Op>::dtype())),
@@ -132,7 +132,7 @@ class And : public BinaryOpNode<And> {
  public:
   And(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kAnd) {
-    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype().scalar_type(), ScalarType::Int);
     CHECK_EQ(lhs->dtype(), rhs->dtype());
   }
 };
@@ -141,7 +141,7 @@ class Xor : public BinaryOpNode<Xor> {
  public:
   Xor(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kXor) {
-    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype().scalar_type(), ScalarType::Int);
     CHECK_EQ(lhs->dtype(), rhs->dtype());
   }
 };
@@ -150,7 +150,7 @@ class Lshift : public BinaryOpNode<Lshift> {
  public:
   Lshift(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kLshift) {
-    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype().scalar_type(), ScalarType::Int);
     CHECK_EQ(lhs->dtype(), rhs->dtype());
   }
 };
@@ -159,7 +159,7 @@ class Rshift : public BinaryOpNode<Rshift> {
  public:
   Rshift(const Expr* lhs, const Expr* rhs)
       : BinaryOpNode(lhs, rhs, IRNodeType::kRshift) {
-    CHECK_EQ(lhs->dtype().scalar_type(), kInt32);
+    CHECK_EQ(lhs->dtype().scalar_type(), ScalarType::Int);
     CHECK_EQ(lhs->dtype(), rhs->dtype());
   }
 };
@@ -202,35 +202,23 @@ class Min : public BinaryOpNode<Min> {
   }
 };
 
-// Encode an integer immediate value.
-class IntImm : public ExprNode<IntImm> {
- public:
-  int value() const {
-    return value_;
-  }
-  static ExprHandle make(int value) {
-    return ExprHandle(new IntImm(value));
-  }
-  IntImm(int value) : ExprNodeBase(kInt32), value_(value) {}
-
- private:
-  int value_;
-};
-
-// Encode an fp32 immediate value.
-class FloatImm : public ExprNode<FloatImm> {
- public:
-  float value() const {
-    return value_;
-  }
-  static ExprHandle make(float value) {
-    return ExprHandle(new FloatImm(value));
-  }
-
- private:
-  FloatImm(float value) : ExprNodeBase(kFloat32), value_(value) {}
-  float value_;
-};
+// Encode typed immediate values e.g. IntImm, FloatImm.
+#define IMM_DECLARE(Type, Name)                                     \
+  class Name##Imm : public ExprNode<Name##Imm> {                    \
+   public:                                                          \
+    Name##Imm(Type value) : ExprNodeBase(k##Name), value_(value) {} \
+    Type value() const {                                            \
+      return value_;                                                \
+    }                                                               \
+    static ExprHandle make(Type value) {                            \
+      return ExprHandle(new Name##Imm(value));                      \
+    }                                                               \
+                                                                    \
+   private:                                                         \
+    Type value_;                                                    \
+  };
+AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_DECLARE);
+#undef IMM_DECLARE
 
 // Bind the value to the var and evaluate the body.
 class Let : public ExprNode<Let> {
@@ -367,7 +355,7 @@ class IfThenElse : public ExprNode<IfThenElse> {
 
   IfThenElse(const Expr* c, const Expr* t, const Expr* f)
       : ExprNodeBase(t->dtype()), condition_(c), true_(t), false_(f) {
-    CHECK_EQ(c->dtype().scalar_type(), kInt32);
+    CHECK_EQ(c->dtype().scalar_type(), ScalarType::Int);
     CHECK_EQ(c->dtype().lanes(), 1);
     CHECK_EQ(t->dtype(), f->dtype());
   }

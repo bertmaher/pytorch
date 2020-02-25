@@ -144,7 +144,7 @@ class TORCH_API Store : public StmtNode<Store> {
     CHECK_EQ(base_handle_->dtype(), kHandle);
     CHECK_EQ(index->dtype().lanes(), mask->dtype().lanes());
     CHECK_EQ(index->dtype().lanes(), value->dtype().lanes());
-    CHECK_EQ(index->dtype().scalar_type(), kInt32);
+    CHECK_EQ(index->dtype().scalar_type(), ScalarType::Int);
   }
  private:
 

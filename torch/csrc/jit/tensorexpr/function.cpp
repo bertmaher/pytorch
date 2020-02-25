@@ -17,7 +17,7 @@ static void unpack_dim_args(
   vars->clear();
   for (size_t i = 0; i < dim_args.size(); i++) {
     dims->push_back(dim_args[i].dim().node());
-    vars->push_back(new Var(dim_args[i].name_hint(), kInt32));
+    vars->push_back(new Var(dim_args[i].name_hint(), kInt));
   }
 }
 

@@ -62,8 +62,10 @@ class TORCH_API ExprHandle {
     return base_expr_node_ == nullptr;
   }
 
-  ExprHandle(int v);
-  ExprHandle(float v);
+#define IMM_EXPR_DECLARE(Type, Name) \
+  ExprHandle(Type v);
+AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_EXPR_DECLARE);
+#undef IMM_EXPR_DECLARE
 
   template <class Op>
   Op* AsNode() {
