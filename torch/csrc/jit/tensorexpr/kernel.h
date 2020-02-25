@@ -121,6 +121,13 @@ class TensorExprKernel {
       const torch::jit::Value* v,
       std::function<ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)> inner_expr);
 
+  Tensor* ComputeConditionWithTwoOperand(
+      const std::string& name,
+      const torch::jit::Value* v,
+      std::function<
+          ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)>
+          inner_expr);
+
   Tensor* ComputeFourOperand(
       const std::string& name,
       const torch::jit::Value* v,

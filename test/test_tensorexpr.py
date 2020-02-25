@@ -1037,5 +1037,19 @@ class TestTensorExprFuser(BaseTestClass):
             np.testing.assert_allclose(ref.cpu().numpy(), res.cpu().numpy())
             assert cuda.elapsed_value() == 1
 
+
+    def test_where():
+        def run_where(x, y):
+            return torch.where(torch.gt(x, y), x, y)
+    
+        a = torch.rand(1024, dtype=float)
+        b = torch.rand(1024, dtype=float)
+        traced = torch.jit.trace(run_where, (torch.zeros(1024), torch.zeros(1024)))
+        x = traced(a, b)
+        y = run_where(a, b)
+        np.testing.assert_allclose(x.numpy(), y.numpy())
+
 if __name__ == '__main__':
     unittest.main()
+        np.testing.assert_allclose(ref.cpu().numpy(), res.cpu().numpy())
+        assert cuda.elapsed_value() == 1

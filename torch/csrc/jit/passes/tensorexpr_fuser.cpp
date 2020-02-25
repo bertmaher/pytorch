@@ -96,6 +96,7 @@ bool isSupported(Node* node) {
     case aten::unsqueeze:
     case aten::frac:
     case aten::rand_like:
+    case aten::where:
       return true;
     default:
       return false;
