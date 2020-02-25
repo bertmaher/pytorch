@@ -295,7 +295,6 @@ void LLVMCodeGen::visit(const And* v) {
   auto rhs = this->value_;
   bool rfp = rhs->getType()->isFloatingPointTy();
 
-  // TODO: Handle arg promotion.
   if (!lfp && !rfp) {
     value_ = irb_.CreateAnd(lhs, rhs);
   } else {
@@ -311,7 +310,6 @@ void LLVMCodeGen::visit(const Xor* v) {
   auto rhs = this->value_;
   bool rfp = rhs->getType()->isFloatingPointTy();
 
-  // TODO: Handle arg promotion.
   if (!lfp && !rfp) {
     value_ = irb_.CreateXor(lhs, rhs);
   } else {
@@ -327,7 +325,6 @@ void LLVMCodeGen::visit(const Lshift* v) {
   auto rhs = this->value_;
   bool rfp = rhs->getType()->isFloatingPointTy();
 
-  // TODO: Handle arg promotion.
   if (!lfp && !rfp) {
     value_ = irb_.CreateShl(lhs, rhs);
   } else {
@@ -343,7 +340,6 @@ void LLVMCodeGen::visit(const Rshift* v) {
   auto rhs = this->value_;
   bool rfp = rhs->getType()->isFloatingPointTy();
 
-  // TODO: Handle arg promotion.
   if (!lfp && !rfp) {
     value_ = irb_.CreateLShr(lhs, rhs);
   } else {
