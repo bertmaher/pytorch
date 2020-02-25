@@ -60,10 +60,6 @@ void IRVisitor::visit(const Let* v) {
   v->body()->accept(this);
 }
 
-void IRVisitor::visit(const ExprStmt* v) {
-  v->expr()->accept(this);
-}
-
 void IRVisitor::visit(const LetStmt* v) {
   v->var()->accept(this);
   v->value()->accept(this);

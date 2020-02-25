@@ -432,16 +432,14 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   // TODO: eventually, codegen these calculations and make them part of the
   // module.
   for (int i = 0; i < gpu_block_extents.size(); i++) {
-    auto const& blocks = new ExprStmt(gpu_block_extents[i]);
-    SimpleIREvaluator eval(blocks, buffer_args());
-    eval.call(args);
-    gpu_block_extents_v[i] = eval.value().as<int>();
+    ExprEval<SimpleIREvaluator> eval(
+        ExprHandle(gpu_block_extents[i]), buffer_args());
+    gpu_block_extents_v[i] = eval.value<int>(args);
   }
   for (int i = 0; i < gpu_thread_extents.size(); i++) {
-    auto const& thread = new ExprStmt(gpu_thread_extents[i]);
-    SimpleIREvaluator eval(thread, buffer_args());
-    eval.call(args);
-    gpu_thread_extents_v[i] = eval.value().as<int>();
+    ExprEval<SimpleIREvaluator> eval(
+        ExprHandle(gpu_thread_extents[i]), buffer_args());
+    gpu_thread_extents_v[i] = eval.value<int>(args);
   }
 
   // Bind the buffer addresses into arguments

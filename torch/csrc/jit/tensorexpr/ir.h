@@ -269,22 +269,6 @@ class Let : public ExprNode<Let> {
   const Expr* body_;
 };
 
-class ExprStmt : public StmtNode<ExprStmt> {
- public:
-  const Expr* expr() const {
-    return expr_;
-  }
-
-  static Stmt* make(const ExprHandle& expr) {
-    return new ExprStmt(expr.node());
-  }
-
-  ExprStmt(const Expr* expr) : expr_(expr) {}
-
- private:
-  const Expr* expr_;
-};
-
 class LetStmt : public StmtNode<LetStmt> {
  public:
   const Var* var() const {

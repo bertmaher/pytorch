@@ -317,10 +317,6 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
     eval_context_.erase(var);
   }
 
-  TORCH_API void visit(const ExprStmt* v) override {
-    v->expr()->accept(this);
-  }
-
   TORCH_API void visit(const LetStmt* v) override {
     const Var* var = v->var();
     CHECK(var != nullptr);

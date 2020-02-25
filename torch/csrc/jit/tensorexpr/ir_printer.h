@@ -30,7 +30,6 @@ class TORCH_API IRPrinter : public IRVisitor {
   void visit(const Cast* v) override;
   void visit(const Var* v) override;
   void visit(const Let* v) override;
-  void visit(const ExprStmt* v) override;
   void visit(const LetStmt* v) override;
   void visit(const Ramp* v) override;
   void visit(const Load* v) override;
