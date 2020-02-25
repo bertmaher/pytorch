@@ -25,8 +25,8 @@ void testExprSimple01() {
       Compute("f", {{16, "X"}, {5, "y"}}, [](const VarHandle& x, const VarHandle& y) {
         return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
       });
-  VarHandle x = tensor->function()->arg(0);
-  VarHandle y = tensor->function()->arg(1);
+  VarHandle x(tensor->function()->arg(0));
+  VarHandle y(tensor->function()->arg(1));
   Schedule sch = Schedule::make({tensor});
   VarHandle x_outer;
   VarHandle x_inner;
@@ -47,8 +47,8 @@ void testExprLower01() {
       Compute("f", {{16, "x"}, {5, "y"}}, [](const VarHandle& x, const VarHandle& y) {
         return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
       });
-  VarHandle x = tensor->function()->arg(0);
-  VarHandle y = tensor->function()->arg(1);
+  VarHandle x(tensor->function()->arg(0));
+  VarHandle y(tensor->function()->arg(1));
   Schedule sch = Schedule::make({tensor});
   Stmt* stmt = sch.Lower();
   std::ostringstream oss;
@@ -63,8 +63,8 @@ void testExprSimple02() {
     return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
   };
   Tensor* tensor = Compute("f", {{26, "x"}, {5, "y"}}, func);
-  VarHandle x = tensor->function()->arg(0);
-  VarHandle y = tensor->function()->arg(1);
+  VarHandle x(tensor->function()->arg(0));
+  VarHandle y(tensor->function()->arg(1));
   Schedule sch = Schedule::make({tensor});
   VarHandle x_outer;
   VarHandle x_inner;
@@ -201,8 +201,8 @@ void testExprSplitWithMask01() {
       Compute("f", {{M, "m"}, {N, "n"}}, [&](const ExprHandle& m, const ExprHandle& n) {
         return a_buf(m, n) + b_buf(m, n) + 1.0f;
       });
-  VarHandle m = tensor->function()->arg(0);
-  VarHandle n = tensor->function()->arg(1);
+  VarHandle m(tensor->function()->arg(0));
+  VarHandle n(tensor->function()->arg(1));
   VarHandle n_outer;
   VarHandle n_inner;
 
@@ -460,7 +460,6 @@ void testScheduleFuserStyle() {
   const int kTotalSize = kVectorSize * kVectorCount;
 
   Buffer a_buf(VarHandle("A", kHandle), kFloat32, {ExprHandle(kTotalSize)});
-  VarHandle a = a_buf.data();
 
   Tensor* b =
       Compute("f", {{kTotalSize, "i"}}, [&](const std::vector<VarHandle>& axes) {

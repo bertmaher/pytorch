@@ -313,11 +313,11 @@ class FuseAxisTransform;
 // the semantics of this operation.
 class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
  public:
-  const VarHandle& expr_var() const {
+  const Var* expr_var() const {
     return func_->func_var();
   }
 
-  const ExprHandle& body() const {
+  const Expr* body() const {
     return func_->body();
   }
 
@@ -344,9 +344,9 @@ class TORCH_API TensorExprOp : public Cloneable<TensorExprOp, ScheduleObject> {
     }
   }
 
-  void AddPredicate(const ExprHandle& predicate) {
-    if (!predicate.empty()) {
-      predicates_.push_back(predicate);
+  void AddPredicate(const Expr* predicate) {
+    if (predicate) {
+      predicates_.push_back(ExprHandle(predicate));
     }
   }
 

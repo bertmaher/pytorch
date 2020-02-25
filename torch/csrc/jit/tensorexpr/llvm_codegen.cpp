@@ -83,7 +83,7 @@ LLVMCodeGen::LLVMCodeGen(
     } else {
       params.push_back(dtypeToLLVMPtr(arg.dtype()));
     }
-    varToArg_[arg.var().node()] = i;
+    varToArg_[arg.var()] = i;
   }
   llvm::FunctionType* fntype = llvm::FunctionType::get(retTy, params, false);
   fn_ = llvm::Function::Create(
@@ -195,8 +195,8 @@ static void* argToPtr(
   if (bufferArg.dtype() == kFloat32) {
     return callArg.floatPtr();
   }
-  LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var().name_hint()
-             << "dtype=" << bufferArg.var().dtype();
+  LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
+             << "dtype=" << bufferArg.var()->dtype();
   return nullptr;
 }
 

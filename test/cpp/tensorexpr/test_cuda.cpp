@@ -37,8 +37,8 @@ void testCudaTestVectorAdd01() {
         return a_buf(n, b_id, t_id) + b_buf(n, b_id, t_id);
       });
   Schedule sch({c});
-  const VarHandle& b_id = c->arg(1);
-  const VarHandle& t_id = c->arg(2);
+  const VarHandle& b_id = VarHandle(c->arg(1));
+  const VarHandle& t_id = VarHandle(c->arg(2));
   c->GPUExecConfig({b_id}, {t_id});
   Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
@@ -90,7 +90,7 @@ static void testCudaTestVectorAdd02_impl(int N, int block_size) {
       },
       [&](const VarHandle& n) { return a_buf(n) + b_buf(n); });
   Schedule sch({c});
-  const VarHandle& n = c->arg(0);
+  VarHandle n(c->arg(0));
   VarHandle n_outer;
   VarHandle n_inner;
   c->SplitWithMask(n, block_size, true, &n_outer, &n_inner);
@@ -216,8 +216,8 @@ void testCudaTestRand01() {
         return Intrinsics::make(IntrinsicsOp::kRand, kFloat32);
       });
   Schedule sch({c});
-  const VarHandle& b_id = c->arg(1);
-  const VarHandle& t_id = c->arg(2);
+  VarHandle b_id(c->arg(1));
+  VarHandle t_id(c->arg(2));
   c->GPUExecConfig({b_id}, {t_id});
   Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c);
