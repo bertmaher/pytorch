@@ -43,7 +43,7 @@ static Dtype texprType(const c10::optional<at::ScalarType>& st) {
 }
 
 static at::ScalarType tensorType(Tensor* t) {
-  auto const& stype = t->function()->body(t->output_index())->dtype().scalar_type();
+  auto const& stype = t->body()->dtype().scalar_type();
   if (stype == kInt32) {
     return at::ScalarType::Int;
   } else if (stype == kFloat32) {
@@ -174,7 +174,7 @@ std::vector<ExprHandle> TensorExprKernel::valueShape(const torch::jit::Value* v)
   if (it == tensors_.end()) {
     return {1};
   }
-  return ExprVectorToExprHandleVector(it->second->function()->dims());
+  return ExprVectorToExprHandleVector(it->second->dims());
 }
 
 Tensor* TensorExprKernel::ComputeOneOperand(
@@ -844,25 +844,25 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
   if (backend_type == BackendType::kCudaCodeGen) {
     for (int i = 0; i < tensor_outputs_.size(); i++) {
       Tensor* tensor = tensor_outputs_[i];
-      ExprHandle total_count = ExprHandle(tensor->function()->dim(0));
-      for (int i = 1; i < tensor->function()->ndim(); i++) {
-        total_count = total_count * ExprHandle(tensor->function()->dim(i));
+      ExprHandle total_count = ExprHandle(tensor->dim(0));
+      for (int i = 1; i < tensor->ndim(); i++) {
+        total_count = total_count * ExprHandle(tensor->dim(i));
       }
       // Flatten the index for GPU kernels.
       // TODO: move this to fusing axis when it is ready.
       Tensor* new_out = Compute(
-          tensor->function()->func_var(tensor->output_index())->name_hint() + "_flat",
+          tensor->func_var()->name_hint() + "_flat",
           {total_count},
           [tensor](const VarHandle& index) -> ExprHandle {
             std::vector<ExprHandle> dims;
             ExprHandle value = index;
-            for (int i = tensor->function()->ndim() - 1; i >= 0; i--) {
+            for (int i = tensor->ndim() - 1; i >= 0; i--) {
               ExprHandle idx = value;
               if (i > 0) {
-                idx = Mod::make(value, ExprHandle(tensor->function()->dim(i)));
+                idx = Mod::make(value, ExprHandle(tensor->dim(i)));
               }
               dims.push_back(idx);
-              value = value / ExprHandle(tensor->function()->dim(i));
+              value = value / ExprHandle(tensor->dim(i));
             }
             std::reverse(dims.begin(), dims.end());
             return tensor->call(dims);
@@ -882,7 +882,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       tensor_outputs_[i]->ComputeInline();
 
       Tensor* tensor = tensor_outputs[i];
-      const Var* index = tensor->function()->arg(0);
+      const Var* index = tensor->arg(0);
       int loop_levels = GetTECudaPointwiseLoopLevels();
       const int kDefaultLoopLevels = 2;
       loop_levels = (loop_levels > 0) ? loop_levels : kDefaultLoopLevels;
@@ -1169,7 +1169,7 @@ void TensorExprKernel::run(Stack& stack) {
   std::vector<at::Tensor> outputs;
   for (auto& o : tensor_outputs_) {
     std::vector<int64_t> tensorSize;
-    for (const Expr* dim : o->function()->dims()) {
+    for (const Expr* dim : o->dims()) {
       auto it = varToSize.find(dim);
       if (it != varToSize.end()) {
         tensorSize.push_back(it->second);

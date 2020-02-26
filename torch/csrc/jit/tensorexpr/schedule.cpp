@@ -49,7 +49,7 @@ class ScheduleNode::DependencyTracker : public IRVisitor {
       Tensor* tensor = const_cast<Tensor*>(to_process_.front());
       to_process_.pop();
       current_consumer_ = tensor;
-      tensor->function()->body(tensor->output_index())->accept(this);
+      tensor->body()->accept(this);
     }
 
     // Topologically sorted all the tensors in encountered_
@@ -397,9 +397,9 @@ class Flattener : public IRMutator {
   Expr* mutate(const FunctionCall* v) override {
     const Tensor *t = v->tensor();
     Buffer buffer(
-        VarHandle(t->function()->func_var(t->output_index())),
-        t->function()->body(t->output_index())->dtype(),
-        ExprVectorToExprHandleVector(t->function()->dims()));
+        VarHandle(t->func_var()),
+        t->body()->dtype(),
+        ExprVectorToExprHandleVector(t->dims()));
     const std::vector<const Expr*>& params = v->params();
     std::vector<ExprHandle> params_expr(params.size());
     for (size_t i = 0; i < params.size(); i++) {
@@ -566,11 +566,11 @@ Stmt* ScheduleNode::Lower() {
       continue;
     }
     Stmt* alloc = new Allocate(
-        tensor->function()->func_var(tensor->output_index()),
-        tensor->function()->body(tensor->output_index())->dtype(),
-        tensor->function()->dims());
+        tensor->func_var(),
+        tensor->body()->dtype(),
+        tensor->dims());
     allocs.push_back(alloc);
-    Stmt* free = new Free(tensor->function()->func_var(tensor->output_index()));
+    Stmt* free = new Free(tensor->func_var());
     frees.push_back(free);
   }
   std::reverse(frees.begin(), frees.end());
