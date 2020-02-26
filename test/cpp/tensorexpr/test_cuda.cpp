@@ -268,7 +268,7 @@ void testCudaDynamicShapeSplit() {
   auto sch = Schedule::make({b});
   VarHandle outer;
   VarHandle inner;
-  b->SplitWithMask(b->arg(0), 1024, true, &outer, &inner);
+  b->SplitWithMask(VarHandle(b->arg(0)), 1024, true, &outer, &inner);
   b->GPUExecConfig({outer}, {inner});
   Stmt* s = sch.Lower();
   CudaCodeGen cg(s, {a, b, n});

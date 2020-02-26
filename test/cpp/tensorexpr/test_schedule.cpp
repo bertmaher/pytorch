@@ -133,8 +133,8 @@ void testExprSplitWithTailNone() {
     return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
   };
   Tensor* tensor = Compute("f", {{24, "x"}, {5, "y"}}, func);
-  VarHandle x = tensor->function()->arg(0);
-  VarHandle y = tensor->function()->arg(1);
+  VarHandle x = VarHandle(tensor->function()->arg(0));
+  VarHandle y = VarHandle(tensor->function()->arg(1));
   Schedule sch = Schedule::make({tensor});
   VarHandle x_outer;
   VarHandle x_inner;
