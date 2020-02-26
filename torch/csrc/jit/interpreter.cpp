@@ -353,6 +353,9 @@ struct CodeImpl {
   std::vector<Operation> operator_table_;
   std::vector<Function*> function_table_;
   std::vector<TypePtr> type_table_;
+  std::vector<std::function<void(std::vector<IValue>&)>>
+      profile_function_table_;
+
   int register_size_ = 0;
   size_t n_outputs;
   size_t n_inputs;
@@ -612,6 +615,12 @@ struct CodeImpl {
     }
   }
 
+  void emitProfile(Node* node) {
+    emitLoadInputs(node->inputs());
+    insertInstruction(PROFILE, profile_function_table_.size());
+    profile_function_table_.push_back(node->cast<ProfileOp>()->getCallback());
+  }
+
   size_t emitGuard(Node* node) {
     // unoptimized graph is at index 0
     // guarded input is at index 1
@@ -726,6 +735,9 @@ struct CodeImpl {
       case prim::BailOut:
         emitBailOut(node);
         break;
+      case prim::profile:
+        emitProfile(node);
+        break;
       case prim::GetAttr:
         emitGetAttr(node);
         break;
@@ -812,24 +824,32 @@ struct InterpreterStateImpl : c10::intrusive_ptr_target {
     // to replace the current frame
     // with a frame of a bailout graph
     size_t base_pointer;
+
+    // unique to every frame across all threads
+    size_t id;
+    static std::atomic<size_t> num_frames;
   };
 
   // saved-by-value stuff that can exist on the stack inside runInterpreter
   struct ActiveFrame {
     size_t pc;
+    size_t id;
     Instruction* instructions;
     IValue* constants;
     Operation* operators;
     Function** functions;
+    std::function<void(std::vector<IValue>&)>* profile_functions;
     TypePtr* types;
     std::map<int64_t, size_t> symbols2dims;
 
     ActiveFrame(const Frame& frame)
         : pc(frame.pc),
+          id(frame.id),
           instructions(frame.function->instructions_.data()),
           constants(frame.function->constant_table_.data()),
           operators(frame.function->operator_table_.data()),
           functions(frame.function->function_table_.data()),
+          profile_functions(frame.function->profile_function_table_.data()),
           types(frame.function->type_table_.data()) {}
   };
 
@@ -841,7 +861,8 @@ struct InterpreterStateImpl : c10::intrusive_ptr_target {
   }
 
   void enterFrame(const Code& code, size_t base_pointer) {
-    frames.emplace_back(Frame{code.pImpl, 0, base_pointer});
+    frames.emplace_back(
+        Frame{code.pImpl, 0, base_pointer, Frame::num_frames++});
     registers.resize(registers.size() + code.pImpl->register_size_);
     // frames.back().function->dump(std::cout);
   }
@@ -864,6 +885,36 @@ struct InterpreterStateImpl : c10::intrusive_ptr_target {
       out << val;
       out << "\n";
     }
+  }
+
+  std::vector<c10::optional<int64_t>> bindSymbolicShapes(
+      ActiveFrame& af,
+      at::IntArrayRef new_sizes,
+      const c10::VaryingShape& sym_shapes) {
+    std::vector<c10::optional<int64_t>> new_symbols;
+    if (new_sizes.size() == sym_shapes.size()) {
+      for (size_t i = 0; i < new_sizes.size(); i++) {
+        auto symbol = sym_shapes[i];
+        if (!symbol.has_value()) {
+          TORCH_INTERNAL_ASSERT("shouldn't be dynamic");
+          new_symbols.push_back(c10::nullopt);
+        } else {
+          if (*symbol > 0) {
+            new_symbols.push_back(
+                *symbol == new_sizes[i] ? symbol : c10::nullopt);
+          } else if (af.symbols2dims.count(symbol.value()) == 0) {
+            af.symbols2dims[*symbol] = new_sizes[i];
+            new_symbols.push_back(*symbol);
+          } else {
+            new_symbols.push_back(
+                (af.symbols2dims[symbol.value()] == new_sizes[i])
+                    ? symbol
+                    : c10::nullopt);
+          }
+        }
+      }
+    }
+    return new_symbols;
   }
 
   bool runImpl(Stack& stack) {
@@ -1066,6 +1117,13 @@ struct InterpreterStateImpl : c10::intrusive_ptr_target {
             stack.emplace_back(future->value());
             ++af.pc;
           } break;
+          case PROFILE: {
+            auto callback = af.profile_functions[inst.X];
+            push(stack, c10::IValue{static_cast<int64_t>(af.id)});
+            callback(stack);
+            ++af.pc;
+            break;
+          }
           case FAIL_GUARD: {
             // patch FAIL_GUARD back to GUARD
             GRAPH_DEBUG(
@@ -1077,9 +1135,17 @@ struct InterpreterStateImpl : c10::intrusive_ptr_target {
           }
           case GUARD: {
             auto t = stack.back().toTensor();
+            auto pttp = tensorTypeInCurrentExecutionContext(t);
             const TypePtr& expected = af.types[inst.X];
             auto expected_type = expected->cast<TensorType>();
-            auto bound_type = expected_type->merge(t, af.symbols2dims);
+            auto bound_type = pttp;
+            if (t.defined()) {
+              auto bound_symbols =
+                  bindSymbolicShapes(af, t.sizes(), expected_type->sizes());
+              auto bound_type =
+                  pttp->withSymbolicShapes(c10::VaryingShape{bound_symbols});
+            }
+            // auto bound_type = expected_type->merge(t, af.symbols2dims);
             push(stack, *expected_type == *bound_type);
             ++af.pc;
           } break;
@@ -1191,6 +1257,8 @@ struct InterpreterStateImpl : c10::intrusive_ptr_target {
     }
   }
 };
+
+std::atomic<size_t> InterpreterStateImpl::Frame::num_frames;
 
 std::ostream& operator<<(std::ostream& out, const Code& code) {
   out << *code.pImpl->graph_ << "\n";
