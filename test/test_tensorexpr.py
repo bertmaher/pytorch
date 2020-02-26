@@ -609,11 +609,10 @@ class TestTensorExprFuser(BaseTestClass):
             test_ne,
             test_div,
             test_eq,
-            #test_fmod,
+            test_fmod,
             test_sub,
-            #test_remainder,
+            test_remainder,
             test_pow,
-            # remainder and fmod don't work on LLVM yet
             # to fix the backward path, need script instead of trace
             # test_sigmoid_backward,
             # test_tanh_backward,
