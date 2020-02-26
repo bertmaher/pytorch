@@ -117,6 +117,7 @@ bool isSupported(Node* node) {
     case aten::__xor__:
     case aten::__lshift__:
     case aten::__rshift__:
+    case aten::where:
       return true;
     default:
       return false;

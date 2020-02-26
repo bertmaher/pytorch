@@ -243,6 +243,35 @@ Tensor* TensorExprKernel::ComputeTwoOperandWithAlpha(
       });
 }
 
+Tensor* TensorExprKernel::ComputeConditionWithTwoOperand(
+    const std::string& name,
+    const torch::jit::Value* v,
+    std::function<
+        ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)>
+        inner_expr) {
+  auto const& n = v->node();
+  auto const& shape = broadcastShapes(
+      valueShape(n->inputs()[0]),
+      valueShape(n->inputs()[1]),
+      valueShape(n->inputs()[2]));
+  return Compute(
+      name,
+      c10::fmap<DimArg>(shape),
+      [this, v, inner_expr](const std::vector<VarHandle>& axes) {
+        auto const& n = v->node();
+        std::vector<ExprHandle> inputs = {
+            tensorOrConstant(n->inputs()[1], axes),
+            tensorOrConstant(n->inputs()[2], axes),
+        };
+
+        promoteInputs(inputs);
+        // First expr is the condition, which we don't promote
+        inputs.emplace(inputs.begin(), tensorOrConstant(n->inputs()[0], axes));
+        ExprHandle compute = inner_expr(inputs[0], inputs[1], inputs[2]);
+        return demoteOutput(compute, n->output());
+      });
+}
+
 Tensor* TensorExprKernel::ComputeThreeOperand(
     const std::string& name,
     const torch::jit::Value* v,
@@ -697,6 +726,15 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
           "aten_threshold", v, [](const ExprHandle& a, const ExprHandle& threshold, const ExprHandle& value) {
             return ifThenElse(CompareSelect::make(a, threshold, kGT), a, value);
       });
+    } break;
+
+    case aten::where: {
+      return ComputeConditionWithTwoOperand(
+          "aten_where",
+          v,
+          [](const ExprHandle& a0, const ExprHandle& a1, const ExprHandle& a2) {
+            return ifThenElse(a0, a1, a2);
+          });
     } break;
 
     case aten::frac: {
