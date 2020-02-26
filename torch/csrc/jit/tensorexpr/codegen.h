@@ -51,10 +51,13 @@ class CodeGen::BufferArg {
   BufferArg(const Buffer& buffer)
       : var_(buffer.data()), dtype_(buffer.dtype()) {}
   BufferArg(Tensor* tensor)
-      : var_(tensor->function()->func_var()),
-        dtype_(tensor->function()->body()->dtype()) {}
+      : var_(tensor->function()->func_var(tensor->output_index())),
+        dtype_(tensor->function()->body(tensor->output_index())->dtype()) {}
   BufferArg(const Function& func)
-      : var_(func.func_var()), dtype_(func.body()->dtype()) {}
+      : var_(func.func_var(0)), dtype_(func.body(0)->dtype()) {
+        // TODO: Support multiple-output functions
+        CHECK(func.func_vars().size() == 1);
+      }
   BufferArg(const VarHandle& var) : var_(var.node()), dtype_(var.dtype()), isVar_(true) {}
 
   const Var* var() const {
