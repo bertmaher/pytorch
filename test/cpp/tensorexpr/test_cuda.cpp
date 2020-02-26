@@ -37,8 +37,8 @@ void testCudaTestVectorAdd01() {
         return a_buf(n, b_id, t_id) + b_buf(n, b_id, t_id);
       });
   Schedule sch({c});
-  const VarHandle& b_id = VarHandle(c->arg(1));
-  const VarHandle& t_id = VarHandle(c->arg(2));
+  VarHandle b_id(c->function()->arg(1));
+  VarHandle t_id(c->function()->arg(2));
   c->GPUExecConfig({b_id}, {t_id});
   Stmt* stmt = sch.Lower();
   CudaCodeGen cuda_cg(stmt, c, a_buf, b_buf);
