@@ -595,6 +595,9 @@ class TestTensorExprFuser(BaseTestClass):
             torch.autograd.backward(c, y)
             return c.detach()
 
+        def test_type_as(x, y):
+            return x.type_as(torch.add(x, y))
+
         fns = {
             test_atan2,
             test_gt,
@@ -614,6 +617,7 @@ class TestTensorExprFuser(BaseTestClass):
             # to fix the backward path, need script instead of trace
             # test_sigmoid_backward,
             # test_tanh_backward,
+            test_type_as,
         }
         device_options = ["cpu", "cuda"] if torch.cuda.is_available() else ['cpu']
         for torch_fn in fns:

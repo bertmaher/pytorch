@@ -56,6 +56,7 @@ bool isSupported(Node* node) {
   switch (node->kind()) {
     case aten::add:
     case aten::_cast_Float:
+    case aten::type_as:
     case aten::sub:
     case aten::mul:
     case aten::div:

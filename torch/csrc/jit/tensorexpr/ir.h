@@ -210,9 +210,9 @@ class IntImm : public ExprNode<IntImm> {
   static ExprHandle make(int value) {
     return ExprHandle(new IntImm(value));
   }
+  IntImm(int value) : ExprNodeBase(kInt32), value_(value) {}
 
  private:
-  IntImm(int value) : ExprNodeBase(kInt32), value_(value) {}
   int value_;
 };
 
@@ -1066,6 +1066,12 @@ class Cond : public StmtNode<Cond> {
   Stmt* true_stmt_;
   Stmt* false_stmt_;
 };
+
+TORCH_API std::vector<const Expr*> ExprHandleVectorToExprVector(const std::vector<ExprHandle>&);
+TORCH_API std::vector<ExprHandle> ExprVectorToExprHandleVector(const std::vector<const Expr*>&);
+TORCH_API std::vector<const Var*> VarHandleVectorToVarVector(const std::vector<VarHandle>&);
+TORCH_API std::vector<VarHandle> VarVectorToVarHandleVector(const std::vector<const Var*>&);
+
 
 } // namespace tensorexpr
 } // namespace jit
