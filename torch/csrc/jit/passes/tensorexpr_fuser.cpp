@@ -12,6 +12,19 @@
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
 
+namespace torch {
+namespace jit {
+namespace tensorexpr {
+
+static bool texpr_fuser_enabled = true;
+TORCH_API void SetTexprFuserEnabled(bool val) {
+  texpr_fuser_enabled = val;
+}
+
+} // namespace tensorexpr
+} // namespace jit
+} // namespace torch
+
 namespace {
 
 const Symbol& getTensorExprSymbol() {
@@ -42,6 +55,8 @@ bool isSupported(Node* node) {
   // TODO:
   switch (node->kind()) {
     case aten::add:
+    case aten::_cast_Float:
+    case aten::type_as:
     case aten::sub:
     case aten::mul:
     case aten::div:
@@ -96,6 +111,12 @@ bool isSupported(Node* node) {
     case aten::unsqueeze:
     case aten::frac:
     case aten::rand_like:
+    case aten::_sigmoid_backward:
+    case aten::_tanh_backward:
+    case aten::__and__:
+    case aten::__xor__:
+    case aten::__lshift__:
+    case aten::__rshift__:
     case aten::where:
       return true;
     default:
@@ -237,6 +258,9 @@ std::pair<graph_node_list::iterator, bool> scanNode(
 }
 
 void fuseTensorExprs(std::shared_ptr<Graph>& graph) {
+  if (!texpr_fuser_enabled) {
+    return;
+  }
   GRAPH_DUMP("Before TExprFuser: ", graph);
 
   // Get rid of dead code so that we don't waste effort fusing it.

@@ -995,7 +995,7 @@ void testATengeInt() {
   SimpleIREvaluator ir_eval(memcpy_expr, a, b, c);
   ir_eval(a_buffer, b_buffer, c_buffer);
 
-  assertAllEqual(c_buffer, 0);
+  assertAllEqual(c_buffer, 1);
 }
 
 void testATengtInt() {
