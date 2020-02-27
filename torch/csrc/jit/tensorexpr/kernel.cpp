@@ -115,7 +115,7 @@ void TensorExprKernel::promoteInputs(std::vector<ExprHandle>& inputs) {
       AT_FORALL_SCALAR_TYPES_AND(Half, TYPE_CASE);
 #undef TYPE_CASE
   default:
-    LOG(FATAL) << "Unsupported datatype";
+    LOG(FATAL) << "Unsupported datatype: " << highType;
     }
   }
 }
