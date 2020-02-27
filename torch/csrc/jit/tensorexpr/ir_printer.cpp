@@ -256,7 +256,7 @@ void IRPrinter::visit(const Cond* v) {
   Stmt* false_stmt = v->false_stmt();
   if (!true_stmt) {
     emitIndent();
-    os() << "if(!" << *cond << ") {" << std::endl;
+    os() << "if (!" << *cond << ") {" << std::endl;
     indent_++;
     os() << *false_stmt << std::endl;
     indent_--;
@@ -264,12 +264,12 @@ void IRPrinter::visit(const Cond* v) {
     os() << "}";
   } else {
     emitIndent();
-    os() << "if(" << *cond << ") {" << std::endl;
+    os() << "if (" << *cond << ") {" << std::endl;
     indent_++;
     os() << *true_stmt << std::endl;
     indent_--;
-    os() << "}";
     emitIndent();
+    os() << "}";
     if (false_stmt) {
       os() << " else {" << std::endl;
       indent_++;
@@ -282,9 +282,7 @@ void IRPrinter::visit(const Cond* v) {
 }
 
 void IRPrinter::emitIndent() {
-  for (int i = 0; i < indent_; i++) {
-    os() << "  ";
-  }
+  os() << std::setw(2 * indent_) << "";
 }
 
 std::ostream& operator<<(std::ostream& stream, const ExprHandle& expr) {
