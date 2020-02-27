@@ -205,6 +205,7 @@ class TensorExprKernel {
   KernelArena kernel_arena_;
   BackendType backend_type_ = BackendType::kUninitialized;
   at::Device device_ = at::kCPU;
+  std::vector<TypePtr> input_types_;
 };
 
 TORCH_API int& GetTECudaPointwiseLoopLevels();

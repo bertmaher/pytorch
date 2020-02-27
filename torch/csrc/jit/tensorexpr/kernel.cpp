@@ -1,6 +1,6 @@
 #include <torch/csrc/jit/tensorexpr/kernel.h>
-
 #include <torch/csrc/jit/tensorexpr/constant_folder.h>
+#include <torch/csrc/jit/jit_log.h>
 #include <torch/csrc/jit/tensorexpr/ir_printer.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 
@@ -1041,8 +1041,89 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
   codegen_ = CreateCodeGen(codegen_name, stmt, params);
 }
 
+template <typename T>
+static bool isValidPrimProperty(const c10::optional<T>& a, T b) {
+  return !a.has_value() || *a == b;
+}
+
+static bool isValidVaryingShape(
+    const c10::VaryingShape& vs,
+    at::IntArrayRef sz) {
+  if (!vs.size().has_value()) {
+    // TODO: does it make sense to have kernels with completely unspecified
+    // shapes/strides
+    return true;
+  }
+
+  if (*vs.size() != sz.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < sz.size(); i++) {
+    if (!isValidPrimProperty(vs[i], sz[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static void checkInputs(const at::ArrayRef<IValue>& inputs, std::vector<TypePtr>& input_types) {
+  TORCH_INTERNAL_ASSERT(
+      inputs.size() == input_types.size(),
+      "number of actual inputs don't match with the number of inputs to a subgraph");
+  for (size_t i = 0; i < inputs.size(); i++) {
+    // enable this to debug the asserts below
+    GRAPH_DEBUG(
+        "Comparing input ",
+        i,
+        " ivalue ",
+        inputs[i],
+        " against type ",
+        *input_types[i]);
+    if (inputs[i].isTensor()) {
+      auto t = inputs[i].toTensor();
+      TORCH_INTERNAL_ASSERT(
+          t.defined(), "input ", i, " can't be an undefined tensor!");
+      auto tt = input_types[i]->cast<TensorType>();
+      TORCH_INTERNAL_ASSERT(tt, "input ", i, " expected to be a tensor!");
+      TORCH_INTERNAL_ASSERT(
+          isValidPrimProperty(tt->scalarType(), t.scalar_type()),
+          "input ",
+          i,
+          " scalar types don't match");
+      // TODO: do we need an extra check to make sure the device is specified
+      TORCH_INTERNAL_ASSERT(
+          isValidPrimProperty(tt->device(), t.device()),
+          "input ",
+          i,
+          " device types don't match");
+      TORCH_INTERNAL_ASSERT(
+          isValidVaryingShape(tt->sizes(), t.sizes()),
+          "input ",
+          i,
+          " sizes don't match");
+      TORCH_INTERNAL_ASSERT(
+          isValidVaryingShape(tt->strides(), t.strides()),
+          "input ",
+          i,
+          " strides don't match");
+    } else if (inputs[i].isInt()) {
+      TORCH_INTERNAL_ASSERT(
+          input_types[i]->cast<IntType>(), "type of ", i, " isn't an int!");
+    } else if (inputs[i].isDouble()) {
+      TORCH_INTERNAL_ASSERT(
+          input_types[i]->cast<FloatType>(), "type of ", i, " isn't an int!");
+    } else {
+      // TODO: cover more IValue types
+      // TODO: make it a hard error
+    }
+  }
+}
+
 void TensorExprKernel::PickAndCheckBackendType(
     const at::ArrayRef<IValue>& inputs) {
+  checkInputs(inputs, input_types_);
+
   at::Device device = [&inputs]() {
     for (auto const& input : inputs) {
       if (input.isTensor()) {
@@ -1225,6 +1306,7 @@ TensorExprKernel::TensorExprKernel(const Graph& subgraph) {
   n_inputs_ = subgraph.inputs().size();
   for (auto const& input : subgraph.inputs()) {
     bindInput(input);
+    input_types_.push_back(input->type());
   }
 
   // Bind nodes to tensor compute expressions.
