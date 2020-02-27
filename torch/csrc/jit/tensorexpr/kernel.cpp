@@ -906,15 +906,15 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
     }
   }
 
-  torch::jit::tensorexpr::schedule::Schedule sch(tensor_outputs);
+  torch::jit::tensorexpr::schedule::LoopNest l(tensor_outputs);
 
   // Compute non-output tensors_ inline
   for (auto& p : tensors_) {
-    p.second->ComputeInline();
+    l.ComputeInline(l.getLoopBodyFor(p.second));
   }
   if (backend_type == kCudaCodeGen) {
     for (int i = 0; i < tensor_outputs_.size(); i++) {
-      tensor_outputs_[i]->ComputeInline();
+      l.ComputeInline(l.getLoopBodyFor(tensor_outputs_[i]));
 
       Tensor* tensor = tensor_outputs[i];
       const Var* index = tensor->arg(0);
@@ -925,34 +925,40 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       int block_size = GetTECudaPointwiseBlockSize();
 
       if (loop_levels == 2) {
-	VarHandle outer;
-	VarHandle inner;
-	int kDefaultBlockSize = 512;
-	if (block_size < 0) {
-	  block_size = kDefaultBlockSize;
-	}
-	tensor->SplitWithMask(VarHandle(index), block_size, true, &outer, &inner);
-	tensor->GPUExecConfig({outer}, {inner});
+        Stmt* outer;
+        Stmt* inner;
+        int kDefaultBlockSize = 512;
+        if (block_size < 0) {
+          block_size = kDefaultBlockSize;
+        }
+        std::vector<Stmt*> loops = l.getLoopStmtsFor(tensor);
+        l.SplitWithMask(loops[0], block_size, &outer, &inner);
+        l.SetGPUBlockIndex(outer, 0);
+        l.SetGPUThreadIndex(inner, 0);
       } else if (loop_levels == 3) {
-	VarHandle outer;
-	VarHandle inner;
-	VarHandle inner_1;
-	VarHandle inner_2;
-	// TODO: change the number of microprocessors
-	const int kDefaultBlockCount = 1280;
-	const int kDefaultBlockSize = 256;
-	block_count = (block_count > 0) ? block_count : kDefaultBlockCount;
-	block_size = (block_size > 0) ? block_size : kDefaultBlockSize;
-	tensor->SplitWithMask(VarHandle(index), block_count * block_size, true, &outer, &inner);
-	tensor->SplitWithMask(inner, block_size, true, &inner_1, &inner_2);
-	tensor->GPUExecConfig({inner_1}, {inner_2});
+        Stmt* outer;
+        Stmt* inner;
+        Stmt* inner_1;
+        Stmt* inner_2;
+        // TODO: change the number of microprocessors
+        const int kDefaultBlockCount = 1280;
+        const int kDefaultBlockSize = 256;
+        block_count = (block_count > 0) ? block_count : kDefaultBlockCount;
+        block_size = (block_size > 0) ? block_size : kDefaultBlockSize;
+        std::vector<Stmt*> loops = l.getLoopStmtsFor(tensor);
+        l.SplitWithMask(loops[0], block_count * block_size, &outer, &inner);
+        l.SplitWithMask(inner, block_size, &inner_1, &inner_2);
+        l.SetGPUBlockIndex(inner_1, 0);
+        l.SetGPUThreadIndex(inner_2, 0);
       } else {
-	throw std::runtime_error("Invalid loop-level: " + std::to_string(loop_levels));
+        throw std::runtime_error(
+            "Invalid loop-level: " + std::to_string(loop_levels));
       }
     }
   }
 
-  Stmt* stmt = sch.Lower();
+  l.ApplyInlines();
+  Stmt* stmt = l.root_stmt();
 
   // Set up formal params (inputs, then outputs) for kernel.
   std::vector<CodeGen::BufferArg> params;

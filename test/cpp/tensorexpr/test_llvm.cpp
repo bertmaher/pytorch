@@ -917,8 +917,8 @@ void testLLVMSimpleMath01() {
   const int N = 1024;
   Tensor* tensor = Compute(
       "f", {{N, "i"}}, [](const VarHandle& i) { return cast<float>(i * i + 1); });
-  Schedule sch = Schedule::make({tensor});
-  Stmt* stmt = sch.Lower();
+  LoopNest l({tensor});
+  Stmt* stmt = l.root_stmt();
   Buffer f_buf(VarHandle(tensor->func_var()), kFloat, {N});
   LLVMCodeGen cg(stmt, {f_buf});
 
@@ -943,8 +943,8 @@ void testLLVMComputeMul() {
   });
 
   Buffer c_buf(VarHandle(c->func_var()), kFloat, {N});
-  Schedule sch = Schedule::make({c});
-  Stmt* s = sch.Lower();
+  LoopNest l({c});
+  Stmt* s = l.root_stmt();
 
   LLVMCodeGen cg(s, {a, b, c_buf});
 
@@ -969,8 +969,8 @@ void testLLVMBroadcastAdd() {
       });
 
   Buffer c_buf(VarHandle(c->func_var()), kFloat, {M, N});
-  Schedule sch = Schedule::make({c});
-  Stmt* s = sch.Lower();
+  LoopNest l({c});
+  Stmt* s = l.root_stmt();
 
   LLVMCodeGen cg(s, {a, b, c_buf});
 
@@ -1053,8 +1053,8 @@ void testLLVMTensorDynamicShapeAdd() {
     Buffer b(VarHandle("b", kHandle), kFloat, {n});
     Tensor* c =
         Compute("c", {{n, "n"}}, [&](const VarHandle& i) { return a(i) + b(i); });
-    Schedule sch = Schedule::make({c});
-    Stmt* s = sch.Lower();
+    LoopNest l({c});
+    Stmt* s = l.root_stmt();
     LLVMCodeGen cg(s, {a, b, c, n});
     std::vector<float> aData(size, 1.0f);
     std::vector<float> bData(size, 2.0f);
@@ -1078,8 +1078,8 @@ void testLLVMDynamicShape2D() {
         Compute("c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
           return a(i, j) + b(i, j);
         });
-    auto sch = torch::jit::tensorexpr::schedule::Schedule::make({c});
-    Stmt* s = sch.Lower();
+    LoopNest l({c});
+    Stmt* s = l.root_stmt();
     LLVMCodeGen cg(s, {a, b, c, m, n});
     std::vector<float> aData(M * N, 1.0f);
     std::vector<float> bData(M * N, 2.0f);
