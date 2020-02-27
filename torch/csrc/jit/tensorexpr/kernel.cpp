@@ -95,7 +95,7 @@ void TensorExprKernel::promoteInputs(std::vector<ExprHandle>& inputs) {
     if (iType == ScalarType::Bool) {
       continue;
     }
-    highType = promoteNumericTypes(highType, iType);
+    highType = promoteTypes(highType, iType);
   }
 
   for (ExprHandle& e : inputs) {

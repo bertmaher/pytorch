@@ -142,7 +142,7 @@ void CudaPrinter::visit(const Intrinsics* v) {
   ScalarType returnType = v->param(0)->dtype().scalar_type();
   for (int i = 1; i < v->nparams(); ++i) {
     returnType =
-        promoteNumericTypes(returnType, v->param(i)->dtype().scalar_type());
+        promoteTypes(returnType, v->param(i)->dtype().scalar_type());
   }
 
   if (returnType == ScalarType::Half || returnType == ScalarType::Float) {
