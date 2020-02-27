@@ -84,7 +84,7 @@ void ProfilingRecord::insertShapeProfile(Node *n, Value *i) {
   n->replaceInputWith(i, pn->output());
 }
 
-#define CFG 0
+#define CFG 1
   
 void ProfilingRecord::instrumentBlock(Block *block) {
   for (auto it = block->nodes().begin(); it != block->nodes().end(); ++it) {
