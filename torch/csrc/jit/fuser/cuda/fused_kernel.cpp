@@ -105,6 +105,9 @@ FusedKernelCUDA::FusedKernelCUDA(
 
   // Creates the NVRTC program
   nvrtcProgram program;
+  #if 1
+  std::cout << "XXXQQQ: fuser code: " << code_ << std::endl;
+  #endif
   AT_CUDA_NVRTC_CHECK(nvrtc().nvrtcCreateProgram(
       &program, code_.c_str(), nullptr, 0, nullptr, nullptr));
 

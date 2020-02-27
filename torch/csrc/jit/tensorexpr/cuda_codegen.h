@@ -95,7 +95,7 @@ class TORCH_API CudaCodeGen : public CodeGen {
  private:
   TORCH_API void Initialize();
 
-  void CompileToNVRTC(const std::string& code);
+  void CompileToNVRTC(const std::string& code, const std::string& func_name);
 
   UniqueNameManager* name_manager() {
     if (!printer_) {

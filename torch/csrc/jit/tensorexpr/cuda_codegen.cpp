@@ -5,7 +5,7 @@
 #include "torch/csrc/jit/tensorexpr/cuda_random.h"
 #include "torch/csrc/jit/tensorexpr/execution_counter.h"
 
-#define DEBUG_PRINT 0
+#define DEBUG_PRINT 1
 
 namespace torch {
 namespace jit {
@@ -187,17 +187,21 @@ void CudaPrinter::visit(const Min* v) {
 }
 
 void CudaPrinter::visit(const IfThenElse* v) {
-  os() << "(";
+  os() << "((";
   v->condition().accept(this);
   os() << ") ? ";
   v->true_value().accept(this);
   os() << " : ";
   v->false_value().accept(this);
+  os() << ")";
 }
 
 class PrioritizeLoad : public IRMutator {
  public:
   virtual Expr mutate(const Load* v) {
+    if (nested_if_then_else_ > 0) {
+      return IRMutator::mutate(v);
+    }
     MemLoadList& load_list = load_stack_.back();
     Var load_new_var{"v", v->dtype()};
     Expr new_value = IRMutator::mutate(v);
@@ -281,6 +285,13 @@ class PrioritizeLoad : public IRMutator {
     return stmt_with_loads;
   }
 
+  Expr mutate(const IfThenElse* v) override {
+    nested_if_then_else_++;
+    auto new_v = IRMutator::mutate(v);
+    nested_if_then_else_--;
+    return new_v;
+  }
+
  private:
   using MemLoadEntry = std::pair<const Variable*, Expr>;
   using MemLoadList = std::vector<MemLoadEntry>;
@@ -306,6 +317,8 @@ class PrioritizeLoad : public IRMutator {
   }
 
   MemoryLoadStack load_stack_;
+  // TODO: switch to Let within the Expr.
+  int nested_if_then_else_ = 0;
 };
 
 class HasRand : public IRVisitor {
@@ -340,7 +353,9 @@ void CudaCodeGen::Initialize() {
   if (has_random_) {
     os() << philox_random_string << std::endl;
   }
-  os() << "extern \"C\" __global__" << std::endl << "void f(";
+  static int counter = 0;
+  std::string func_name = "func_" + std::to_string(++counter);
+  os() << "extern \"C\" __global__" << std::endl << "void " << func_name << "(";
   const std::vector<BufferArg> buffer_args = this->buffer_args();
   for (int i = 0; i < buffer_args.size(); i++) {
     if (i > 0) {
@@ -412,7 +427,14 @@ void CudaCodeGen::Initialize() {
   ;
 #endif
 
-  CompileToNVRTC(oss_.str());
+  #if 1
+  CompileToNVRTC(oss_.str(), func_name);
+  #else
+  std::ifstream ifs("/home/ubuntu/projects/pt_fusion/pytorch/01.cpp");
+  std::string content( (std::istreambuf_iterator<char>(ifs) ),
+		       (std::istreambuf_iterator<char>()    ) );
+  CompileToNVRTC(content, func_name);
+  #endif
   USE_TRIGGER(cuda_codegen_created);
 }
 
@@ -491,10 +513,11 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
       stream,
       ptr_to_args.data(),
       nullptr));
+  // cudaDeviceSynchronize();
   USE_TRIGGER(cuda_codegen_executed);
 }
 
-void CudaCodeGen::CompileToNVRTC(const std::string& code) {
+void CudaCodeGen::CompileToNVRTC(const std::string& code, const std::string& func_name) {
   // Initializes driver's API context (if necessary)
   CUdevice device = 0;
   CUcontext pctx = 0;
@@ -558,10 +581,9 @@ void CudaCodeGen::CompileToNVRTC(const std::string& code) {
   AT_CUDA_NVRTC_CHECK(nvrtc().nvrtcGetPTX(program, ptx.data()));
 
   CUmodule module;
-  std::string name = "f";
   AT_CUDA_DRIVER_CHECK(nvrtc().cuModuleLoadData(&module, ptx.data()));
   AT_CUDA_DRIVER_CHECK(
-      nvrtc().cuModuleGetFunction(&function_, module, name.c_str()));
+      nvrtc().cuModuleGetFunction(&function_, module, func_name.c_str()));
 }
 
 RegisterCodeGen<CudaCodeGen> reg("cuda_codegen");

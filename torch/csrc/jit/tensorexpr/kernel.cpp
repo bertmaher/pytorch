@@ -696,7 +696,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
                   load,
                   tensorOrConstant(inputs[ii], new_axes));
               offset += bufferSizes(tensors_.at(inputs[ii]->unique()))[dim];
-              new_axes[dim] = new_axes[dim] - IntImm::make(offset);
+              new_axes[dim] = axes[dim] - IntImm::make(offset);
             }
 
             return load;

@@ -84,6 +84,8 @@ void ProfilingRecord::insertShapeProfile(Node *n, Value *i) {
   n->replaceInputWith(i, pn->output());
 }
 
+#define CFG 0
+  
 void ProfilingRecord::instrumentBlock(Block *block) {
   for (auto it = block->nodes().begin(); it != block->nodes().end(); ++it) {
     auto n = *it;
@@ -100,6 +102,15 @@ void ProfilingRecord::instrumentBlock(Block *block) {
       instrumentBlock(b);
     }
   }
+
+  #if CFG == 1
+  // insert profile nodes on block outputs
+  for (auto i : block->return_node()->inputs()) {
+    if (i->type()->isSubtypeOf(TensorType::get())) {
+      insertShapeProfile(block->return_node(), i);
+    }
+  }
+  #endif
 }
 
 std::unique_ptr<ProfilingRecord> ProfilingRecord::instrumentGraph(
@@ -111,11 +122,13 @@ std::unique_ptr<ProfilingRecord> ProfilingRecord::instrumentGraph(
   unprofileBlock(new_g->block());
   pr->instrumentBlock(new_g->block());
 
+  #if CFG == 0
   for (auto i : new_g->return_node()->inputs()) {
     if (i->type()->isSubtypeOf(TensorType::get())) {
       pr->insertShapeProfile(new_g->return_node(), i);
     }
   }
+  #endif
   std::function<void(Stack&)> counter = [raw_pr](Stack&) {
     std::lock_guard<std::mutex> lock(raw_pr->mutex_);
     if (raw_pr->profiling_count_ > 0)
