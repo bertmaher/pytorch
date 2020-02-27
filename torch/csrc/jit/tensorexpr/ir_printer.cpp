@@ -168,6 +168,7 @@ void IRPrinter::visit(const LetStmt* v) {
 }
 
 void IRPrinter::visit(const Ramp* v) {
+  emitIndent();
   os() << "Ramp(" << v->base() << ", " << v->stride() << ", " << v->lanes()
        << ")";
 }
@@ -180,6 +181,7 @@ void IRPrinter::visit(const Load* v) {
 void IRPrinter::visit(const For* v) {
   const Var* var = v->var();
   VarHandle vv(var);
+  emitIndent();
   os() << "for (" << var->dtype().ToCppString() << " " << vv << " = "
        << ExprHandle(v->start()) << "; " << vv << " < " << ExprHandle(v->stop()) << "; " << vv
        << "++) {";
@@ -189,8 +191,11 @@ void IRPrinter::visit(const For* v) {
   }
   os() << std::endl;
   if (v->body()) {
+    indent_++;
     os() << *v->body() << std::endl;
+    indent_--;
   }
+  emitIndent();
   os() << "}";
 }
 
@@ -202,6 +207,7 @@ void IRPrinter::visit(const Block* v) {
 
 void IRPrinter::visit(const Store* v) {
   // TODO: handle the mask
+  emitIndent();
   os() << *v->base_handle() << "[" << *v->index() << "] = " << *v->value() << ";";
 }
 
@@ -226,6 +232,7 @@ void IRPrinter::visit(const BaseCallNode* v) {
 }
 
 void IRPrinter::visit(const Allocate* v) {
+  emitIndent();
   os() << "Allocate(" << *v->buffer_var() << ", " << v->dtype();
   os() << ", {";
   const std::vector<const Expr*>& dims = v->dims();
@@ -239,6 +246,7 @@ void IRPrinter::visit(const Allocate* v) {
 }
 
 void IRPrinter::visit(const Free* v) {
+  emitIndent();
   os() << "Free(" << *v->buffer_var() << ");";
 }
 
@@ -247,18 +255,35 @@ void IRPrinter::visit(const Cond* v) {
   Stmt* true_stmt = v->true_stmt();
   Stmt* false_stmt = v->false_stmt();
   if (!true_stmt) {
+    emitIndent();
     os() << "if(!" << *cond << ") {" << std::endl;
+    indent_++;
     os() << *false_stmt << std::endl;
+    indent_--;
+    emitIndent();
     os() << "}";
   } else {
+    emitIndent();
     os() << "if(" << *cond << ") {" << std::endl;
+    indent_++;
     os() << *true_stmt << std::endl;
+    indent_--;
     os() << "}";
+    emitIndent();
     if (false_stmt) {
       os() << " else {" << std::endl;
+      indent_++;
       os() << *false_stmt << std::endl;
+      indent_--;
+      emitIndent();
       os() << "}";
     }
+  }
+}
+
+void IRPrinter::emitIndent() {
+  for (int i = 0; i < indent_; i++) {
+    os() << "  ";
   }
 }
 

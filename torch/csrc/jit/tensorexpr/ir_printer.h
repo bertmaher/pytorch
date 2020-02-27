@@ -72,6 +72,8 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
   }
 
  private:
+  void emitIndent();
+  int indent_ = 0;
   PrinterStream printer_os_;
   UniqueNameManager name_manager_;
 };
