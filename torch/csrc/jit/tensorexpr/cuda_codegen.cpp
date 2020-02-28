@@ -265,6 +265,7 @@ void CudaPrinter::visit(const IfThenElse* v) {
 class PrioritizeLoad : public IRMutator {
  public:
   const Expr* mutate(const Load* v) override {
+    // Look at the declaration of this variable for more details.
     if (nested_if_then_else_ > 0) {
       return IRMutator::mutate(v);
     }
@@ -383,7 +384,7 @@ class PrioritizeLoad : public IRMutator {
   }
 
   MemoryLoadStack load_stack_;
-  // TODO: For now, we are not movign the loads with the IfThenElse.
+  // TODO: For now, we are not moving the loads with the IfThenElse.
   // Eventually, we should switch to a more generic structure like:
   // int v2 = IfThenElse(cond, true_v, false_v) + 2 ->
   // 
