@@ -29,6 +29,7 @@ namespace jit {
   _(ExprUnaryMath01)            \
   _(ExprBinaryMath01)           \
   _(ExprDynamicShapeAdd)        \
+  _(ExprBitwiseOps)             \
   _(IRPrinterBasicValueTest)    \
   _(IRPrinterBasicValueTest02)  \
   _(IRPrinterLetTest01)         \
