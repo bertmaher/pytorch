@@ -784,21 +784,24 @@ SplitAxisWithMask::SplitAxisWithMask(
   // TODO: support factor_on_inner == false;
   CHECK(factor_on_inner) << "only factor_on_inner = True is supported for now";
 
-  // TODO: Support dynamic shapes
-  auto const& sizeExpr = this->stop() - this->start();
+  ExprHandle split_count;
   bool needsPredicate = true;
   if (this->stop().AsNode<IntImm>() && this->start().AsNode<IntImm>()) {
     int size = stop().AsNode<IntImm>()->value() - start().AsNode<IntImm>()->value();
     if ((size % factor) == 0) {
       needsPredicate = false;
     }
+    // TODO: Switch to real constant folding when it is available.
+    split_count = (size + factor - 1) / factor;
+  } else {
+    auto const& sizeExpr = this->stop() - this->start();
+    split_count = (sizeExpr + factor - 1) / factor;
   }
   if (needsPredicate) {
     IntImm* start = this->start().AsNode<IntImm>();
     CHECK(start && start->value() == 0) << "Non-zero start is not implemented yet";
     predicate_ = CompareSelect::make(loop_axis->var(), this->stop(), kLT);
   }
-  auto const& split_count = (sizeExpr + factor - 1) / factor;
 
   this->set_output_group_count(1);
   const std::string& loop_var_name = loop_axis->var().name_hint();

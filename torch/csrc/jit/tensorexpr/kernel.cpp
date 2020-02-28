@@ -865,7 +865,16 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       Tensor* tensor = tensor_outputs_[i];
       ExprHandle total_count = ExprHandle(tensor->dim(0));
       for (int i = 1; i < tensor->ndim(); i++) {
-        total_count = total_count * ExprHandle(tensor->dim(i));
+        const IntImm* total_count_i = total_count.AsNode<IntImm>();
+        const IntImm* tensor_dim_i =
+            dynamic_cast<const IntImm*>(tensor->dim(i));
+        if (total_count_i && tensor_dim_i) {
+          // TODO: switch to real constant folding when it is available.
+          total_count =
+              ExprHandle(total_count_i->value() * tensor_dim_i->value());
+        } else {
+          total_count = total_count * ExprHandle(tensor->dim(i));
+        }
       }
       // Flatten the index for GPU kernels.
       // TODO: move this to fusing axis when it is ready.

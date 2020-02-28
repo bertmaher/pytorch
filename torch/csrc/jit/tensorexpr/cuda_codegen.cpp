@@ -510,14 +510,14 @@ void CudaCodeGen::Initialize() {
     if (i > 0) {
       std::cout << ", ";
     }
-    std::cout << gpu_block_extents[i];
+    std::cout << *gpu_block_extents[i];
   }
   std::cout << "), thread(";
   for (int i = 0; i < gpu_thread_extents.size(); i++) {
     if (i > 0) {
       std::cout << ", ";
     }
-    std::cout << gpu_thread_extents[i];
+    std::cout << *gpu_thread_extents[i];
   }
   std::cout << ")" << std::endl;
   ;
