@@ -1115,12 +1115,11 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
               "input",
               inputTensorDims,
               [&](const std::vector<VarHandle>& axes) {
-                std::vector<ExprHandle> idxs;
-                idxs.push_back(axes[0] * (int32_t)*strides[0]);
-                for (int i = 1; i < axes.size(); i++) {
-                  idxs.push_back(idxs[i - 1] + axes[i] * (int32_t)*strides[i]);
+                ExprHandle idx = 0;
+                for (int64_t i = 0; i < axes.size(); i++) {
+                  idx = idx + axes[i] * int32_t{*strides[i]};
                 }
-                return in_buffer(idxs.back());
+                return in_buffer(idx);
               }));
       kernelArgs_.emplace_back(
           in_buffer,
