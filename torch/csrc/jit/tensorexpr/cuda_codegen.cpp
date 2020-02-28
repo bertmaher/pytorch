@@ -527,15 +527,6 @@ void CudaCodeGen::Initialize() {
   USE_TRIGGER(cuda_codegen_created);
 }
 
-static bool blockSizeIsZero(const std::vector<int>& blocks) {
-  for (int b : blocks) {
-    if (b == 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void CudaCodeGen::call(const std::vector<CallArg>& args) {
   CHECK_EQ(args.size(), buffer_args().size());
 
@@ -561,8 +552,10 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   }
 
   // Skip launching the kernel if there are no elements to process.
-  if (blockSizeIsZero(gpu_block_extents_v)) {
-    return;
+  for (int extent : gpu_block_extents_v) {
+    if (extent == 0) {
+      return;
+    }
   }
 
   // Bind the buffer addresses into arguments
