@@ -527,17 +527,13 @@ void CudaCodeGen::Initialize() {
   USE_TRIGGER(cuda_codegen_created);
 }
 
-static int gridSize(
-    const std::vector<int>& blocks,
-    const std::vector<int>& threads) {
-  int size = 1;
+static bool blockSizeIsZero(const std::vector<int>& blocks) {
   for (int b : blocks) {
-    size *= b;
+    if (b == 0) {
+      return true;
+    }
   }
-  for (int t : threads) {
-    size *= t;
-  }
-  return size;
+  return false;
 }
 
 void CudaCodeGen::call(const std::vector<CallArg>& args) {
@@ -565,7 +561,7 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   }
 
   // Skip launching the kernel if there are no elements to process.
-  if (gridSize(gpu_block_extents_v, gpu_thread_extents_v) == 0) {
+  if (blockSizeIsZero(gpu_block_extents_v)) {
     return;
   }
 
