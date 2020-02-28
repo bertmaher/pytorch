@@ -1,4 +1,6 @@
 #include <torch/csrc/jit/tensorexpr/kernel.h>
+
+#include <torch/csrc/jit/tensorexpr/constant_folder.h>
 #include <torch/csrc/jit/tensorexpr/ir_printer.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
 
@@ -996,6 +998,9 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
 
   l.ApplyInlines();
   Stmt* stmt = l.root_stmt();
+
+  ConstantFolder constant_folder;
+  stmt = stmt->accept_mutator(&constant_folder);
 
   // Set up formal params (inputs, then outputs) for kernel.
   std::vector<CodeGen::BufferArg> params;

@@ -1,5 +1,6 @@
 #pragma once
 
+
 /**
  * See README.md for instructions on how to add a new test.
  */
@@ -84,7 +85,16 @@ namespace jit {
   _(ATengeInt)                  \
   _(ATengtInt)                  \
   _(ATenleInt)                  \
-  _(ATenltInt)
+  _(ATenltInt)                  \
+  _(ConstantFoldSimple)         \
+  _(ConstantFoldTwoLayer)       \
+  _(ConstantFoldShifts)         \
+  _(ConstantFoldBitwise)        \
+  _(ConstantFoldMultiOp)        \
+  _(ConstantFoldMinMax)         \
+  _(ConstantFoldIntrinsics)     \
+  _(ConstantFoldWithVar)        \
+  _(UnFoldableExpr)
 
 #define TH_FORALL_TESTS_LLVM(_) \
   _(LLVMByteImmTest)            \

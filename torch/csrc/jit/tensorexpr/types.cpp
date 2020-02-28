@@ -132,9 +132,10 @@ std::string Dtype::ToCppString() const {
     case ScalarType::Half:
       return "half";
     default:
-      throw std::runtime_error(
-          "Invalid dtype: " + std::to_string(scalar_type_));
+      LOG(FATAL) << "ToCppString Invalid dtype: "
+                 << std::to_string(scalar_type_);
   }
+  return "invalid";
 }
 
 } // namespace tensorexpr
