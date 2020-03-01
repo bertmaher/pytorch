@@ -376,6 +376,73 @@ class TestTensorExprFuser(BaseTestClass):
         x = traced(a, b)
         np.testing.assert_allclose(a.numpy() + b.numpy(), x.numpy())
 
+    def test_double(self):
+        TENSOR_LEN = 8
+        def easy(x, y):
+            aaa = torch.add(x, y)
+            bbb = torch.mul(aaa, y);
+            return bbb
+
+        traced = torch.jit.trace(
+            easy,
+            (torch.rand(TENSOR_LEN, dtype=torch.float64), torch.full((TENSOR_LEN,), 0.5, dtype=torch.float64)),
+        )
+
+        a = torch.rand(TENSOR_LEN, dtype=torch.double)
+        b = torch.full((TENSOR_LEN,), 0.5, dtype=torch.double)
+        x = traced(a, b)
+        np.testing.assert_allclose((a.numpy() + b.numpy()) * b.numpy(), x.numpy())
+
+    def test_short(self):
+        TENSOR_LEN = 8
+        def easy(x, y):
+            aaa = torch.add(x, y)
+            bbb = torch.mul(aaa, y);
+            return bbb
+
+        traced = torch.jit.trace(
+            easy,
+            (torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int16), torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int16)),
+        )
+
+        a = torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int16)
+        b = torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int16)
+        x = traced(a, b)
+        np.testing.assert_allclose((a.numpy() + b.numpy()) * b.numpy(), x.numpy())
+
+    def test_char(self):
+        TENSOR_LEN = 8
+        def easy(x, y):
+            aaa = torch.add(x, y)
+            bbb = torch.mul(aaa, y);
+            return bbb
+
+        traced = torch.jit.trace(
+            easy,
+            (torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int8), torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.uint8)),
+        )
+
+        a = torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int8)
+        b = torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.uint8)
+        x = traced(a, b)
+        np.testing.assert_allclose((a.numpy() + b.numpy()) * b.numpy(), x.numpy())
+
+    def test_int64_promotion(self):
+        TENSOR_LEN = 8
+        def easy(x, y):
+            aaa = torch.add(x, y)
+            bbb = torch.mul(aaa, y);
+            return bbb
+
+        traced = torch.jit.trace(
+            easy,
+            (torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int8), torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int64)),
+        )
+
+        a = torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int8)
+        b = torch.randint(TENSOR_LEN, (TENSOR_LEN,), dtype=torch.int64)
+        x = traced(a, b)
+        np.testing.assert_allclose((a.numpy() + b.numpy()) * b.numpy(), x.numpy())
 
     def test_eq(self):
         def easy(x, y):
@@ -918,24 +985,29 @@ class TestTensorExprFuser(BaseTestClass):
         npr_a, npr_b = np.array_split(npr2, 2)
         np.testing.assert_allclose(npr_a + npr_b, x.numpy())
 
+    def _test_cat(self, device):
+        def easy(*args):
+            args_2 = [v + i for i, v in enumerate(args)]
+            v = torch.cat(args_2, dim=1)
+            return v
 
-    def test_cat(self):
-        def easy(x, y):
-            a = x + 1
-            b = y + 2
-            c = torch.cat([a, b], dim=1)
-            return c
+        M = 1024
+        Ns = [1024, 512, 256, 128]
+        values = [torch.zeros(M, N, device=device) for N in Ns]
+        traced = torch.jit.trace(easy, values)
 
-        traced = torch.jit.trace(easy, (torch.zeros(1024, 1024), torch.zeros(1024, 1024)))
+        x = traced(*values)
+        npr = [v.cpu().numpy() for v in values]
+        npr_2 = [v + i for i, v in enumerate(npr)]
+        npr_x = np.concatenate(npr_2, axis=1)
+        np.testing.assert_allclose(npr_x, x.cpu().numpy())
 
-        a = torch.zeros(1024, 1024)
-        x = traced(a, a)
-        npr = a.numpy()
-        npr_x = npr + 1
-        npr_y = npr + 2
-        npr_c = np.concatenate((npr_x, npr_y), axis=1)
-        np.testing.assert_allclose(npr_c, x.numpy())
+    def test_cat_cpu(self):
+        self._test_cat('cpu')
 
+    @unittest.skipIf(not torch.cuda.is_available(), "requires CUDA")
+    def test_cat_cuda(self):
+        self._test_cat('cuda')
 
     def test_scalar(self):
         @torch.jit.script
@@ -1141,5 +1213,6 @@ class TestTensorExprFuser(BaseTestClass):
         y = run_where(a, b)
         np.testing.assert_allclose(x.numpy(), y.numpy())
 
+        
 if __name__ == '__main__':
     unittest.main()

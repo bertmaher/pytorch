@@ -30,27 +30,9 @@ int& GetTECudaPointwiseBlockSize() {
 } // namespace torch
 
 
-static Dtype texprType(const c10::optional<at::ScalarType>& st) {
-  switch (*st) {
-    case at::ScalarType::Int:
-      return kInt32;
-    case at::ScalarType::Float:
-      return kFloat32;
-    default:
-      LOG(FATAL) << "Unhandled datatype";
-      return kUninitialized;
-  }
-}
-
 static at::ScalarType tensorType(Tensor* t) {
-  auto const& stype = t->body()->dtype().scalar_type();
-  if (stype == kInt32) {
-    return at::ScalarType::Int;
-  } else if (stype == kFloat32) {
-    return at::ScalarType::Float;
-  }
-  LOG(FATAL) << "Unhandled datatype";
-  return at::ScalarType::Float;
+  return static_cast<at::ScalarType>(
+      t->body()->dtype().scalar_type());
 }
 
 static std::vector<ExprHandle> texprSizes(const c10::VaryingShape& shape) {
@@ -102,25 +84,62 @@ ExprHandle TensorExprKernel::constant(const torch::jit::Value* v) {
 }
 
 void TensorExprKernel::promoteInputs(std::vector<ExprHandle>& inputs) {
-  bool any_float = std::any_of(inputs.begin(), inputs.end(), [](const ExprHandle& e) {
-    return e.dtype() == kFloat32;
-  });
-
-  if (!any_float)
+  if (inputs.empty()) {
     return;
+  }
+
+  // Find the highest type among the inputs.
+  ScalarType highType = inputs[0].dtype().scalar_type();
+  for (int i = 0; i < inputs.size(); ++i) {
+    ScalarType iType = inputs[i].dtype().scalar_type();
+    if (iType == ScalarType::Bool) {
+      continue;
+    }
+    highType = promoteTypes(highType, iType);
+  }
 
   for (ExprHandle& e : inputs) {
-    if (e.dtype() == kInt32) {
-      e = cast<float>(e);
+    if (e.dtype().scalar_type() == ScalarType::Bool) {
+      continue;
+    }
+
+    if (e.dtype().scalar_type() == highType) {
+      continue;
+    }
+
+    switch (highType) {
+#define TYPE_CASE(Type, Name) \
+  case ScalarType::Name:      \
+    e = cast<Type>(e);        \
+    break;
+      AT_FORALL_SCALAR_TYPES_AND(Half, TYPE_CASE);
+#undef TYPE_CASE
+  default:
+    LOG(FATAL) << "Unsupported datatype: " << highType;
     }
   }
 }
 
-ExprHandle TensorExprKernel::demoteOutput(const ExprHandle& e, const torch::jit::Value* v) {
+ExprHandle TensorExprKernel::demoteOutput(
+    const ExprHandle& e,
+    const torch::jit::Value* v) {
   CHECK(v->type()->kind() == TypeKind::TensorType);
-  auto tt = v->type()->cast<TensorType>()->scalarType();
-  if (e.dtype() == kFloat32 && tt == at::ScalarType::Int) {
-    return cast<int>(e);
+  auto tt = *v->type()->cast<TensorType>()->scalarType();
+
+  if (tt == static_cast<at::ScalarType>(e.dtype().scalar_type())) {
+    return e;
+  }
+
+  switch (tt) {
+#define TYPE_CASE(Type, Name) \
+    case at::ScalarType::Name:      \
+    return cast<Type>(e);
+    AT_FORALL_SCALAR_TYPES_AND(Half, TYPE_CASE);
+#undef TYPE_CASE
+    case at::ScalarType::Bool:
+      return e;
+  default:
+    LOG(FATAL) << "Unsupported datatype";
   }
 
   return e;
@@ -782,7 +801,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
                   load,
                   tensorOrConstant(inputs[ii], new_axes));
               offset += bufferSizes(tensors_.at(inputs[ii]->unique()))[dim];
-              new_axes[dim] = new_axes[dim] - IntImm::make(offset);
+              new_axes[dim] = axes[dim] - IntImm::make(offset);
             }
 
             return load;
@@ -846,7 +865,16 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       Tensor* tensor = tensor_outputs_[i];
       ExprHandle total_count = ExprHandle(tensor->dim(0));
       for (int i = 1; i < tensor->ndim(); i++) {
-        total_count = total_count * ExprHandle(tensor->dim(i));
+        const IntImm* total_count_i = total_count.AsNode<IntImm>();
+        const IntImm* tensor_dim_i =
+            dynamic_cast<const IntImm*>(tensor->dim(i));
+        if (total_count_i && tensor_dim_i) {
+          // TODO: switch to real constant folding when it is available.
+          total_count =
+              ExprHandle(total_count_i->value() * tensor_dim_i->value());
+        } else {
+          total_count = total_count * ExprHandle(tensor->dim(i));
+        }
       }
       // Flatten the index for GPU kernels.
       // TODO: move this to fusing axis when it is ready.
@@ -1024,9 +1052,9 @@ ExprHandle TensorExprKernel::createInputIndexExpr(
   for (int i = 0; i < axes.size(); i++) {
     // For discontiguous tensors, create a parameter to represent stride.
     if (!*contiguity[i]) {
-      VarHandle v =
-          VarHandle{"stride_" + buffer.data()->name_hint() + "_" + std::to_string(i),
-              kInt32};
+      VarHandle v = VarHandle{
+          "stride_" + buffer.data()->name_hint() + "_" + std::to_string(i),
+          kInt};
       strideArgs.emplace_back(n - i, v);
       stride = v;
     }
@@ -1058,7 +1086,9 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
     case TypeKind::TensorType: {
       auto tt = input->type()->cast<TensorType>();
       Buffer in_buffer(
-          "t" + input->debugName(), texprType(tt->scalarType()), {0});
+          "t" + input->debugName(),
+          ToDtype(static_cast<ScalarType>(*tt->scalarType())),
+          {0});
       std::vector<DimArg> inputTensorDims;
       std::unordered_map<int64_t, VarHandle> sizeVars;
       for (int i = 0; i < *tt->sizes().size(); i++) {
@@ -1067,7 +1097,7 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
           VarHandle v(
               "size_" + std::to_string(input->unique()) + "_" +
                   std::to_string(i),
-              kInt32);
+              kInt);
           sizeVars.emplace(size, v);
           inputTensorDims.push_back(v);
         } else {
@@ -1094,12 +1124,11 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
               "input",
               inputTensorDims,
               [&](const std::vector<VarHandle>& axes) {
-                std::vector<ExprHandle> idxs;
-                idxs.push_back(axes[0] * (int32_t)*strides[0]);
-                for (int i = 1; i < axes.size(); i++) {
-                  idxs.push_back(idxs[i - 1] + axes[i] * (int32_t)*strides[i]);
+                ExprHandle idx = 0;
+                for (int64_t i = 0; i < axes.size(); i++) {
+                  idx = idx + axes[i] * int32_t{*strides[i]};
                 }
-                return in_buffer(idxs.back());
+                return in_buffer(idx);
               }));
       kernelArgs_.emplace_back(
           in_buffer,
@@ -1109,13 +1138,13 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
       break;
     }
     case TypeKind::FloatType: {
-      VarHandle v("v" + input->debugName(), kFloat32);
+      VarHandle v("v" + input->debugName(), kFloat);
       kernelArgs_.push_back(v);
       scalars_.emplace(input->unique(), v);
       break;
     }
     case TypeKind::IntType: {
-      VarHandle v("v" + input->debugName(), kInt32);
+      VarHandle v("v" + input->debugName(), kInt);
       kernelArgs_.push_back(v);
       scalars_.emplace(input->unique(), v);
       break;

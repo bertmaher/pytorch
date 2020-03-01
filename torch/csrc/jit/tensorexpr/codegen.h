@@ -87,35 +87,37 @@ class CodeGen::CallArg {
 
   CallArg(void* ptr) : ptr_(ptr) {}
 
-  CallArg(int32_t i) : ival_(i) {}
-
-  CallArg(float f) : fval_(f) {}
+#define ARG_TYPE_CTOR(Type, Name) \
+  CallArg(Type v) : Name##val_(v) {}
+    AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, ARG_TYPE_CTOR);
+#undef ARG_TYPE_CTOR
 
   void* data() const {
     return ptr_;
   }
 
-  int32_t intData() const {
-    return ival_;
+#define ARG_DATA_DEFINE(Type, Name) \
+  Type Name##Data() const { \
+    return Name##val_; \
   }
+    AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, ARG_DATA_DEFINE);
+#undef ARG_DATA_DEFINE
 
-  float floatData() const {
-    return fval_;
+#define ARG_PTR_DEFINE(Type, Name) \
+  Type* Name##Ptr() const { \
+    return const_cast<Type*>(&Name##val_); \
   }
-
-  int* intPtr() const {
-    return const_cast<int*>(&ival_);
-  }
-
-  float* floatPtr() const {
-    return const_cast<float*>(&fval_);
-  }
+    AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, ARG_PTR_DEFINE);
+#undef ARG_PTR_DEFINE
 
  private:
   union {
     void* ptr_;
-    float fval_;
-    int32_t ival_;
+
+#define ARG_BACKING(Type, Name) \
+    Type Name##val_;
+    AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, ARG_BACKING);
+#undef ARG_BACKING
   };
 };
 

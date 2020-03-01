@@ -14,6 +14,14 @@ namespace jit {
   _(ExprLetTest01)              \
   _(ExprLetStmtTest01)          \
   _(ExprLetTest02)              \
+  _(ExprIntTest)                \
+  _(ExprFloatTest)              \
+  _(ExprByteTest)               \
+  _(ExprCharTest)               \
+  _(ExprShortTest)              \
+  _(ExprLongTest)               \
+  _(ExprHalfTest)               \
+  _(ExprDoubleTest)             \
   _(ExprVectorAdd01)            \
   _(ExprCompareSelectEQ)        \
   _(ExprSubstitute01)           \
@@ -21,6 +29,7 @@ namespace jit {
   _(ExprUnaryMath01)            \
   _(ExprBinaryMath01)           \
   _(ExprDynamicShapeAdd)        \
+  _(ExprBitwiseOps)             \
   _(IRPrinterBasicValueTest)    \
   _(IRPrinterBasicValueTest02)  \
   _(IRPrinterLetTest01)         \
@@ -38,6 +47,7 @@ namespace jit {
   _(ScheduleFuserThreeArg)      \
   _(ScheduleDynamicShape2D)     \
   _(TypeTest01)                 \
+  _(TypePropagation)            \
   _(Cond01)                     \
   _(IfThenElse01)               \
   _(IfThenElse02)               \
@@ -77,16 +87,55 @@ namespace jit {
   _(ATenltInt)
 
 #define TH_FORALL_TESTS_LLVM(_) \
+  _(LLVMByteImmTest)            \
+  _(LLVMCharImmTest)            \
+  _(LLVMShortImmTest)           \
   _(LLVMIntImmTest)             \
+  _(LLVMLongImmTest)            \
   _(LLVMFloatImmTest)           \
+  _(LLVMDoubleImmTest)          \
+  _(LLVMHalfImmTest)            \
+  _(LLVMByteAddTest)            \
+  _(LLVMCharAddTest)            \
+  _(LLVMShortAddTest)           \
   _(LLVMIntAddTest)             \
+  _(LLVMLongAddTest)            \
+  _(LLVMFloatAddTest)           \
+  _(LLVMDoubleAddTest)          \
+  _(LLVMHalfAddTest)            \
+  _(LLVMByteSubTest)            \
+  _(LLVMCharSubTest)            \
+  _(LLVMShortSubTest)           \
   _(LLVMIntSubTest)             \
+  _(LLVMLongSubTest)            \
+  _(LLVMFloatSubTest)           \
+  _(LLVMDoubleSubTest)          \
+  _(LLVMHalfSubTest)            \
+  _(LLVMByteMulTest)            \
+  _(LLVMCharMulTest)            \
+  _(LLVMShortMulTest)           \
   _(LLVMIntMulTest)             \
+  _(LLVMLongMulTest)            \
+  _(LLVMFloatMulTest)           \
+  _(LLVMDoubleMulTest)          \
+  _(LLVMHalfMulTest)            \
+  _(LLVMByteDivTest)            \
+  _(LLVMCharDivTest)            \
+  _(LLVMShortDivTest)           \
   _(LLVMIntDivTest)             \
+  _(LLVMLongDivTest)            \
+  _(LLVMFloatDivTest)           \
+  _(LLVMDoubleDivTest)          \
+  _(LLVMHalfDivTest)            \
   _(LLVMIntToFloatCastTest)     \
   _(LLVMFloatToIntCastTest)     \
+  _(LLVMIntToLongCastTest)      \
+  _(LLVMByteToCharCastTest)     \
+  _(LLVMHalfToLongCastTest)     \
+  _(LLVMByteToDoubleCastTest)   \
   _(LLVMLetTest01)              \
   _(LLVMLetTest02)              \
+  _(LLVMLetTestMultitype)       \
   _(LLVMBufferTest)             \
   _(LLVMBlockTest)              \
   _(LLVMLoadStoreTest)          \
@@ -112,7 +161,8 @@ namespace jit {
   _(LLVMBindDynamicShapeAdd)    \
   _(LLVMTensorDynamicShapeAdd)  \
   _(LLVMDynamicShape2D)         \
-  _(LLVMIfThenElseTest)
+  _(LLVMIfThenElseTest)         \
+  _(LLVMVectorizerLoadStoreTest)
 
 #define TH_FORALL_TESTS_CUDA(_) \
   _(CudaTestVectorAdd01)        \

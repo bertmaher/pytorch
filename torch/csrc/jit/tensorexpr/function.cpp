@@ -17,7 +17,7 @@ static void unpack_dim_args(
   vars->clear();
   for (size_t i = 0; i < dim_args.size(); i++) {
     dims->push_back(dim_args[i].dim().node());
-    vars->push_back(new Var(dim_args[i].name_hint(), kInt32));
+    vars->push_back(new Var(dim_args[i].name_hint(), kInt));
   }
 }
 
@@ -108,7 +108,7 @@ Stmt* Function::ElementStmt(size_t index) {
     strides[i] = stride;
   }
 
-  ExprHandle total_index;
+  ExprHandle total_index = int32_t{0};
   for (size_t i = 0; i < dims_.size(); i++) {
     ExprHandle index = VarHandle(this->args_[i]) * ExprHandle(strides[i]);
     if (i == 0) {

@@ -28,7 +28,7 @@ Load::Load(
       mask_(mask) {
   CHECK_EQ(base_handle_->dtype(), kHandle);
   CHECK_EQ(index->dtype().lanes(), mask->dtype().lanes());
-  CHECK_EQ(index->dtype().scalar_type(), kInt32);
+  CHECK_EQ(index->dtype().scalar_type(), ScalarType::Int);
 }
 
 Store::Store(
@@ -105,7 +105,7 @@ std::vector<const Expr*> ExprHandleVectorToExprVector(const std::vector<ExprHand
   for (size_t i = 0; i < v.size(); i++) {
     result[i] = v[i].node();
   }
-  return std::move(result);
+  return result;
 }
 
 std::vector<ExprHandle> ExprVectorToExprHandleVector(const std::vector<const Expr*>& v) {
@@ -113,7 +113,7 @@ std::vector<ExprHandle> ExprVectorToExprHandleVector(const std::vector<const Exp
   for (size_t i = 0; i < v.size(); i++) {
     result[i] = ExprHandle(v[i]);
   }
-  return std::move(result);
+  return result;
 }
 
 std::vector<const Var*> VarHandleVectorToVarVector(const std::vector<VarHandle>& v) {
@@ -121,7 +121,7 @@ std::vector<const Var*> VarHandleVectorToVarVector(const std::vector<VarHandle>&
   for (size_t i = 0; i < v.size(); i++) {
     result[i] = v[i].node();
   }
-  return std::move(result);
+  return result;
 }
 
 std::vector<VarHandle> VarVectorToVarHandleVector(const std::vector<const Var*>& v) {
@@ -129,7 +129,7 @@ std::vector<VarHandle> VarVectorToVarHandleVector(const std::vector<const Var*>&
   for (size_t i = 0; i < v.size(); i++) {
     result[i] = VarHandle(v[i]);
   }
-  return std::move(result);
+  return result;
 }
 
 
