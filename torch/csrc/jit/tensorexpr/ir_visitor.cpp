@@ -45,6 +45,10 @@ void IRVisitor::visit(const And* v) {
   visit_binary_op(v, this);
 }
 
+void IRVisitor::visit(const Or* v) {
+  visit_binary_op(v, this);
+}
+
 void IRVisitor::visit(const Xor* v) {
   visit_binary_op(v, this);
 }

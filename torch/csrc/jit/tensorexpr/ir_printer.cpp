@@ -51,6 +51,10 @@ void IRPrinter::visit(const And* v) {
   visitBinaryOp(v, "&", this);
 }
 
+void IRPrinter::visit(const Or* v) {
+  visitBinaryOp(v, "|", this);
+}
+
 void IRPrinter::visit(const Xor* v) {
   visitBinaryOp(v, "^", this);
 }
