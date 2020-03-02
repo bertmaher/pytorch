@@ -113,13 +113,13 @@ class Block : public StmtNode<Block> {
     return stmts_;
   }
 
- private:
   explicit Block(const std::vector<Stmt*>& stmts) {
     for (Stmt* s : stmts) {
       stmts_.push_back(s);
       set_parent(s, this);
     }
   }
+ private:
   std::list<Stmt*> stmts_;
 };
 
@@ -264,19 +264,29 @@ class Cond : public StmtNode<Cond> {
   }
 
   Cond(const Expr* condition, Stmt* true_stmt, Stmt* false_stmt)
-      : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {
-    if (true_stmt_) {
+      : condition_(condition) {
+    if (true_stmt) {
+      Block* b = dynamic_cast<Block*>(true_stmt);
+      if (!b) {
+        b = new Block({true_stmt});
+      }
+      true_stmt_ = b;
       set_parent(true_stmt_, this);
     }
-    if (false_stmt_) {
+    if (false_stmt) {
+      Block* b = dynamic_cast<Block*>(false_stmt);
+      if (!b) {
+        b = new Block({false_stmt});
+      }
+      false_stmt_ = b;
       set_parent(false_stmt_, this);
     }
   }
 
  private:
   const Expr* condition_;
-  Stmt* true_stmt_;
-  Stmt* false_stmt_;
+  Block* true_stmt_ = nullptr;
+  Block* false_stmt_ = nullptr;
 };
 
 class LoopOptions {
@@ -398,30 +408,36 @@ class For : public StmtNode<For> {
   }
 
   For(const Var* var, const Expr* start, const Expr* stop, Stmt* body)
-      : var_(var), start_(start), stop_(stop), body_(body) {
-          CHECK(var && start && stop && body);
-          set_parent(body_, this);
-      }
+      : var_(var), start_(start), stop_(stop) {
+    CHECK(var && start && stop && body);
+    Block* b = dynamic_cast<Block*>(body);
+    if (!b) {
+      b = new Block({body});
+    }
+    body_ = b;
+    set_parent(body_, this);
+  }
 
   For(const Var* var,
       const Expr* start,
       const Expr* stop,
       Stmt* body,
       const LoopOptions& loop_options)
-      : var_(var),
-        start_(start),
-        stop_(stop),
-        body_(body),
-        loop_options_(loop_options) {
-          CHECK(var && start && stop && body);
-          set_parent(body_, this);
-        }
+      : var_(var), start_(start), stop_(stop), loop_options_(loop_options) {
+    CHECK(var && start && stop && body);
+    Block* b = dynamic_cast<Block*>(body);
+    if (!b) {
+      b = new Block({body});
+    }
+    body_ = b;
+    set_parent(body_, this);
+  }
 
  private:
   const Var* var_;
   const Expr* start_;
   const Expr* stop_;
-  Stmt* body_;
+  Block* body_;
   LoopOptions loop_options_;
 };
 } // namespace tensorexpr
