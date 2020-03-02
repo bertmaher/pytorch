@@ -37,6 +37,8 @@ static const Expr* mutate_binary_op(
       return new Min(lhs_new, rhs_new, option);
     case IRNodeType::kAnd:
       return new And(lhs_new, rhs_new);
+    case IRNodeType::kOr:
+      return new Or(lhs_new, rhs_new);
     case IRNodeType::kXor:
       return new Xor(lhs_new, rhs_new);
     case IRNodeType::kLshift:
@@ -70,6 +72,10 @@ const Expr* IRMutator::mutate(const Mod* v) {
 }
 
 const Expr* IRMutator::mutate(const And* v) {
+  return mutate_binary_op(v, this);
+}
+
+const Expr* IRMutator::mutate(const Or* v) {
   return mutate_binary_op(v, this);
 }
 
