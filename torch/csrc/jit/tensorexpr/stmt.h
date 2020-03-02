@@ -433,6 +433,14 @@ class For : public StmtNode<For> {
     set_parent(body_, this);
   }
 
+  void set_gpu_block_index(int block_index) {
+    loop_options_.set_gpu_block_index(block_index);
+  }
+
+  void set_gpu_thread_index(int thread_index) {
+    loop_options_.set_gpu_thread_index(thread_index);
+  }
+
  private:
   const Var* var_;
   const Expr* start_;
