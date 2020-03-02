@@ -17,6 +17,17 @@ class Stmt : public KernelScopedObject {
   Stmt() {}
   TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
   virtual Stmt* accept_mutator(IRMutator* mutator) = 0;
+
+  Stmt* get_parent() const {
+    return parent_;
+  }
+
+ protected:
+  static void set_parent(Stmt* s, Stmt* new_parent) {
+    s->parent_ = new_parent;
+  }
+ private:
+  Stmt* parent_ = nullptr;
 };
 
 template <class Op>
@@ -86,6 +97,7 @@ class Block : public StmtNode<Block> {
 
   void append_stmt(Stmt *s) {
     stmts_.push_back(s);
+    set_parent(s, this);
   }
   bool replace_stmt(Stmt* old_stmt, Stmt* new_stmt) {
     auto pos = std::find(stmts_.begin(), stmts_.end(), old_stmt);
@@ -94,6 +106,7 @@ class Block : public StmtNode<Block> {
     }
     stmts_.insert(pos, new_stmt);
     stmts_.erase(pos);
+    set_parent(new_stmt, this);
     return true;
   }
   std::list<Stmt*> stmts() const {
@@ -104,6 +117,7 @@ class Block : public StmtNode<Block> {
   explicit Block(const std::vector<Stmt*>& stmts) {
     for (Stmt* s : stmts) {
       stmts_.push_back(s);
+      set_parent(s, this);
     }
   }
   std::list<Stmt*> stmts_;
@@ -250,7 +264,14 @@ class Cond : public StmtNode<Cond> {
   }
 
   Cond(const Expr* condition, Stmt* true_stmt, Stmt* false_stmt)
-      : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {}
+      : condition_(condition), true_stmt_(true_stmt), false_stmt_(false_stmt) {
+    if (true_stmt_) {
+      set_parent(true_stmt_, this);
+    }
+    if (false_stmt_) {
+      set_parent(false_stmt_, this);
+    }
+  }
 
  private:
   const Expr* condition_;
@@ -379,6 +400,7 @@ class For : public StmtNode<For> {
   For(const Var* var, const Expr* start, const Expr* stop, Stmt* body)
       : var_(var), start_(start), stop_(stop), body_(body) {
           CHECK(var && start && stop && body);
+          set_parent(body_, this);
       }
 
   For(const Var* var,
@@ -392,6 +414,7 @@ class For : public StmtNode<For> {
         body_(body),
         loop_options_(loop_options) {
           CHECK(var && start && stop && body);
+          set_parent(body_, this);
         }
 
  private:
