@@ -140,6 +140,16 @@ namespace jit {
   _(LLVMBlockTest)              \
   _(LLVMLoadStoreTest)          \
   _(LLVMVecLoadStoreTest)       \
+  _(LLVMVecLoadStoreacosTest)   \
+  _(LLVMVecLoadStoreasinTest)   \
+  _(LLVMVecLoadStoreatanTest)   \
+  _(LLVMVecLoadStorecoshTest)   \
+  _(LLVMVecLoadStoresinhTest)   \
+  _(LLVMVecLoadStoretanhTest)   \
+  _(LLVMVecLoadStoreerfTest)    \
+  _(LLVMVecLoadStoreerfcTest)   \
+  _(LLVMVecLoadStoreexpm1Test)  \
+  _(LLVMVecLoadStorelgammaTest) \
   _(LLVMMemcpyTest)             \
   _(LLVMBzeroTest)              \
   _(LLVMElemwiseAdd)            \

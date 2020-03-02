@@ -13,6 +13,7 @@
 #include "torch/csrc/jit/tensorexpr/tensor.h"
 
 #include <numeric>
+#include <cmath>
 
 namespace torch {
 namespace jit {
@@ -291,6 +292,42 @@ void testLLVMVecLoadStoreTest() {
   EXPECT_EQ(b_buffer[2], 1);
   EXPECT_EQ(b_buffer[3], 1);
 }
+
+#define INTRINSICS_TEST(Type, Name, Lanes)                       \
+  void testLLVMVecLoadStore##Name##Test() {                      \
+    KernelScope kernel_scope;                                    \
+    Buffer a(VarHandle("A", kHandle), Type, {1});                \
+    Buffer b(VarHandle("B", kHandle), Type, {1});                \
+    std::vector<float> a_buffer = {0.5, 0.5, 0.5, 0.5};          \
+    std::vector<float> b_buffer = {3, 3, 3, 3};                  \
+    auto store = Store::make(                                    \
+        b,                                                       \
+        Ramp::make(0, 1, Lanes),                                 \
+        Name(Load::make(                                         \
+            a,                                                   \
+            Ramp::make(0, 1, Lanes),                             \
+            Broadcast::make(IntImm::make(1), Lanes))),           \
+        Broadcast::make(IntImm::make(1), Lanes));                \
+    LLVMCodeGen cg(store, {a, b});                               \
+    std::vector<void*> args({a_buffer.data(), b_buffer.data()}); \
+    float ref = std::Name(0.5f);                                 \
+    EXPECT_EQ(cg.value<int>(args), 0);                           \
+    EXPECT_EQ(b_buffer[0], ref);                                 \
+    EXPECT_EQ(b_buffer[1], ref);                                 \
+    EXPECT_EQ(b_buffer[2], ref);                                 \
+    EXPECT_EQ(b_buffer[3], ref);                                 \
+  }
+INTRINSICS_TEST(kFloat, erf, 4)
+INTRINSICS_TEST(kFloat, erfc, 4)
+INTRINSICS_TEST(kFloat, acos, 4)
+INTRINSICS_TEST(kFloat, asin, 4)
+INTRINSICS_TEST(kFloat, atan, 4)
+INTRINSICS_TEST(kFloat, cosh, 4)
+INTRINSICS_TEST(kFloat, sinh, 4)
+INTRINSICS_TEST(kFloat, tanh, 4)
+INTRINSICS_TEST(kFloat, expm1, 4)
+INTRINSICS_TEST(kFloat, lgamma, 4)
+#undef INTRIN_TEST
 
 void testLLVMVectorizerLoadStoreTest() {
   KernelScope kernel_scope;

@@ -23,6 +23,7 @@ using namespace torch::jit::tensorexpr;
 DEFINE_TRIGGER(llvm_codegen_created);
 DEFINE_TRIGGER(llvm_codegen_executed);
 
+#define DEBUG_PRINT 0
 static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
 #if 0
   // FIXME: Switch to using detectHost() rather than setting up the JTMB manually
@@ -60,7 +61,6 @@ LLVMCodeGen::LLVMCodeGen(
     : CodeGen(stmt, args),
       context_(std::make_unique<llvm::LLVMContext>()),
       irb_(getContext()) {
-
   // Manually map types to LLVM types.
   ByteTy_ = llvm::Type::getInt8Ty(getContext());
   CharTy_ = llvm::Type::getInt8Ty(getContext());
@@ -121,14 +121,14 @@ llvm::LLVMContext& LLVMCodeGen::getContext() {
 llvm::Type* LLVMCodeGen::dtypeToLLVM(Dtype dtype) {
   switch (dtype.scalar_type()) {
 #define TYPE_CASE(_1, n) \
-  case ScalarType::n: \
-      return n##Ty_; \
-      break;
+  case ScalarType::n:    \
+    return n##Ty_;       \
+    break;
 
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
-  default:
-    LOG(FATAL) << "Unhandled dtype: " << dtype;
+    default:
+      LOG(FATAL) << "Unhandled dtype: " << dtype;
   }
   return nullptr;
 }
@@ -206,16 +206,16 @@ static void* argToPtr(
 
   switch (bufferArg.dtype().scalar_type()) {
 #define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-        return callArg.Name##Ptr();
-        break;
+  case ScalarType::Name:    \
+    return callArg.Name##Ptr();
+    break;
 
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
 
     default:
-    LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
-             << "dtype=" << bufferArg.var()->dtype();
+      LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
+                 << "dtype=" << bufferArg.var()->dtype();
   }
   return nullptr;
 }
@@ -496,8 +496,8 @@ getFromType(llvm::Type* type, T value) {
   return llvm::ConstantFP::get(type, value);
 }
 
-#define IMM_VISIT_DECLARE(Type, Name) \
-  void LLVMCodeGen::visit(const Name##Imm* v) { \
+#define IMM_VISIT_DECLARE(Type, Name)                  \
+  void LLVMCodeGen::visit(const Name##Imm* v) {        \
     value_ = getFromType<Type>(Name##Ty_, v->value()); \
   }
 AT_FORALL_SCALAR_TYPES(IMM_VISIT_DECLARE);
@@ -611,10 +611,10 @@ void LLVMCodeGen::visit(const Ramp* v) {
 
   llvm::Type* vecType = nullptr;
   switch (v->dtype().scalar_type()) {
-#define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-      vecType = llvm::VectorType::get(Name##Ty_, lanes); \
-      break;
+#define TYPE_CASE(_1, Name)                            \
+  case ScalarType::Name:                               \
+    vecType = llvm::VectorType::get(Name##Ty_, lanes); \
+    break;
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
@@ -684,10 +684,10 @@ void LLVMCodeGen::visit(const Load* v) {
   llvm::Type* loadType = nullptr;
 
   switch (v->dtype().scalar_type()) {
-#define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-      loadType = llvm::VectorType::get(Name##Ty_, v->dtype().lanes()); \
-      break;
+#define TYPE_CASE(_1, Name)                                          \
+  case ScalarType::Name:                                             \
+    loadType = llvm::VectorType::get(Name##Ty_, v->dtype().lanes()); \
+    break;
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
@@ -912,7 +912,6 @@ static void applyMathFunctionAttributes(llvm::Function* f) {
   f->addFnAttr(llvm::Attribute::ReadNone);
   f->addFnAttr(llvm::Attribute::NoFree);
   f->addFnAttr(llvm::Attribute::NoUnwind);
-  f->addFnAttr(llvm::Attribute::Speculatable);
   f->addFnAttr(llvm::Attribute::WillReturn);
 }
 
@@ -924,7 +923,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     switch (v->op_type()) {
 #define UNARY_INTRIN_CASE(enum, intrin)                 \
   case enum: {                                          \
-    v->params().front()->accept(this);                   \
+    v->params().front()->accept(this);                  \
     value_ = irb_.CreateUnaryIntrinsic(intrin, value_); \
     return;                                             \
   } break;
@@ -953,26 +952,39 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
         return;
       } break;
 
-#define UNARY_MATH_CASE(enum, name, type)                             \
-  case enum: {                                                        \
-    auto callee = module_->getOrInsertFunction(                       \
-        name, llvm::FunctionType::get(type, {type}, false), {});      \
-    call_ty = callee.getFunctionType();                               \
-    call_fn = callee.getCallee();                                     \
-    applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn)); \
+#define SIMD_UNARY_MATH_CASE(enum, name, type)                               \
+  case enum: {                                                               \
+    llvm::FunctionCallee callee;                                             \
+    std::string fname;                                                       \
+    if (v->dtype().lanes() == 4) {                                           \
+      if (v->op_type() == kErfc) {                                           \
+        fname = "Sleef_" + std::string(name) + "4_u15";                      \
+      } else {                                                               \
+        fname = "Sleef_" + std::string(name) + "4_u10";                      \
+      }                                                                      \
+      llvm::Type* vecType = llvm::VectorType::get(type, v->dtype().lanes()); \
+      callee = module_->getOrInsertFunction(                                 \
+          fname, llvm::FunctionType::get(vecType, {vecType}, false), {});    \
+    } else {                                                                 \
+      callee = module_->getOrInsertFunction(                                 \
+          name, llvm::FunctionType::get(type, {type}, false), {});           \
+    }                                                                        \
+    call_ty = callee.getFunctionType();                                      \
+    call_fn = callee.getCallee();                                            \
+    applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn));        \
   } break;
-        UNARY_MATH_CASE(kErf, "erff", FloatTy_)
-        UNARY_MATH_CASE(kErfc, "erfcf", FloatTy_)
-        UNARY_MATH_CASE(kTan, "tanf", FloatTy_)
-        UNARY_MATH_CASE(kAcos, "acosf", FloatTy_)
-        UNARY_MATH_CASE(kAsin, "asinf", FloatTy_)
-        UNARY_MATH_CASE(kAtan, "atanf", FloatTy_)
-        UNARY_MATH_CASE(kCosh, "coshf", FloatTy_)
-        UNARY_MATH_CASE(kSinh, "sinhf", FloatTy_)
-        UNARY_MATH_CASE(kTanh, "tanhf", FloatTy_)
-        UNARY_MATH_CASE(kExpm1, "expm1f", FloatTy_)
-        UNARY_MATH_CASE(kLgamma, "lgammaf", FloatTy_)
-#undef UNARY_MATH_CASE
+        SIMD_UNARY_MATH_CASE(kErf, "erff", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kErfc, "erfcf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kTan, "tanf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kAcos, "acosf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kAsin, "asinf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kAtan, "atanf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kCosh, "coshf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kSinh, "sinhf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kTanh, "tanhf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kExpm1, "expm1f", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kLgamma, "lgammaf", FloatTy_)
+#undef SIMD_UNARY_MATH_CASE
 
 #define BINARY_MATH_CASE(enum, name, type)                             \
   case enum: {                                                         \
@@ -996,7 +1008,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     switch (v->op_type()) {
 #define UNARY_INTRIN_CASE(enum, intrin)                 \
   case enum: {                                          \
-    v->params().front()->accept(this);                   \
+    v->params().front()->accept(this);                  \
     value_ = irb_.CreateUnaryIntrinsic(intrin, value_); \
     return;                                             \
   } break;
@@ -1066,13 +1078,29 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     }
   }
 
+  std::unordered_set<IntrinsicsOp> simd_unary_intrinsics = {kErf,
+                                                            kErfc,
+                                                            kTan,
+                                                            kAcos,
+                                                            kAsin,
+                                                            kAtan,
+                                                            kCosh,
+                                                            kSinh,
+                                                            kTanh,
+                                                            kExpm1,
+                                                            kLgamma};
+
   std::vector<llvm::Value*> params;
   for (auto& p : v->params()) {
     p->accept(this);
     params.push_back(value_);
   }
 
-  if (v->dtype().lanes() == 1) {
+  if (v->dtype().lanes() == 1 ||
+      (v->dtype().scalar_type() == ScalarType::Float &&
+       v->dtype().lanes() == 4 &&
+       simd_unary_intrinsics.find(v->op_type()) !=
+           simd_unary_intrinsics.end())) {
     value_ = irb_.CreateCall(call_ty, call_fn, params);
   } else {
     llvm::Type* vecType = llvm::VectorType::get(FloatTy_, v->dtype().lanes());
