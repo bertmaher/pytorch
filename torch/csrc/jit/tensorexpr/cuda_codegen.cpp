@@ -436,6 +436,11 @@ void CudaCodeGen::Initialize() {
   HasRand has_rand_func(stmt());
   has_random_ = has_rand_func.has_rand();
   printer_.reset(new CudaPrinter(&oss_, has_random_));
+
+  os() <<
+    "#define NAN __int_as_float(0x7fffffff)\n"
+    "#define POS_INFINITY __int_as_float(0x7f800000)\n"
+    "#define NEG_INFINITY __int_as_float(0xff800000)\n";
   if (has_random_) {
     os() << philox_random_string << std::endl;
   }
