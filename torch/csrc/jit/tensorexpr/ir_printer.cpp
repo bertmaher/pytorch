@@ -200,8 +200,8 @@ void IRPrinter::visit(const For* v) {
 }
 
 void IRPrinter::visit(const Block* v) {
-  for (int i = 0; i < v->nstmts(); ++i) {
-    os() << *v->stmt(i) << std::endl;
+  for (Stmt *s : v->stmts()) {
+    os() << *s << std::endl;
   }
 }
 

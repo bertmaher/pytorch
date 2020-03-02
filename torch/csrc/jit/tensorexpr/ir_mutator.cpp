@@ -270,8 +270,7 @@ Stmt* IRMutator::mutate(const For* v) {
 Stmt* IRMutator::mutate(const Block* v) {
   bool any_change = false;
   std::vector<Stmt*> stmts;
-  for (int i = 0; i < v->nstmts(); i++) {
-    Stmt* stmt = v->stmt(i);
+  for (Stmt* stmt : v->stmts()) {
     Stmt* stmt_new = stmt->accept_mutator(this);
     if (stmt != stmt_new) {
       any_change = true;

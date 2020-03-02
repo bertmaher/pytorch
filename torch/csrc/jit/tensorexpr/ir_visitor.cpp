@@ -104,8 +104,8 @@ void IRVisitor::visit(const Store* v) {
 }
 
 void IRVisitor::visit(const Block* v) {
-  for (int i = 0; i < v->nstmts(); i++) {
-    v->stmt(i)->accept(this);
+  for (Stmt* s : v->stmts()) {
+    s->accept(this);
   }
 }
 
