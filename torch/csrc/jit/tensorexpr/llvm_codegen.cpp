@@ -23,7 +23,6 @@ using namespace torch::jit::tensorexpr;
 DEFINE_TRIGGER(llvm_codegen_created);
 DEFINE_TRIGGER(llvm_codegen_executed);
 
-#define DEBUG_PRINT 0
 static llvm::orc::JITTargetMachineBuilder makeTargetMachineBuilder() {
 #if 0
   // FIXME: Switch to using detectHost() rather than setting up the JTMB manually
