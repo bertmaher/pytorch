@@ -298,8 +298,9 @@ void testLLVMVecLoadStoreTest() {
     KernelScope kernel_scope;                                    \
     Buffer a(VarHandle("A", kHandle), Type, {1});                \
     Buffer b(VarHandle("B", kHandle), Type, {1});                \
-    std::vector<float> a_buffer = {0.5, 0.5, 0.5, 0.5};          \
-    std::vector<float> b_buffer = {3, 3, 3, 3};                  \
+    float val = 0.5f;                                            \
+    std::vector<float> a_buffer = {val, val, val, val};          \
+    std::vector<float> b_buffer = {val, val, val, val};          \
     auto store = Store::make(                                    \
         b,                                                       \
         Ramp::make(0, 1, Lanes),                                 \
@@ -312,6 +313,10 @@ void testLLVMVecLoadStoreTest() {
     std::vector<void*> args({a_buffer.data(), b_buffer.data()}); \
     float ref = std::Name(0.5f);                                 \
     EXPECT_EQ(cg.value<int>(args), 0);                           \
+    EXPECT_EQ(a_buffer[0], val);                                 \
+    EXPECT_EQ(a_buffer[1], val);                                 \
+    EXPECT_EQ(a_buffer[2], val);                                 \
+    EXPECT_EQ(a_buffer[3], val);                                 \
     EXPECT_EQ(b_buffer[0], ref);                                 \
     EXPECT_EQ(b_buffer[1], ref);                                 \
     EXPECT_EQ(b_buffer[2], ref);                                 \
