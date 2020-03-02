@@ -787,8 +787,8 @@ void LLVMCodeGen::visit(const For* v) {
 }
 
 void LLVMCodeGen::visit(const Block* v) {
-  for (int i = 0; i < v->nstmts(); i++) {
-    v->stmt(i)->accept(this);
+  for (Stmt* s : v->stmts()) {
+    s->accept(this);
   }
 }
 

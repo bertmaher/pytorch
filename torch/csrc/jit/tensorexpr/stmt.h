@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <string>
 #include <vector>
 
@@ -78,16 +79,34 @@ class Block : public StmtNode<Block> {
     }
     return new Block(valid_stmts);
   }
+
   int nstmts() const {
     return stmts_.size();
   }
-  Stmt* stmt(int index) const {
-    return stmts_[index];
+
+  void append_stmt(Stmt *s) {
+    stmts_.push_back(s);
+  }
+  bool replace_stmt(Stmt* old_stmt, Stmt* new_stmt) {
+    auto pos = std::find(stmts_.begin(), stmts_.end(), old_stmt);
+    if (pos == stmts_.end()) {
+      return false;
+    }
+    stmts_.insert(pos, new_stmt);
+    stmts_.erase(pos);
+    return true;
+  }
+  std::list<Stmt*> stmts() const {
+    return stmts_;
   }
 
  private:
-  explicit Block(const std::vector<Stmt*>& stmts) : stmts_(stmts) {}
-  std::vector<Stmt*> stmts_;
+  explicit Block(const std::vector<Stmt*>& stmts) {
+    for (Stmt* s : stmts) {
+      stmts_.push_back(s);
+    }
+  }
+  std::list<Stmt*> stmts_;
 };
 
 class TORCH_API Store : public StmtNode<Store> {
