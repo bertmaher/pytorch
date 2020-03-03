@@ -9,53 +9,8 @@
 namespace torch {
 namespace jit {
 namespace tensorexpr {
-namespace schedule {
-class TensorExprNode;
-class ScheduleNode;
-} // namespace schedule
 
-using schedule::TensorExprNode;
-
-class TORCH_API TensorOperation : public KernelScopedObject {
- public:
-  void SplitWithTail(
-      const VarHandle& loop_var,
-      int factor,
-      bool factor_on_inner,
-      VarHandle* outer_var,
-      VarHandle* inner_var,
-      VarHandle* tail_var,
-      TensorOperation** tail_op);
-
-  void SplitWithMask(
-      const VarHandle& loop_var,
-      int factor,
-      bool factor_on_inner,
-      VarHandle* outer_var,
-      VarHandle* inner_var);
-
-  void ComputeInline();
-
-  void GPUExecConfig(
-      const std::vector<VarHandle>& blockIdx,
-      const std::vector<VarHandle>& threadIdx);
-
-  TensorExprNode* expr_node() {
-    return expr_node_;
-  }
-
- protected:
-  TensorOperation() {}
-  explicit TensorOperation(TensorExprNode* expr_node) : expr_node_(expr_node) {}
-
- private:
-  void check_expr_node();
-
-  friend class schedule::ScheduleNode;
-  TensorExprNode* expr_node_ = nullptr;
-};
-
-class Tensor : public TensorOperation {
+class Tensor {
  public:
   Function* function() const {
     return function_;
