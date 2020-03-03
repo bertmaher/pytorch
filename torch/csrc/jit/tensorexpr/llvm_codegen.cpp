@@ -927,7 +927,9 @@ static void applyMathFunctionAttributes(llvm::Function* f) {
   f->addFnAttr(llvm::Attribute::ReadNone);
   f->addFnAttr(llvm::Attribute::NoFree);
   f->addFnAttr(llvm::Attribute::NoUnwind);
-  f->addFnAttr(llvm::Attribute::Speculatable);
+  // TODO: Adding this attr should be correct, but as of LLVM 9.0.1 adding it
+  // causes some math functions to incorrectly be turned into tail calls.
+  // f->addFnAttr(llvm::Attribute::Speculatable);
   f->addFnAttr(llvm::Attribute::WillReturn);
 }
 
