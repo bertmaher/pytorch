@@ -14,18 +14,44 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
+enum IRNodeType {
+  kPrimitive,
+  kAdd,
+  kSub,
+  kMul,
+  kDiv,
+  kMod,
+  kMax,
+  kMin,
+  kAnd,
+  kOr,
+  kLshift,
+  kRshift,
+  kXor,
+  kCompareSelect,
+  kLet,
+  kCast,
+  kNone
+};
+
 // The common base between all expression node.
 class Expr : public KernelScopedObject {
  public:
-  explicit Expr(Dtype dtype) : dtype_(dtype) {}
+  explicit Expr(Dtype dtype, IRNodeType expr_type = kNone)
+    : dtype_(dtype), expr_type_(expr_type) {}
   Dtype dtype() const {
     return dtype_;
   }
   TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
   virtual const Expr* accept_mutator(IRMutator* mutator) const = 0;
 
+  IRNodeType expr_type() const {
+    return expr_type_;
+  }
+
  private:
   Dtype dtype_;
+  IRNodeType expr_type_;
 };
 
 // A CRTP pattern to accept visitors for children class,
@@ -121,7 +147,7 @@ class Var : public ExprNode<Var> {
   }
 
   Var(const std::string& name_hint, Dtype dtype)
-      : ExprNodeBase(dtype), name_hint_(name_hint) {}
+      : ExprNodeBase(dtype, kPrimitive), name_hint_(name_hint) {}
 
  private:
   std::string name_hint_;

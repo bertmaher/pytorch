@@ -22,13 +22,30 @@ template <typename Op>
 void visitBinaryOp(
     const BinaryOpNode<Op>* v,
     const std::string& op_str,
-    IRPrinter* printer) {
+    IRPrinter* printer,
+    bool parens = true) {
   std::ostream& os = printer->os();
-  os << "(";
+  int self_prec = getPrecedence(v->expr_type());
+  int lhs_prec = getPrecedence(v->lhs()->expr_type());
+  int rhs_prec = getPrecedence(v->rhs()->expr_type());
+
+  if (lhs_prec >= self_prec) {
+    os << "(";
+  }
   v->lhs()->accept(printer);
+  if (lhs_prec >= self_prec) {
+    os << ")";
+  }
+
   os << " " << op_str << " ";
+
+  if (rhs_prec >= self_prec) {
+    os << "(";
+  }
   v->rhs()->accept(printer);
-  os << ")";
+  if (rhs_prec >= self_prec) {
+    os << ")";
+  }
 }
 
 void IRPrinter::visit(const Add* v) {
@@ -95,8 +112,17 @@ void IRPrinter::visit(const Min* v) {
 
 void IRPrinter::visit(const CompareSelect* v) {
   CompareSelectOperation cmp_op = v->compare_select_op();
-  os() << "(";
+  int self_prec = getPrecedence(v->expr_type());
+  int lhs_prec = getPrecedence(v->lhs()->expr_type());
+  int rhs_prec = getPrecedence(v->rhs()->expr_type());
+
+  if (lhs_prec >= self_prec) {
+    os() << "(";
+  }
   v->lhs()->accept(this);
+  if (lhs_prec >= self_prec) {
+    os() << ")";
+  }
   switch (cmp_op) {
     case CompareSelectOperation::kEQ:
       os() << "==";
@@ -119,8 +145,14 @@ void IRPrinter::visit(const CompareSelect* v) {
     default:
       throw std::runtime_error("invalid compare select operator");
   }
+
+  if (rhs_prec >= self_prec) {
+    os() << "(";
+  }
   v->rhs()->accept(this);
-  os() << ")";
+  if (rhs_prec >= self_prec) {
+    os() << ")";
+  }
 }
 
 static void formatFPSuffix(std::ostream& os, double v) {
@@ -170,13 +202,30 @@ void IRPrinter::visit(const Var* v) {
 }
 
 void IRPrinter::visit(const Let* v) {
-  os() << "(let ";
+  int self_prec = getPrecedence(v->expr_type());
+  int value_prec = getPrecedence(v->value()->expr_type());
+  int body_prec = getPrecedence(v->body()->expr_type());
+  os() << "let ";
   v->var()->accept(this);
   os() << " = ";
+
+  if (value_prec >= self_prec) {
+    os() << "(";
+  }
   v->value()->accept(this);
+  if (value_prec >= self_prec) {
+    os() << ")";
+  }
+
   os() << " in ";
+
+  if(body_prec >= self_prec) {
+    os() << "(";
+  }
   v->body()->accept(this);
-  os() << ")";
+  if (body_prec >= self_prec) {
+    os() << ")";
+  }
 }
 
 void IRPrinter::visit(const LetStmt* v) {

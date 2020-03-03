@@ -10,22 +10,6 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
-enum IRNodeType {
-  kAdd,
-  kSub,
-  kMul,
-  kDiv,
-  kMod,
-  kMax,
-  kMin,
-  kAnd,
-  kOr,
-  kLshift,
-  kRshift,
-  kXor,
-  kCompareSelect,
-};
-
 enum CompareSelectOperation {
   kEQ,
   kGT,
@@ -34,6 +18,41 @@ enum CompareSelectOperation {
   kLE,
   kNE,
 };
+
+inline int getPrecedence(IRNodeType ty) {
+  // Match C++ operator precedence rules, since some pretty-print expressions to C++.
+  // SEE: https://en.cppreference.com/w/cpp/language/operator_precedence
+  switch (ty) {
+  case kPrimitive:
+    return 0;
+  case kCast:
+    return 2;
+  case kAdd:
+  case kSub:
+    return 6;
+  case kMul:
+  case kDiv:
+  case kMod:
+    return 5;
+  case kMax:
+  case kMin:
+    return 99;
+  case kAnd:
+    return 11;
+  case kOr:
+    return 13;
+  case kLshift:
+  case kRshift:
+    return 7;
+  case kXor:
+    return 12;
+  case kCompareSelect:
+  case kLet:
+    return 16;
+  default:
+    return 99;
+  }
+}
 
 class Buffer;
 
@@ -46,7 +65,7 @@ class Cast : public ExprNode<Cast> {
     return ExprHandle(new Cast(dtype, src_value.node()));
   }
   Cast(Dtype dtype, const Expr* src_value)
-      : ExprNodeBase(dtype), src_value_(src_value) {}
+      : ExprNodeBase(dtype, kCast), src_value_(src_value) {}
 
  private:
   const Expr* src_value_;
@@ -68,9 +87,6 @@ class BinaryOpNode : public ExprNode<Op> {
   const Expr* rhs() const {
     return this->rhs_;
   }
-  IRNodeType expr_type() const {
-    return expr_type_;
-  }
 
   static ExprHandle make(const ExprHandle& lhs, const ExprHandle& rhs) {
     return ExprHandle(new Op(lhs.node(), rhs.node()));
@@ -81,10 +97,9 @@ class BinaryOpNode : public ExprNode<Op> {
       const Expr* rhs_v,
       IRNodeType expr_type,
       ScalarType ret_type = ScalarType::None)
-      : ExprNode<Op>(BinaryOpDtype(lhs_v->dtype(), rhs_v->dtype(), ret_type)),
+      : ExprNode<Op>(BinaryOpDtype(lhs_v->dtype(), rhs_v->dtype(), ret_type), expr_type),
         lhs_(CastIfNeeded(lhs_v, ExprNode<Op>::dtype())),
-        rhs_(CastIfNeeded(rhs_v, ExprNode<Op>::dtype())),
-        expr_type_(expr_type) {}
+        rhs_(CastIfNeeded(rhs_v, ExprNode<Op>::dtype())) { }
 
  private:
   static const Expr* CastIfNeeded(const Expr* expr, Dtype dst_dtype) {
@@ -96,7 +111,6 @@ class BinaryOpNode : public ExprNode<Op> {
 
   const Expr* lhs_;
   const Expr* rhs_;
-  IRNodeType expr_type_;
 };
 
 class Add : public BinaryOpNode<Add> {
@@ -216,7 +230,7 @@ class Min : public BinaryOpNode<Min> {
 #define IMM_DECLARE(Type, Name)                                     \
   class Name##Imm : public ExprNode<Name##Imm> {                    \
    public:                                                          \
-    Name##Imm(Type value) : ExprNodeBase(k##Name), value_(value) {} \
+    Name##Imm(Type value) : ExprNodeBase(k##Name, kPrimitive), value_(value) {} \
     Type value() const {                                            \
       return value_;                                                \
     }                                                               \
@@ -248,7 +262,7 @@ class Let : public ExprNode<Let> {
   }
 
   Let(const Expr* var, const Expr* value, const Expr* body)
-      : ExprNodeBase(body->dtype()), var_(var), value_(value), body_(body) {}
+      : ExprNodeBase(body->dtype(), kLet), var_(var), value_(value), body_(body) {}
 
  private:
   const Expr* var_;
