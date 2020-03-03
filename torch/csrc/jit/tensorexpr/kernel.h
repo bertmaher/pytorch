@@ -8,11 +8,14 @@ namespace torch {
 namespace jit {
 namespace tensorexpr {
 
+TORCH_API std::vector<DimArg> texprDims(const torch::jit::Value* v);
+
 template <typename T>
 inline std::vector<int64_t> bufferSizes(const T& t) {
   std::vector<int64_t> sizes;
   for (int i = 0; i < t->function()->ndim(); i++) {
-    sizes.push_back(dynamic_cast<const IntImm*>(t->function()->dim(i))->value());
+    sizes.push_back(
+        dynamic_cast<const IntImm*>(t->function()->dim(i))->value());
   }
   return sizes;
 }
@@ -59,7 +62,8 @@ class TensorExprKernel {
 
   template <typename T, typename T1>
   ExprHandle broadcast(const T& t, const std::vector<T1>& axes) {
-    return t->call(computeIndicesToBroadcast(axes, ExprVectorToExprHandleVector(t->function()->dims())));
+    return t->call(computeIndicesToBroadcast(
+        axes, ExprVectorToExprHandleVector(t->function()->dims())));
   }
 
   template <typename T, typename T1>
@@ -90,6 +94,7 @@ class TensorExprKernel {
 
   ExprHandle demoteOutput(const ExprHandle& e, const torch::jit::Value* v);
 
+ public:
   template <typename T>
   ExprHandle tensorOrConstant(
       const torch::jit::Value* v,
@@ -101,6 +106,12 @@ class TensorExprKernel {
     return constant(v);
   }
 
+  void addNoInline(int64_t unique_id);
+  inline Tensor* getTensor(int64_t unique_id) {
+    return tensors_.at(unique_id);
+  }
+
+ private:
   Tensor* ComputeOneOperand(
       const std::string& name,
       const torch::jit::Value* v,
@@ -109,17 +120,21 @@ class TensorExprKernel {
   Tensor* ComputeTwoOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandle(const ExprHandle&, const ExprHandle&)> inner_expr);
+      std::function<ExprHandle(const ExprHandle&, const ExprHandle&)>
+          inner_expr);
 
   Tensor* ComputeTwoOperandWithAlpha(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandle(const ExprHandle&, const ExprHandle&)> inner_expr);
+      std::function<ExprHandle(const ExprHandle&, const ExprHandle&)>
+          inner_expr);
 
   Tensor* ComputeThreeOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)> inner_expr);
+      std::function<
+          ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)>
+          inner_expr);
 
   Tensor* ComputeConditionWithTwoOperand(
       const std::string& name,
@@ -131,8 +146,11 @@ class TensorExprKernel {
   Tensor* ComputeFourOperand(
       const std::string& name,
       const torch::jit::Value* v,
-      std::function<ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&, const ExprHandle&)>
-          inner_expr);
+      std::function<ExprHandle(
+          const ExprHandle&,
+          const ExprHandle&,
+          const ExprHandle&,
+          const ExprHandle&)> inner_expr);
 
   Tensor* ComputeValue(const torch::jit::Value* v);
 
@@ -191,6 +209,7 @@ class TensorExprKernel {
   std::vector<KernelArg> kernelArgs_;
   std::vector<Tensor*> tensor_outputs_;
   std::unordered_map<int64_t, Tensor*> tensors_;
+  std::unordered_set<int64_t> no_inline_;
   std::unordered_map<int64_t, VarHandle> scalars_;
   std::unique_ptr<CodeGen> codegen_;
   KernelArena kernel_arena_;

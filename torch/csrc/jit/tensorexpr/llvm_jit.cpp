@@ -1,6 +1,7 @@
 #ifdef ENABLE_LLVM
 
 #include "torch/csrc/jit/tensorexpr/llvm_jit.h"
+#include "torch/csrc/jit/tensorexpr/native.h"
 
 #include <algorithm>
 #include <memory>
@@ -16,64 +17,72 @@ namespace orc {
 class TORCH_API PytorchLLVMJITImpl {
  private:
   std::unique_ptr<LLJIT> LLJ;
+  MangleAndInterner Mangle;
 
  public:
-  PytorchLLVMJITImpl() : LLJ(cantFail(LLJITBuilder().create())) {
+  PytorchLLVMJITImpl()
+      : LLJ(cantFail(LLJITBuilder().create())),
+        Mangle(LLJ->getExecutionSession(), LLJ->getDataLayout()) {
     auto ProcSymbolsGenerator =
         cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
-                LLJ->getDataLayout().getGlobalPrefix()));
+            LLJ->getDataLayout().getGlobalPrefix()));
     LLJ->getMainJITDylib().setGenerator(std::move(ProcSymbolsGenerator));
-
     // Handle platform-specific symbol mangling
-    MangleAndInterner Mangle(LLJ->getExecutionSession(), LLJ->getDataLayout());
+
+    for (auto kv : getNativeFunctionRegistry()) {
+      auto str = kv.first;
+      auto func = kv.second.first;
+      cantFail(LLJ->defineAbsolute(
+          mangle(str), {llvm::pointerToJITTargetAddress(func), {}}));
+    }
 
     // Register implementations of intrinsics
     cantFail(LLJ->defineAbsolute(
-        *Mangle("log10f"), {llvm::pointerToJITTargetAddress(&log10f), {}}));
+        mangle("log10f"), {llvm::pointerToJITTargetAddress(&log10f), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("logf"), {llvm::pointerToJITTargetAddress(&logf), {}}));
+        mangle("logf"), {llvm::pointerToJITTargetAddress(&logf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("log2f"), {llvm::pointerToJITTargetAddress(&log2f), {}}));
+        mangle("log2f"), {llvm::pointerToJITTargetAddress(&log2f), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("expf"), {llvm::pointerToJITTargetAddress(&expf), {}}));
+        mangle("expf"), {llvm::pointerToJITTargetAddress(&expf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("erff"), {llvm::pointerToJITTargetAddress(&erff), {}}));
+        mangle("erff"), {llvm::pointerToJITTargetAddress(&erff), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("cosf"), {llvm::pointerToJITTargetAddress(&cosf), {}}));
+        mangle("cosf"), {llvm::pointerToJITTargetAddress(&cosf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("sinf"), {llvm::pointerToJITTargetAddress(&sinf), {}}));
+        mangle("sinf"), {llvm::pointerToJITTargetAddress(&sinf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("tanf"), {llvm::pointerToJITTargetAddress(&tanf), {}}));
+        mangle("tanf"), {llvm::pointerToJITTargetAddress(&tanf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("acosf"), {llvm::pointerToJITTargetAddress(&acosf), {}}));
+        mangle("acosf"), {llvm::pointerToJITTargetAddress(&acosf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("asinf"), {llvm::pointerToJITTargetAddress(&asinf), {}}));
+        mangle("asinf"), {llvm::pointerToJITTargetAddress(&asinf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("atanf"), {llvm::pointerToJITTargetAddress(&atanf), {}}));
+        mangle("atanf"), {llvm::pointerToJITTargetAddress(&atanf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("coshf"), {llvm::pointerToJITTargetAddress(&coshf), {}}));
+        mangle("coshf"), {llvm::pointerToJITTargetAddress(&coshf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("sinhf"), {llvm::pointerToJITTargetAddress(&sinhf), {}}));
+        mangle("sinhf"), {llvm::pointerToJITTargetAddress(&sinhf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("tanhf"), {llvm::pointerToJITTargetAddress(&tanhf), {}}));
+        mangle("tanhf"), {llvm::pointerToJITTargetAddress(&tanhf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("sqrtf"), {llvm::pointerToJITTargetAddress(&sqrtf), {}}));
+        mangle("sqrtf"), {llvm::pointerToJITTargetAddress(&sqrtf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("fabsf"), {llvm::pointerToJITTargetAddress(&fabsf), {}}));
+        mangle("fabsf"), {llvm::pointerToJITTargetAddress(&fabsf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("floorf"), {llvm::pointerToJITTargetAddress(&floorf), {}}));
+        mangle("floorf"), {llvm::pointerToJITTargetAddress(&floorf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("ceilf"), {llvm::pointerToJITTargetAddress(&ceilf), {}}));
+        mangle("ceilf"), {llvm::pointerToJITTargetAddress(&ceilf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("roundf"), {llvm::pointerToJITTargetAddress(&roundf), {}}));
+        mangle("roundf"), {llvm::pointerToJITTargetAddress(&roundf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("truncf"), {llvm::pointerToJITTargetAddress(&truncf), {}}));
+        mangle("truncf"), {llvm::pointerToJITTargetAddress(&truncf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("atan2f"), {llvm::pointerToJITTargetAddress(&atan2f), {}}));
+        mangle("atan2f"), {llvm::pointerToJITTargetAddress(&atan2f), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("fmodf"), {llvm::pointerToJITTargetAddress(&fmodf), {}}));
+        mangle("fmodf"), {llvm::pointerToJITTargetAddress(&fmodf), {}}));
     cantFail(LLJ->defineAbsolute(
-        *Mangle("remainderf"),
+        mangle("remainderf"),
         {llvm::pointerToJITTargetAddress(&remainderf), {}}));
   }
 
@@ -86,6 +95,10 @@ class TORCH_API PytorchLLVMJITImpl {
 
   JITSymbol findSymbol(const std::string Name) {
     return cantFail(LLJ->lookup(Name));
+  }
+
+  StringRef mangle(std::string S) {
+    return *Mangle(S);
   }
 
   const DataLayout& getDataLayout() {
@@ -104,6 +117,10 @@ Error PytorchLLVMJIT::addModule(ThreadSafeModule M) {
 
 JITSymbol PytorchLLVMJIT::findSymbol(const std::string Name) {
   return impl_->findSymbol(std::move(Name));
+}
+
+StringRef PytorchLLVMJIT::mangle(std::string S) {
+  return impl_->mangle(S);
 }
 
 const DataLayout& PytorchLLVMJIT::getDataLayout() {

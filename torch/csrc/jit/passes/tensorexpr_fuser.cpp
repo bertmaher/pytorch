@@ -8,6 +8,7 @@
 #include <torch/csrc/jit/passes/dead_code_elimination.h>
 #include <torch/csrc/jit/passes/utils/subgraph_utils.h>
 #include <torch/csrc/jit/tensorexpr/kernel.h>
+#include <torch/csrc/jit/tensorexpr/native.h>
 
 using namespace torch::jit;
 using namespace torch::jit::tensorexpr;
@@ -120,7 +121,12 @@ bool isSupported(Node* node) {
     case aten::__rshift__:
     case aten::where:
       return true;
-    default:
+    default: {
+      auto& nfr = getNativeFunctionRegistry();
+      if (nfr.count(node->kind().toQualString())) {
+        return true;
+      }
+    }
       return false;
   }
 }
@@ -141,10 +147,7 @@ bool canHandle(Node* node, AliasDb& aliasDb) {
     return false;                           \
   }
 
-bool canMerge(
-    Node* consumer,
-    Node* producer,
-    AliasDb& aliasDb) {
+bool canMerge(Node* consumer, Node* producer, AliasDb& aliasDb) {
   // Only handle complete tensor types
   for (torch::jit::Value* output : consumer->outputs()) {
     REQ(output->isCompleteTensor());
@@ -163,8 +166,7 @@ bool canMerge(
   REQ(aliasDb.couldMoveAfterTopologically(consumer, producer));
 
   // Ops that return aliases can only be folded if this is the only use.
-  if (producer->kind() == aten::slice ||
-      producer->kind() == aten::unsqueeze ||
+  if (producer->kind() == aten::slice || producer->kind() == aten::unsqueeze ||
       producer->kind() == prim::ConstantChunk) {
     for (auto& use : producer->output(0)->uses()) {
       REQ(use.user == consumer);
@@ -197,11 +199,12 @@ bool canMerge(
 }
 #undef REQ
 
-Node *getOrCreateTensorExprSubgraph(Node *n) {
+Node* getOrCreateTensorExprSubgraph(Node* n) {
   if (n->hasAttribute(attr::Subgraph) && n->kind() == getTensorExprSymbol()) {
     return n;
   }
-  auto te_group = SubgraphUtils::createSingletonSubgraph(n, getTensorExprSymbol());
+  auto te_group =
+      SubgraphUtils::createSingletonSubgraph(n, getTensorExprSymbol());
   GRAPH_UPDATE("getOrCreateTensorExprSubgraph: ", *te_group);
   return te_group;
 }

@@ -123,7 +123,6 @@ void IRPrinter::visit(const CompareSelect* v) {
   os() << ")";
 }
 
-
 #define IMM_PRINT_VISIT(Type, Name)           \
   void IRPrinter::visit(const Name##Imm* v) { \
     if (v->dtype().is_floating_point()) {     \
@@ -166,8 +165,8 @@ void IRPrinter::visit(const Let* v) {
 
 void IRPrinter::visit(const LetStmt* v) {
   const Var* var = v->var();
-  os() << var->dtype().ToCppString() << " " << *var << " = " << *v->value() << "; "
-       << std::endl;
+  os() << var->dtype().ToCppString() << " " << *var << " = " << *v->value()
+       << "; " << std::endl;
   v->body()->accept(this);
 }
 
@@ -187,8 +186,8 @@ void IRPrinter::visit(const For* v) {
   VarHandle vv(var);
   emitIndent();
   os() << "for (" << var->dtype().ToCppString() << " " << vv << " = "
-       << ExprHandle(v->start()) << "; " << vv << " < " << ExprHandle(v->stop()) << "; " << vv
-       << "++) {";
+       << ExprHandle(v->start()) << "; " << vv << " < " << ExprHandle(v->stop())
+       << "; " << vv << "++) {";
   std::string loop_options_str = v->loop_options().ToString();
   if (!loop_options_str.empty()) {
     os() << " // " << loop_options_str;
@@ -212,7 +211,19 @@ void IRPrinter::visit(const Block* v) {
 void IRPrinter::visit(const Store* v) {
   // TODO: handle the mask
   emitIndent();
-  os() << *v->base_handle() << "[" << *v->index() << "] = " << *v->value() << ";";
+  os() << *v->base_handle() << "[" << *v->index() << "] = " << *v->value()
+       << ";";
+}
+
+void IRPrinter::visit(const OpaqueCall* v) {
+  os() << *v->output_handle() << " = " << v->name() << "(";
+  for (auto& ih : v->input_handles()) {
+    os() << *ih;
+    if (&ih != &v->input_handles().back()) {
+      os() << ", ";
+    }
+  }
+  os() << ")";
 }
 
 void IRPrinter::visit(const Broadcast* v) {
@@ -231,6 +242,17 @@ void IRPrinter::visit(const BaseCallNode* v) {
       os() << ", ";
     }
     os() << *v->param(i);
+  }
+  os() << ")";
+}
+
+void IRPrinter::visit(const CallExternal* v) {
+  os() << v->name() << "(";
+  for (auto p : v->params()) {
+    os() << p;
+    if (&p != &v->params().back()) {
+      os() << ", ";
+    }
   }
   os() << ")";
 }

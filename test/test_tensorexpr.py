@@ -250,6 +250,25 @@ class TestTensorExprFuser(BaseTestClass):
         npr = np_easy(a.numpy(), b.numpy(), c.numpy())
         np.testing.assert_allclose(npr, x.numpy())
 
+    def test_matmul(self):
+        llvm = LLVMCodeGenExecuted()
+        def easy(x, y):
+            aaa, bbb = torch.chunk(y, 2)
+            y = torch.cat([aaa, bbb], dim=0)
+            aaa = torch.matmul(x, y) * 3
+            return aaa
+
+        shape = (128,128)
+        a = torch.rand(shape)
+        b = torch.rand(shape)
+        traced = torch.jit.trace(
+            easy, (a, b)
+        )
+
+        x = traced(a, b)
+        y = 3 * (a @ b)
+        np.testing.assert_allclose(y.numpy(), x.numpy(), rtol=1e-5, atol=1e-3)
+        assert llvm.elapsed_value() == 1
 
     def test_broadcast(self):
         def easy(x, y, z):

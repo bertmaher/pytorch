@@ -34,10 +34,12 @@ class Load;
 class For;
 class Block;
 class Store;
+class OpaqueCall;
 class Broadcast;
 class IfThenElse;
 class BaseCallNode;
 class Intrinsics;
+class CallExternal;
 class FunctionCall;
 class Allocate;
 class Free;
@@ -60,10 +62,9 @@ class TORCH_API IRVisitor {
   virtual void visit(const Rshift* v);
   virtual void visit(const CompareSelect* v);
 
-#define IMM_PRINT_VISIT(Type, Name) \
-  virtual void visit(const Name##Imm* v);
+#define IMM_PRINT_VISIT(Type, Name) virtual void visit(const Name##Imm* v);
 
-AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT)
+  AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT)
 #undef IMM_PRINT_VISIT
 
   virtual void visit(const Cast* v);
@@ -75,6 +76,7 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT)
   virtual void visit(const For* v);
   virtual void visit(const Block* v);
   virtual void visit(const Store* v);
+  virtual void visit(const OpaqueCall* v);
   virtual void visit(const Broadcast* v);
   virtual void visit(const IfThenElse* v);
 
@@ -86,6 +88,7 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT)
   // that.
   virtual void visit(const BaseCallNode* v);
   virtual void visit(const Intrinsics* v);
+  virtual void visit(const CallExternal* v);
   virtual void visit(const FunctionCall* v);
   virtual void visit(const Allocate* v);
   virtual void visit(const Free* v);

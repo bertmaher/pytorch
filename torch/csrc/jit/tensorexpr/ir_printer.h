@@ -30,9 +30,8 @@ class TORCH_API IRPrinter : public IRVisitor {
   void visit(const Lshift* v) override;
   void visit(const Rshift* v) override;
   void visit(const CompareSelect* v) override;
-#define IMM_PRINT_VISIT(Type, Name) \
-  void visit(const Name##Imm* v) override;
-AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
+#define IMM_PRINT_VISIT(Type, Name) void visit(const Name##Imm* v) override;
+  AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
 #undef IMM_PRINT_VISIT
   void visit(const Cast* v) override;
   void visit(const Var* v) override;
@@ -43,9 +42,11 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
   void visit(const For* v) override;
   void visit(const Block* v) override;
   void visit(const Store* v) override;
+  void visit(const OpaqueCall* v) override;
   void visit(const Broadcast* v) override;
   void visit(const IfThenElse* v) override;
   void visit(const BaseCallNode* v) override;
+  void visit(const CallExternal* v) override;
   void visit(const Allocate* v) override;
   void visit(const Free* v) override;
   void visit(const Cond* v) override;

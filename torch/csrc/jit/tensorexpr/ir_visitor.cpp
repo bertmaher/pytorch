@@ -107,6 +107,16 @@ void IRVisitor::visit(const Store* v) {
   v->mask()->accept(this);
 }
 
+void IRVisitor::visit(const OpaqueCall* v) {
+  v->output_handle()->accept(this);
+  for (auto& ih : v->input_handles()) {
+    ih->accept(this);
+  }
+  for (auto& a : v->arguments()) {
+    a->accept(this);
+  }
+}
+
 void IRVisitor::visit(const Block* v) {
   for (Stmt* s : v->stmts()) {
     s->accept(this);
@@ -139,6 +149,11 @@ void IRVisitor::visit(const BaseCallNode* v) {
 }
 
 void IRVisitor::visit(const Intrinsics* v) {
+  const BaseCallNode* base = v;
+  this->visit(base);
+}
+
+void IRVisitor::visit(const CallExternal* v) {
   const BaseCallNode* base = v;
   this->visit(base);
 }

@@ -188,7 +188,10 @@ class Max : public BinaryOpNode<Max> {
   }
 
   static ExprHandle make(const ExprHandle& lhs, const ExprHandle& rhs) = delete;
-  static ExprHandle make(const ExprHandle& lhs, const ExprHandle& rhs, bool propagate_nans) {
+  static ExprHandle make(
+      const ExprHandle& lhs,
+      const ExprHandle& rhs,
+      bool propagate_nans) {
     return ExprHandle(new Max(lhs.node(), rhs.node(), propagate_nans));
   }
 };
@@ -207,7 +210,10 @@ class Min : public BinaryOpNode<Min> {
   }
 
   static ExprHandle make(const ExprHandle& lhs, const ExprHandle& rhs) = delete;
-  static ExprHandle make(const ExprHandle& lhs, const ExprHandle& rhs, bool propagate_nans) {
+  static ExprHandle make(
+      const ExprHandle& lhs,
+      const ExprHandle& rhs,
+      bool propagate_nans) {
     return ExprHandle(new Min(lhs.node(), rhs.node(), propagate_nans));
   }
 };
@@ -243,7 +249,10 @@ class Let : public ExprNode<Let> {
     return body_;
   }
 
-  static ExprHandle make(const ExprHandle& var, const ExprHandle& value, const ExprHandle& body) {
+  static ExprHandle make(
+      const ExprHandle& var,
+      const ExprHandle& value,
+      const ExprHandle& body) {
     return ExprHandle(new Let(var.node(), value.node(), body.node()));
   }
 
@@ -266,7 +275,10 @@ class Ramp : public ExprNode<Ramp> {
   const Expr* stride() const {
     return stride_;
   }
-  static ExprHandle make(const ExprHandle& base, const ExprHandle& stride, int lanes) {
+  static ExprHandle make(
+      const ExprHandle& base,
+      const ExprHandle& stride,
+      int lanes) {
     return ExprHandle(new Ramp(base.node(), stride.node(), lanes));
   }
   int lanes() const {
@@ -298,7 +310,10 @@ class TORCH_API Load : public ExprNode<Load> {
   const Expr* mask() const {
     return mask_;
   }
-  static ExprHandle make(const Buffer& buffer, const ExprHandle& index, const ExprHandle& mask) {
+  static ExprHandle make(
+      const Buffer& buffer,
+      const ExprHandle& index,
+      const ExprHandle& mask) {
     return ExprHandle(new Load(buffer, index.node(), mask.node()));
   }
   static ExprHandle make(
@@ -306,7 +321,8 @@ class TORCH_API Load : public ExprNode<Load> {
       const VarHandle& base_handle,
       const ExprHandle& index,
       const ExprHandle& mask) {
-    return ExprHandle(new Load(dtype, base_handle.node(), index.node(), mask.node()));
+    return ExprHandle(
+        new Load(dtype, base_handle.node(), index.node(), mask.node()));
   }
 
   Load(const Buffer& buffer, const Expr* index, const Expr* mask);
@@ -320,6 +336,49 @@ class TORCH_API Load : public ExprNode<Load> {
   const Var* base_handle_;
   const Expr* index_;
   const Expr* mask_;
+};
+
+class TORCH_API OpaqueCall : public StmtNode<OpaqueCall> {
+ public:
+  const std::string name() const {
+    return name_;
+  }
+
+  const Var* output_handle() const {
+    return output_handle_;
+  }
+
+  const std::vector<const Var*>& input_handles() const {
+    return input_handles_;
+  }
+
+  const std::vector<const Expr*>& arguments() const {
+    return arguments_;
+  }
+
+  static Stmt* make(
+      const std::string& name,
+      const Var* output_handle,
+      const std::vector<const Var*>& input_handles,
+      const std::vector<const Expr*>& arguments) {
+    return new OpaqueCall(name, output_handle, input_handles, arguments);
+  }
+
+ private:
+  OpaqueCall(
+      const std::string& name,
+      const Var* output_handle,
+      const std::vector<const Var*>& input_handles,
+      const std::vector<const Expr*>& arguments)
+      : name_(name),
+        output_handle_(output_handle),
+        input_handles_(input_handles),
+        arguments_(arguments) {}
+
+  std::string name_;
+  const Var* output_handle_;
+  std::vector<const Var*> input_handles_;
+  std::vector<const Expr*> arguments_;
 };
 
 class Broadcast : public ExprNode<Broadcast> {
@@ -359,7 +418,10 @@ class IfThenElse : public ExprNode<IfThenElse> {
     return false_;
   }
 
-  static ExprHandle make(const ExprHandle& c, const ExprHandle& t, const ExprHandle& f) {
+  static ExprHandle make(
+      const ExprHandle& c,
+      const ExprHandle& t,
+      const ExprHandle& f) {
     return ExprHandle(new IfThenElse(c.node(), t.node(), f.node()));
   }
 
@@ -380,6 +442,7 @@ class BaseCallNode : public Expr {
  public:
   enum CallType {
     kIntrinsics,
+    kCallExternal,
     kFunctionCall,
   };
 
@@ -401,13 +464,17 @@ class BaseCallNode : public Expr {
   }
 
  protected:
-  BaseCallNode(Dtype dtype, CallType call_type, const std::vector<const Expr*>& params)
+  BaseCallNode(
+      Dtype dtype,
+      CallType call_type,
+      const std::vector<const Expr*>& params)
       : Expr(dtype), call_type_(call_type), params_(params) {}
 
  private:
   // The handler for the default ir_mutator to make a copy of this node with new
   // params.
-  virtual const Expr* DefaultMutator(const std::vector<const Expr*>& new_params) const = 0;
+  virtual const Expr* DefaultMutator(
+      const std::vector<const Expr*>& new_params) const = 0;
 
   template <class U, class B>
   friend class ExprNode;
@@ -521,17 +588,54 @@ enum IntrinsicsOp {
   kRand, // We need more discussions on this. Should we consider stateful?
 };
 
+class CallExternal : public CallNode<CallExternal> {
+ public:
+  static const Expr* make(
+      std::string name,
+      const std::vector<const Expr*>& params) {
+    return new CallExternal(name, params);
+  }
+  std::string func_name() const override {
+    return name_;
+  }
+  inline std::string name() const {
+    return name_;
+  }
+  const Expr* DefaultMutator(
+      const std::vector<const Expr*>& new_params) const override {
+    return CallExternal::make(name_, new_params);
+  }
+
+ private:
+  using BaseClass = CallNode<CallExternal>;
+  CallExternal(std::string name, const std::vector<const Expr*>& params)
+      : BaseClass(CallExternalDtype(name, params), kCallExternal, params),
+        name_(name),
+        params_(params) {}
+  TORCH_API static Dtype CallExternalDtype(
+      std::string name,
+      const std::vector<const Expr*>& params);
+
+  std::string name_;
+  const std::vector<const Expr*>& params_;
+};
+
 class Intrinsics : public CallNode<Intrinsics> {
  public:
   static ExprHandle make(IntrinsicsOp op_type, const ExprHandle& v1) {
     return ExprHandle(new Intrinsics(op_type, v1.node()));
   }
 
-  static ExprHandle make(IntrinsicsOp op_type, const ExprHandle& v1, const ExprHandle& v2) {
+  static ExprHandle make(
+      IntrinsicsOp op_type,
+      const ExprHandle& v1,
+      const ExprHandle& v2) {
     return ExprHandle(new Intrinsics(op_type, v1.node(), v2.node()));
   }
 
-  static ExprHandle make(IntrinsicsOp op_type, const std::vector<ExprHandle>& params) {
+  static ExprHandle make(
+      IntrinsicsOp op_type,
+      const std::vector<ExprHandle>& params) {
     std::vector<const Expr*> params_nodes(params.size());
     for (size_t i = 0; i < params.size(); i++) {
       params_nodes[i] = params[i].node();
@@ -646,10 +750,10 @@ class Intrinsics : public CallNode<Intrinsics> {
   }
 
  private:
-
   TORCH_API static int OpArgCount(IntrinsicsOp op_type);
 
-  const Expr* DefaultMutator(const std::vector<const Expr*>& new_params) const override {
+  const Expr* DefaultMutator(
+      const std::vector<const Expr*>& new_params) const override {
     return new Intrinsics(this->op_type(), new_params);
   }
 
@@ -667,11 +771,14 @@ class Intrinsics : public CallNode<Intrinsics> {
 
 class FunctionCall;
 
-TORCH_API std::vector<const Expr*> ExprHandleVectorToExprVector(const std::vector<ExprHandle>&);
-TORCH_API std::vector<ExprHandle> ExprVectorToExprHandleVector(const std::vector<const Expr*>&);
-TORCH_API std::vector<const Var*> VarHandleVectorToVarVector(const std::vector<VarHandle>&);
-TORCH_API std::vector<VarHandle> VarVectorToVarHandleVector(const std::vector<const Var*>&);
-
+TORCH_API std::vector<const Expr*> ExprHandleVectorToExprVector(
+    const std::vector<ExprHandle>&);
+TORCH_API std::vector<ExprHandle> ExprVectorToExprHandleVector(
+    const std::vector<const Expr*>&);
+TORCH_API std::vector<const Var*> VarHandleVectorToVarVector(
+    const std::vector<VarHandle>&);
+TORCH_API std::vector<VarHandle> VarVectorToVarHandleVector(
+    const std::vector<const Var*>&);
 
 } // namespace tensorexpr
 } // namespace jit

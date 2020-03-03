@@ -22,6 +22,7 @@ class TORCH_API PytorchLLVMJIT {
   ~PytorchLLVMJIT();
 
   Error addModule(ThreadSafeModule M);
+  StringRef mangle(std::string S);
 
   JITSymbol findSymbol(const std::string Name);
 

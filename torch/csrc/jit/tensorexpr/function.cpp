@@ -45,8 +45,8 @@ Tensor* Compute(
   std::vector<const Var*> args;
   unpack_dim_args(dim_args, &dims, &args);
   const Expr* body = body_func(VarHandle(args[0])).node();
-  Function* func =
-      new Function(func_name, std::move(dims), std::move(args), std::move(body));
+  Function* func = new Function(
+      func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
 }
 
@@ -67,12 +67,16 @@ Tensor* Compute(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<ExprHandle(const VarHandle&, const VarHandle&, const VarHandle&)> body_func) {
+    std::function<
+        ExprHandle(const VarHandle&, const VarHandle&, const VarHandle&)>
+        body_func) {
   CHECK_EQ(dim_args.size(), 3ULL);
   std::vector<const Expr*> dims;
   std::vector<const Var*> args;
   unpack_dim_args(dim_args, &dims, &args);
-  const Expr* body = body_func(VarHandle(args[0]), VarHandle(args[1]), VarHandle(args[2])).node();
+  const Expr* body =
+      body_func(VarHandle(args[0]), VarHandle(args[1]), VarHandle(args[2]))
+          .node();
   Function* func = new Function(
       func_name, std::move(dims), std::move(args), std::move(body));
   return new Tensor(func, 0);
@@ -81,8 +85,11 @@ Tensor* Compute(
 Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<ExprHandle(const VarHandle&, const VarHandle&, const VarHandle&, const VarHandle&)>
-        body_func) {
+    std::function<ExprHandle(
+        const VarHandle&,
+        const VarHandle&,
+        const VarHandle&,
+        const VarHandle&)> body_func) {
   CHECK_EQ(dim_args.size(), 4ULL);
   std::vector<const Expr*> dims;
   std::vector<const Var*> args_nodes;
@@ -96,6 +103,21 @@ Tensor* Compute(
 
 Stmt* Function::ElementStmt(size_t index) {
   std::vector<ExprHandle> strides(dims_.size());
+  auto* ce = dynamic_cast<const CallExternal*>(body(index));
+  if (ce != nullptr) {
+    std::vector<const Var*> input_vars;
+    std::vector<const Expr*> input_args;
+    for (auto p : ce->params()) {
+      auto fc = dynamic_cast<const FunctionCall*>(p);
+      if (fc) {
+        input_vars.emplace_back(fc->tensor()->function()->func_var(index));
+      } else {
+        input_args.emplace_back(p);
+      }
+    }
+    return OpaqueCall::make(
+        ce->name(), func_var(index), input_vars, input_args);
+  }
   for (size_t i = 0; i < strides.size(); i++) {
     if (i == strides.size() - 1) {
       strides[i] = ExprHandle(1);
@@ -120,7 +142,8 @@ Stmt* Function::ElementStmt(size_t index) {
 
   const Expr* mask = new IntImm(1);
 
-  Stmt* update_stmt = new Store(func_var(index), total_index.node(), body(index), mask);
+  Stmt* update_stmt =
+      new Store(func_var(index), total_index.node(), body(index), mask);
   return update_stmt;
 }
 

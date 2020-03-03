@@ -37,9 +37,9 @@ class TORCH_API LLVMCodeGen : public CodeGen, public IRVisitor {
   llvm::Value* value_;
   llvm::JITTargetAddress kernelAddress_;
 
-#define LLVM_TYPE_DECLARE(_1, Name) \
-  llvm::Type* Name##Ty_;
-AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, LLVM_TYPE_DECLARE);
+  llvm::Type* VoidTy_;
+#define LLVM_TYPE_DECLARE(_1, Name) llvm::Type* Name##Ty_;
+  AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, LLVM_TYPE_DECLARE);
 #undef LLVM_TYPE_DECLARE
 
   std::unordered_map<const Var*, int> varToArg_;
@@ -79,9 +79,8 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, LLVM_TYPE_DECLARE);
   void visit(const Rshift* v) override;
   void visit(const CompareSelect* v) override;
 
-#define IMM_VISIT_DECLARE(_1, Name) \
-  void visit(const Name##Imm* v) override;
-AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_VISIT_DECLARE);
+#define IMM_VISIT_DECLARE(_1, Name) void visit(const Name##Imm* v) override;
+  AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_VISIT_DECLARE);
 #undef IMM_VISIT_DECLARE
 
   void visit(const Cast* v) override;
@@ -98,6 +97,8 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_VISIT_DECLARE);
   void visit(const BaseCallNode* v) override;
   void visit(const Intrinsics* v) override;
   void visit(const FunctionCall* v) override;
+  void visit(const CallExternal* v) override;
+  void visit(const OpaqueCall* v) override;
   void visit(const Allocate* v) override;
   void visit(const Free* v) override;
   void visit(const Cond* v) override;

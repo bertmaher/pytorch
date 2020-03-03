@@ -1,8 +1,8 @@
-#include <torch/csrc/jit/passes/guard_elimination.h>
 #include <torch/csrc/jit/graph_executor.h>
 #include <torch/csrc/jit/jit_log.h>
 #include <torch/csrc/jit/passes/alias_analysis.h>
 #include <torch/csrc/jit/passes/constant_propagation.h>
+#include <torch/csrc/jit/passes/guard_elimination.h>
 #include <torch/csrc/jit/passes/peephole.h>
 #include <memory>
 #include <unordered_set>
@@ -243,6 +243,7 @@ struct GuardElimination {
       case aten::rsqrt:
       case aten::remainder:
       case aten::mm:
+      case aten::matmul:
       case aten::min:
       case aten::max:
       case aten::type_as:

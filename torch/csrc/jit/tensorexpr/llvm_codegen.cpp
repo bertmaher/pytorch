@@ -1,10 +1,13 @@
 #ifdef ENABLE_LLVM
 
 #include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
+#include "torch/csrc/jit/tensorexpr/native.h"
 
 #include <memory>
 
 #include <llvm/Analysis/TargetTransformInfo.h>
+
+#include <llvm/ExecutionEngine/JITSymbol.h>
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
@@ -60,8 +63,8 @@ LLVMCodeGen::LLVMCodeGen(
     : CodeGen(stmt, args),
       context_(std::make_unique<llvm::LLVMContext>()),
       irb_(getContext()) {
-
   // Manually map types to LLVM types.
+  VoidTy_ = llvm::Type::getVoidTy(getContext());
   ByteTy_ = llvm::Type::getInt8Ty(getContext());
   CharTy_ = llvm::Type::getInt8Ty(getContext());
   ShortTy_ = llvm::Type::getInt16Ty(getContext());
@@ -79,6 +82,7 @@ LLVMCodeGen::LLVMCodeGen(
 
   jit_ = std::make_unique<llvm::orc::PytorchLLVMJIT>();
   module_ = std::make_unique<llvm::Module>("pytorch", getContext());
+
   module_->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
   module_->setTargetTriple(JTMB.getTargetTriple().str());
 
@@ -121,14 +125,14 @@ llvm::LLVMContext& LLVMCodeGen::getContext() {
 llvm::Type* LLVMCodeGen::dtypeToLLVM(Dtype dtype) {
   switch (dtype.scalar_type()) {
 #define TYPE_CASE(_1, n) \
-  case ScalarType::n: \
-      return n##Ty_; \
-      break;
+  case ScalarType::n:    \
+    return n##Ty_;       \
+    break;
 
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
-  default:
-    LOG(FATAL) << "Unhandled dtype: " << dtype;
+    default:
+      LOG(FATAL) << "Unhandled dtype: " << dtype;
   }
   return nullptr;
 }
@@ -206,16 +210,16 @@ static void* argToPtr(
 
   switch (bufferArg.dtype().scalar_type()) {
 #define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-        return callArg.Name##Ptr();
-        break;
+  case ScalarType::Name:    \
+    return callArg.Name##Ptr();
+    break;
 
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
 
     default:
-    LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
-             << "dtype=" << bufferArg.var()->dtype();
+      LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
+                 << "dtype=" << bufferArg.var()->dtype();
   }
   return nullptr;
 }
@@ -285,7 +289,9 @@ void LLVMCodeGen::visit(const Mul* v) {
   } else if (!lfp && !rfp) {
     value_ = irb_.CreateMul(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch mul arg types";
+    LOG(FATAL) << "Unhandled mismatch mul arg types, lhs is "
+               << (lfp ? "" : "not ") << "floating point, whereas rhs is "
+               << (rfp ? "" : "not ");
   }
 }
 
@@ -511,8 +517,8 @@ getFromType(llvm::Type* type, T value) {
   return llvm::ConstantFP::get(type, value);
 }
 
-#define IMM_VISIT_DECLARE(Type, Name) \
-  void LLVMCodeGen::visit(const Name##Imm* v) { \
+#define IMM_VISIT_DECLARE(Type, Name)                  \
+  void LLVMCodeGen::visit(const Name##Imm* v) {        \
     value_ = getFromType<Type>(Name##Ty_, v->value()); \
   }
 AT_FORALL_SCALAR_TYPES(IMM_VISIT_DECLARE);
@@ -577,6 +583,8 @@ void LLVMCodeGen::visit(const Var* v) {
     value_ = arg;
   } else if (varToVal_.count(v)) {
     value_ = varToVal_.at(v);
+  } else {
+    LOG(FATAL) << "Unable to resolve Variable " << *v << "\n";
   }
 }
 
@@ -626,10 +634,10 @@ void LLVMCodeGen::visit(const Ramp* v) {
 
   llvm::Type* vecType = nullptr;
   switch (v->dtype().scalar_type()) {
-#define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-      vecType = llvm::VectorType::get(Name##Ty_, lanes); \
-      break;
+#define TYPE_CASE(_1, Name)                            \
+  case ScalarType::Name:                               \
+    vecType = llvm::VectorType::get(Name##Ty_, lanes); \
+    break;
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
@@ -699,10 +707,10 @@ void LLVMCodeGen::visit(const Load* v) {
   llvm::Type* loadType = nullptr;
 
   switch (v->dtype().scalar_type()) {
-#define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-      loadType = llvm::VectorType::get(Name##Ty_, v->dtype().lanes()); \
-      break;
+#define TYPE_CASE(_1, Name)                                          \
+  case ScalarType::Name:                                             \
+    loadType = llvm::VectorType::get(Name##Ty_, v->dtype().lanes()); \
+    break;
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
@@ -931,6 +939,10 @@ static void applyMathFunctionAttributes(llvm::Function* f) {
   f->addFnAttr(llvm::Attribute::WillReturn);
 }
 
+void LLVMCodeGen::visit(const CallExternal* v) {
+  LOG(FATAL) << "CallExternal needs to be lowered to OpaqueCall";
+}
+
 void LLVMCodeGen::visit(const Intrinsics* v) {
   llvm::FunctionType* call_ty = nullptr;
   llvm::Value* call_fn = nullptr;
@@ -939,7 +951,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     switch (v->op_type()) {
 #define UNARY_INTRIN_CASE(enum, intrin)                 \
   case enum: {                                          \
-    v->params().front()->accept(this);                   \
+    v->params().front()->accept(this);                  \
     value_ = irb_.CreateUnaryIntrinsic(intrin, value_); \
     return;                                             \
   } break;
@@ -1109,11 +1121,94 @@ void LLVMCodeGen::visit(const FunctionCall* v) {
 }
 
 void LLVMCodeGen::visit(const Allocate* v) {
-  LOG(FATAL) << "Unimplemented: Allocate";
+  const Var* buffer_var = v->buffer_var();
+  std::vector<const Expr*> dims = v->dims();
+  auto total_byte_size = ExprHandle(IntImm::make(v->dtype().byte_size()));
+
+  for (size_t i = 0; i < dims.size(); i++) {
+    total_byte_size = total_byte_size * ExprHandle(dims[i]);
+  }
+  total_byte_size.node()->accept(this);
+  auto byte_size = irb_.CreateZExt(value_, LongTy_);
+  auto f = module_->getOrInsertFunction(
+      "malloc",
+      llvm::FunctionType::get(
+          llvm::PointerType::getUnqual(CharTy_), {LongTy_}, false));
+  TORCH_INTERNAL_ASSERT(f);
+  auto call_ty = f.getFunctionType();
+  auto call_fn = f.getCallee();
+  value_ = irb_.CreateCall(call_ty, call_fn, {byte_size});
+  llvm::Type* loadType = nullptr;
+
+  switch (v->dtype().scalar_type()) {
+#define TYPE_CASE(_1, Name) \
+  case ScalarType::Name:    \
+    loadType = Name##Ty_;   \
+    break;
+    AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
+#undef TYPE_CASE
+    default:
+      throw std::runtime_error("invalid dtype in Load");
+  }
+
+  auto vaddr =
+      irb_.CreateBitOrPointerCast(value_, llvm::PointerType::get(loadType, 0));
+
+  varToVal_.emplace(buffer_var, vaddr);
+  return;
+}
+
+void LLVMCodeGen::visit(const OpaqueCall* v) {
+  auto nfr = getNativeFunctionRegistry();
+  TORCH_CHECK(
+      nfr.find(v->name()) != nfr.end(),
+      v->name(),
+      " never registered with native function registry.  See tensorexpr/native.h");
+  auto sym = jit_->findSymbol(jit_->mangle(v->name()));
+
+  std::vector<llvm::Value*> params;
+  std::vector<llvm::Type*> types;
+
+  for (auto& p : v->input_handles()) {
+    p->accept(this);
+    auto t = value_->getType();
+    types.push_back(t);
+    params.push_back(value_);
+  }
+
+  for (auto& p : v->arguments()) {
+    p->accept(this);
+    auto t = value_->getType();
+    types.push_back(t);
+    params.push_back(value_);
+  }
+
+  v->output_handle()->accept(this);
+  params.push_back(value_);
+  types.push_back(llvm::PointerType::getUnqual(FloatTy_));
+
+  auto f = module_->getOrInsertFunction(
+      jit_->mangle(v->name()), llvm::FunctionType::get(VoidTy_, types, false));
+  TORCH_INTERNAL_ASSERT(f);
+  auto call_ty = f.getFunctionType();
+  auto call_fn = f.getCallee();
+  value_ = irb_.CreateCall(call_ty, call_fn, params);
 }
 
 void LLVMCodeGen::visit(const Free* v) {
-  LOG(FATAL) << "Unimplemented: Free";
+  const Var* buffer_var = v->buffer_var();
+  auto f = module_->getOrInsertFunction(
+      "free",
+      llvm::FunctionType::get(
+          VoidTy_, {llvm::PointerType::getUnqual(CharTy_)}, false));
+  TORCH_INTERNAL_ASSERT(f);
+  auto call_ty = f.getFunctionType();
+  auto call_fn = f.getCallee();
+  auto addr = varToVal_.at(buffer_var);
+  addr =
+      irb_.CreateBitOrPointerCast(addr, llvm::PointerType::getUnqual(CharTy_));
+  irb_.CreateCall(call_ty, call_fn, {addr});
+  return;
 }
 
 void LLVMCodeGen::visit(const Cond* v) {
