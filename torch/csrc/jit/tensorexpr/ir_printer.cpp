@@ -123,23 +123,38 @@ void IRPrinter::visit(const CompareSelect* v) {
   os() << ")";
 }
 
+static void formatFPSuffix(std::ostream& os, double v) {
+  // No suffix for doubles.
+}
+
+template<typename T>
+static void formatFPSuffix(std::ostream& os, T v) {
+  os << (v == std::ceil(v) ? ".f" : "f");
+}
+
+template<typename T,
+         std::enable_if_t<std::is_floating_point<T>::value>* = nullptr>
+static void formatImm(std::ostream& os, T v) {
+  if (std::isnan(v)) {
+    os << "NAN";
+  } else if (std::isinf(v)) {
+    os << (v > 0 ? "POS_INFINITY" : "NEG_INFINITY");
+  } else {
+    os << std::setprecision(16) << v;
+    formatFPSuffix(os, v);
+  }
+}
+
+template<typename T,
+         std::enable_if_t<!std::is_floating_point<T>::value>* = nullptr>
+static void formatImm(std::ostream& os, T v) {
+  os << v;
+}
 
 #define IMM_PRINT_VISIT(Type, Name)           \
   void IRPrinter::visit(const Name##Imm* v) { \
-    if (v->dtype().is_floating_point()) {     \
-      std::ostringstream oss;                 \
-      oss << v->value();                      \
-      std::string s = oss.str();              \
-      if (s.find('.') == std::string::npos) { \
-        s += ".f";                            \
-      } else {                                \
-        s += "f";                             \
-      }                                       \
-      os() << s;                              \
-    } else {                                  \
-      os() << v->value();                     \
-    }                                         \
-  }
+    formatImm(os(), v->value());              \
+}
 AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
 #undef IMM_PRINT_VISIT
 
