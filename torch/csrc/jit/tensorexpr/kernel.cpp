@@ -191,7 +191,7 @@ static std::vector<ExprHandle> broadcastShapes(
 std::vector<ExprHandle> TensorExprKernel::valueShape(const torch::jit::Value* v) {
   auto it = tensors_.find(v->unique());
   if (it == tensors_.end()) {
-    return {1};
+    return {};
   }
   return ExprVectorToExprHandleVector(it->second->dims());
 }
