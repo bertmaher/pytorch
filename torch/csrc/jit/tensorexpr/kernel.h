@@ -218,6 +218,8 @@ class TensorExprKernel {
   std::shared_ptr<Graph> graph_;
   Code code_;
   bool fallback_{false};
+  bool hasRandom_{false};
+  bool hasBroadcast_{false};
 };
 
 TORCH_API int& GetTECudaPointwiseLoopLevels();

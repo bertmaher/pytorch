@@ -155,39 +155,50 @@ static bool isOne(ExprHandle e) {
   return n->value() == 1;
 }
 
-static std::vector<ExprHandle> broadcastShapes(
+static std::pair<std::vector<ExprHandle>, bool> broadcastShapes(
     const std::vector<ExprHandle>& a,
     const std::vector<ExprHandle>& b) {
+  bool broadcast = false;
   auto at = a.rbegin();
   auto bt = b.rbegin();
   std::vector<ExprHandle> ret;
   while (at != a.rend() || bt != b.rend()) {
     if (at == a.rend()) {
+      broadcast = true;
       ret.push_back(*bt++);
       continue;
     }
     if (bt == b.rend()) {
+      broadcast = true;
       ret.push_back(*at++);
       continue;
     }
     // TODO: if neither *at nor *bt is 1, ensure they are identical
     // expressions.  Nb: `==` doesn't work since that simply produces a new
     // ExprHandle.
-    ExprHandle dim = isOne(*at) ? *bt : *at;
+    ExprHandle dim = *at;
+    if (isOne(*at)) {
+      if (!isOne(*bt)) {
+        dim = *bt;
+        broadcast = true;
+      }
+    }
     ret.push_back(dim);
     at++;
     bt++;
   }
   std::reverse(ret.begin(), ret.end());
-  return ret;
+  return {ret, broadcast};
 }
 
 template <typename... Args>
-static std::vector<ExprHandle> broadcastShapes(
+static std::pair<std::vector<ExprHandle>, bool> broadcastShapes(
     const std::vector<ExprHandle>& a,
     const std::vector<ExprHandle>& b,
     Args... args) {
-  return broadcastShapes(broadcastShapes(a, b), args...);
+  auto const& res = broadcastShapes(a, b);
+  auto const& res2 = broadcastShapes(res.first, args...);
+  return {res2.first, res.second || res2.second};
 }
 
 std::vector<ExprHandle> TensorExprKernel::valueShape(
@@ -225,8 +236,10 @@ Tensor* TensorExprKernel::ComputeTwoOperand(
     const std::function<ExprHandle(const ExprHandle&, const ExprHandle&)>&
         inner_expr) {
   auto const& n = v->node();
-  auto const& shape =
+  auto const& res =
       broadcastShapes(valueShape(n->inputs()[0]), valueShape(n->inputs()[1]));
+  auto const& shape = res.first;
+  hasBroadcast_ |= res.second;
   return Compute(
       name,
       c10::fmap<DimArg>(shape),
@@ -249,8 +262,10 @@ Tensor* TensorExprKernel::ComputeTwoOperandWithAlpha(
     const std::function<ExprHandle(const ExprHandle&, const ExprHandle&)>&
         inner_expr) {
   auto const& n = v->node();
-  auto const& shape =
+  auto const& res =
       broadcastShapes(valueShape(n->inputs()[0]), valueShape(n->inputs()[1]));
+  auto const& shape = res.first;
+  hasBroadcast_ |= res.second;
   return Compute(
       name,
       c10::fmap<DimArg>(shape),
@@ -275,10 +290,12 @@ Tensor* TensorExprKernel::ComputeConditionWithTwoOperand(
         ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)>&
         inner_expr) {
   auto const& n = v->node();
-  auto const& shape = broadcastShapes(
+  auto const& res = broadcastShapes(
       valueShape(n->inputs()[0]),
       valueShape(n->inputs()[1]),
       valueShape(n->inputs()[2]));
+  auto const& shape = res.first;
+  hasBroadcast_ |= res.second;
   return Compute(
       name,
       c10::fmap<DimArg>(shape),
@@ -304,10 +321,12 @@ Tensor* TensorExprKernel::ComputeThreeOperand(
         ExprHandle(const ExprHandle&, const ExprHandle&, const ExprHandle&)>&
         inner_expr) {
   auto const& n = v->node();
-  auto const& shape = broadcastShapes(
+  auto const& res = broadcastShapes(
       valueShape(n->inputs()[0]),
       valueShape(n->inputs()[1]),
       valueShape(n->inputs()[2]));
+  auto const& shape = res.first;
+  hasBroadcast_ |= res.second;
   return Compute(
       name,
       c10::fmap<DimArg>(shape),
@@ -334,11 +353,13 @@ Tensor* TensorExprKernel::ComputeFourOperand(
         const ExprHandle&,
         const ExprHandle&)>& inner_expr) {
   auto const& n = v->node();
-  auto const& shape = broadcastShapes(
+  auto const& res = broadcastShapes(
       valueShape(n->inputs()[0]),
       valueShape(n->inputs()[1]),
       valueShape(n->inputs()[2]),
       valueShape(n->inputs()[3]));
+  auto const& shape = res.first;
+  hasBroadcast_ |= res.second;
   return Compute(
       name,
       c10::fmap<DimArg>(shape),
@@ -613,6 +634,7 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
     } break;
 
     case aten::rand_like: {
+      hasRandom_ = true;
       return ComputeOneOperand("aten_rand_like", v, [](const ExprHandle& a) {
         return Intrinsics::make(IntrinsicsOp::kRand, a.dtype());
       });
@@ -1319,6 +1341,10 @@ void TensorExprKernel::compile() {
           tensors_.emplace(output->unique(), ComputeValue(output));
         }
       }
+    }
+    if (hasRandom_ && hasBroadcast_) {
+      throw std::runtime_error(
+          "Cannot support broadcast and random within one kernel");
     }
   }
 
