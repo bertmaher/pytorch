@@ -751,38 +751,46 @@ void LLVMCodeGen::visit(const Load* v) {
 }
 
 void LLVMCodeGen::visit(const For* v) {
-  // Create "start" value.
+  // Create "start" and "stop" values.
   v->start()->accept(this);
   auto start = this->value_;
+  v->stop()->accept(this);
+  auto stop = this->value_;
 
-  // Create loop preheader and body.
+  // Create block for loop condition test.
   auto preheader = irb_.GetInsertBlock();
-  auto loop = llvm::BasicBlock::Create(getContext(), "loop", fn_);
-  irb_.CreateBr(loop);
-  irb_.SetInsertPoint(loop);
+  auto condBlock = llvm::BasicBlock::Create(getContext(), "cond", fn_);
+  irb_.CreateBr(condBlock);
+  irb_.SetInsertPoint(condBlock);
 
   // Set up phi node for index variable.
   auto idx = irb_.CreatePHI(IntTy_, 2);
   idx->addIncoming(start, preheader);
   varToVal_.emplace(v->var(), idx);
 
+  // Create the body and exit blocks.
+  auto body = llvm::BasicBlock::Create(getContext(), "body", fn_);
+  auto exit = llvm::BasicBlock::Create(getContext(), "exit", fn_);
+
+  // Create the stop condition.
+  auto cond = irb_.CreateICmpSLT(idx, stop);
+  irb_.CreateCondBr(cond, body, exit);
+
   // Codegen the body.
+  irb_.SetInsertPoint(body);
   if (v->body()) {
     v->body()->accept(this);
   }
+  // "Body" block may have changed if we generated nested control flow.
+  body = irb_.GetInsertBlock();
 
-  // Create the stop condition. and "after" block.
+  // Increment the index variable and branch back to loop test.
   auto inc = irb_.CreateAdd(idx, llvm::ConstantInt::getSigned(IntTy_, 1));
-  v->stop()->accept(this);
-  auto stop = this->value_;
-  auto cond = irb_.CreateICmpSLT(inc, stop);
+  irb_.CreateBr(condBlock);
+  idx->addIncoming(inc, body);
 
-  // Branch back to top of loop and finish phi for index variable.
-  auto end_loop = irb_.GetInsertBlock();
-  auto after = llvm::BasicBlock::Create(getContext(), "after", fn_);
-  irb_.CreateCondBr(cond, loop, after);
-  irb_.SetInsertPoint(after);
-  idx->addIncoming(inc, end_loop);
+  // Exit the loop.
+  irb_.SetInsertPoint(exit);
   value_ = llvm::ConstantInt::get(IntTy_, 0);
 }
 
