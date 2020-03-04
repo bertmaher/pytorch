@@ -1021,7 +1021,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     call_ty = callee.getFunctionType();                                      \
     call_fn = callee.getCallee();                                            \
     applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn));        \
-  } break
+  } break;
 #endif
         SIMD_UNARY_MATH_CASE(kErf, "erff", FloatTy_)
         SIMD_UNARY_MATH_CASE(kErfc, "erfcf", FloatTy_)
