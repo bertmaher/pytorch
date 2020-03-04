@@ -159,13 +159,14 @@ static void formatFPSuffix(std::ostream& os, double v) {
   // No suffix for doubles.
 }
 
-template<typename T>
+template <typename T>
 static void formatFPSuffix(std::ostream& os, T v) {
   os << (v == std::ceil(v) ? ".f" : "f");
 }
 
-template<typename T,
-         std::enable_if_t<std::is_floating_point<T>::value>* = nullptr>
+template <
+    typename T,
+    std::enable_if_t<std::is_floating_point<T>::value>* = nullptr>
 static void formatImm(std::ostream& os, T v) {
   if (std::isnan(v)) {
     os << "NAN";
@@ -177,8 +178,9 @@ static void formatImm(std::ostream& os, T v) {
   }
 }
 
-template<typename T,
-         std::enable_if_t<!std::is_floating_point<T>::value>* = nullptr>
+template <
+    typename T,
+    std::enable_if_t<!std::is_floating_point<T>::value>* = nullptr>
 static void formatImm(std::ostream& os, T v) {
   os << v;
 }
@@ -186,7 +188,7 @@ static void formatImm(std::ostream& os, T v) {
 #define IMM_PRINT_VISIT(Type, Name)           \
   void IRPrinter::visit(const Name##Imm* v) { \
     formatImm(os(), v->value());              \
-}
+  }
 AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_PRINT_VISIT);
 #undef IMM_PRINT_VISIT
 
@@ -219,7 +221,7 @@ void IRPrinter::visit(const Let* v) {
 
   os() << " in ";
 
-  if(body_prec >= self_prec) {
+  if (body_prec >= self_prec) {
     os() << "(";
   }
   v->body()->accept(this);
@@ -230,8 +232,8 @@ void IRPrinter::visit(const Let* v) {
 
 void IRPrinter::visit(const LetStmt* v) {
   const Var* var = v->var();
-  os() << var->dtype().ToCppString() << " " << *var << " = " << *v->value() << "; "
-       << std::endl;
+  os() << var->dtype().ToCppString() << " " << *var << " = " << *v->value()
+       << "; " << std::endl;
   v->body()->accept(this);
 }
 
@@ -251,8 +253,8 @@ void IRPrinter::visit(const For* v) {
   VarHandle vv(var);
   emitIndent();
   os() << "for (" << var->dtype().ToCppString() << " " << vv << " = "
-       << ExprHandle(v->start()) << "; " << vv << " < " << ExprHandle(v->stop()) << "; " << vv
-       << "++) {";
+       << ExprHandle(v->start()) << "; " << vv << " < " << ExprHandle(v->stop())
+       << "; " << vv << "++) {";
   std::string loop_options_str = v->loop_options().ToString();
   if (!loop_options_str.empty()) {
     os() << " // " << loop_options_str;
@@ -268,7 +270,7 @@ void IRPrinter::visit(const For* v) {
 }
 
 void IRPrinter::visit(const Block* v) {
-  for (Stmt *s : v->stmts()) {
+  for (Stmt* s : v->stmts()) {
     os() << *s << std::endl;
   }
 }
@@ -276,7 +278,8 @@ void IRPrinter::visit(const Block* v) {
 void IRPrinter::visit(const Store* v) {
   // TODO: handle the mask
   emitIndent();
-  os() << *v->base_handle() << "[" << *v->index() << "] = " << *v->value() << ";";
+  os() << *v->base_handle() << "[" << *v->index() << "] = " << *v->value()
+       << ";";
 }
 
 void IRPrinter::visit(const Broadcast* v) {

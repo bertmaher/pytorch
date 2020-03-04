@@ -28,7 +28,7 @@ static T EvalConstExpr(const ExprHandle& expr) {
 } // namespace
 
 class Vectorizer : public IRMutator {
-  public:
+ public:
   Stmt* vectorize(const For* v) {
     Stmt* body = v->body();
     const Var* var = v->var();
@@ -38,11 +38,13 @@ class Vectorizer : public IRMutator {
     const IntImm* start_imm = dynamic_cast<const IntImm*>(start);
     const IntImm* stop_imm = dynamic_cast<const IntImm*>(stop);
     if (!start_imm) {
-      throw std::runtime_error("Can't vectorize due to non-constant loop start!");
+      throw std::runtime_error(
+          "Can't vectorize due to non-constant loop start!");
     }
 
     if (!stop_imm) {
-      throw std::runtime_error("Can't vectorize due to non-constant loop stop!");
+      throw std::runtime_error(
+          "Can't vectorize due to non-constant loop stop!");
     }
 
     var_ = var;
@@ -58,55 +60,68 @@ class Vectorizer : public IRMutator {
   }
 
   const Expr* mutate(const Add* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs() };
-    return try_vectorize(v, inputs,
-      [&](){ return ExprHandle(inputs[0]) + ExprHandle(inputs[1]); });
+    std::vector<const Expr*> inputs = {v->lhs(), v->rhs()};
+    return try_vectorize(v, inputs, [&]() {
+      return ExprHandle(inputs[0]) + ExprHandle(inputs[1]);
+    });
   }
 
   const Expr* mutate(const Sub* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs() };
-    return try_vectorize(v, inputs,
-      [&](){ return ExprHandle(inputs[0]) - ExprHandle(inputs[1]); });
+    std::vector<const Expr*> inputs = {v->lhs(), v->rhs()};
+    return try_vectorize(v, inputs, [&]() {
+      return ExprHandle(inputs[0]) - ExprHandle(inputs[1]);
+    });
   }
 
   const Expr* mutate(const Mul* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs() };
-    return try_vectorize(v, inputs,
-      [&](){ return ExprHandle(inputs[0]) * ExprHandle(inputs[1]); });
+    std::vector<const Expr*> inputs = {v->lhs(), v->rhs()};
+    return try_vectorize(v, inputs, [&]() {
+      return ExprHandle(inputs[0]) * ExprHandle(inputs[1]);
+    });
   }
 
   const Expr* mutate(const Div* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs() };
-    return try_vectorize(v, inputs,
-      [&](){ return ExprHandle(inputs[0]) / ExprHandle(inputs[1]); });
+    std::vector<const Expr*> inputs = {v->lhs(), v->rhs()};
+    return try_vectorize(v, inputs, [&]() {
+      return ExprHandle(inputs[0]) / ExprHandle(inputs[1]);
+    });
   }
 
   const Expr* mutate(const Max* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs() };
-    return try_vectorize(v, inputs,
-      [&](){ return Max::make(ExprHandle(inputs[0]), ExprHandle(inputs[1]), v->propagate_nans()); });
+    std::vector<const Expr*> inputs = {v->lhs(), v->rhs()};
+    return try_vectorize(v, inputs, [&]() {
+      return Max::make(
+          ExprHandle(inputs[0]), ExprHandle(inputs[1]), v->propagate_nans());
+    });
   }
 
   const Expr* mutate(const Min* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs() };
-    return try_vectorize(v, inputs,
-      [&](){ return Min::make(ExprHandle(inputs[0]), ExprHandle(inputs[1]), v->propagate_nans()); });
+    std::vector<const Expr*> inputs = {v->lhs(), v->rhs()};
+    return try_vectorize(v, inputs, [&]() {
+      return Min::make(
+          ExprHandle(inputs[0]), ExprHandle(inputs[1]), v->propagate_nans());
+    });
   }
 
   const Expr* mutate(const CompareSelect* v) override {
-    std::vector<const Expr*> inputs = { v->lhs(), v->rhs(), v->ret_val1(), v->ret_val2() };
-    return try_vectorize(v, inputs,
-      [&](){
-        return CompareSelect::make(ExprHandle(inputs[0]), ExprHandle(inputs[1]),
-                                   ExprHandle(inputs[2]), ExprHandle(inputs[3]),
-                                   v->compare_select_op());
-      });
+    std::vector<const Expr*> inputs = {
+        v->lhs(), v->rhs(), v->ret_val1(), v->ret_val2()};
+    return try_vectorize(v, inputs, [&]() {
+      return CompareSelect::make(
+          ExprHandle(inputs[0]),
+          ExprHandle(inputs[1]),
+          ExprHandle(inputs[2]),
+          ExprHandle(inputs[3]),
+          v->compare_select_op());
+    });
   }
 
   const Expr* mutate(const Cast* v) override {
-    std::vector<const Expr*> inputs = { v->src_value() };
-    return try_vectorize(v, inputs,
-      [&](){ return Cast::make(Dtype(v->dtype().scalar_type(), lanes_), ExprHandle(inputs[0])); });
+    std::vector<const Expr*> inputs = {v->src_value()};
+    return try_vectorize(v, inputs, [&]() {
+      return Cast::make(
+          Dtype(v->dtype().scalar_type(), lanes_), ExprHandle(inputs[0]));
+    });
   }
 
   const Expr* mutate(const Var* v) override {
@@ -122,9 +137,11 @@ class Vectorizer : public IRMutator {
     const Expr* value = v->value();
     const Expr* body = v->body();
 
-    std::vector<const Expr*> inputs = { body };
-    return try_vectorize(v, inputs,
-      [&]() { return Let::make(ExprHandle(var), ExprHandle(value), ExprHandle(inputs[0])); });
+    std::vector<const Expr*> inputs = {body};
+    return try_vectorize(v, inputs, [&]() {
+      return Let::make(
+          ExprHandle(var), ExprHandle(value), ExprHandle(inputs[0]));
+    });
   }
 
   const Expr* mutate(const Ramp* v) override {
@@ -144,9 +161,14 @@ class Vectorizer : public IRMutator {
   const Expr* mutate(const Load* v) override {
     Dtype dtype(v->dtype().scalar_type(), lanes_);
     const Var* base_handle = v->base_handle();
-    std::vector<const Expr*> inputs = { v->index(), v->mask() };
-    return try_vectorize(v, inputs,
-      [&]() { return Load::make(dtype, VarHandle(base_handle), ExprHandle(inputs[0]), ExprHandle(inputs[1])); });
+    std::vector<const Expr*> inputs = {v->index(), v->mask()};
+    return try_vectorize(v, inputs, [&]() {
+      return Load::make(
+          dtype,
+          VarHandle(base_handle),
+          ExprHandle(inputs[0]),
+          ExprHandle(inputs[1]));
+    });
   }
 
   const Expr* mutate(const Broadcast* v) override {
@@ -166,22 +188,29 @@ class Vectorizer : public IRMutator {
       throw std::runtime_error("Can't vectorize an IfThenElse condition!");
     }
 
-    std::vector<const Expr*> inputs = { v->true_value(), v->false_value() };
-    return try_vectorize(v, inputs,
-      [&]() { return IfThenElse::make(ExprHandle(condition), ExprHandle(inputs[0]), ExprHandle(inputs[1])); });
+    std::vector<const Expr*> inputs = {v->true_value(), v->false_value()};
+    return try_vectorize(v, inputs, [&]() {
+      return IfThenElse::make(
+          ExprHandle(condition), ExprHandle(inputs[0]), ExprHandle(inputs[1]));
+    });
   }
 
   const Expr* mutate(const BaseCallNode* v) override {
     std::vector<const Expr*> inputs = v->params();
-    return try_vectorize(v, inputs,
-      [&]() { return ExprHandle(DefaultMutator(v, inputs)); });
+    return try_vectorize(
+        v, inputs, [&]() { return ExprHandle(DefaultMutator(v, inputs)); });
   }
 
   Stmt* mutate(const Store* v) override {
     const Var* base_handle = v->base_handle();
-    std::vector<const Expr*> inputs = { v->index(), v->value(), v->mask() };
-    return try_vectorize(v, inputs,
-      [&]() { return Store::make(VarHandle(base_handle), ExprHandle(inputs[0]), ExprHandle(inputs[1]), ExprHandle(inputs[2])); });
+    std::vector<const Expr*> inputs = {v->index(), v->value(), v->mask()};
+    return try_vectorize(v, inputs, [&]() {
+      return Store::make(
+          VarHandle(base_handle),
+          ExprHandle(inputs[0]),
+          ExprHandle(inputs[1]),
+          ExprHandle(inputs[2]));
+    });
   }
 
   Stmt* mutate(const For* v) override {
@@ -189,7 +218,10 @@ class Vectorizer : public IRMutator {
   }
 
   template <typename T>
-  const Expr* try_vectorize(const Expr* e, std::vector<const Expr*>& inputs, T&& vec_ctor) {
+  const Expr* try_vectorize(
+      const Expr* e,
+      std::vector<const Expr*>& inputs,
+      T&& vec_ctor) {
     bool vectorize = vectorize_inputs(inputs);
     if (vectorize) {
       return vec_ctor().node();
@@ -199,7 +231,10 @@ class Vectorizer : public IRMutator {
   }
 
   template <typename T>
-  Stmt* try_vectorize(const Stmt* s, std::vector<const Expr*>& inputs, T&& vec_ctor) {
+  Stmt* try_vectorize(
+      const Stmt* s,
+      std::vector<const Expr*>& inputs,
+      T&& vec_ctor) {
     bool vectorize = vectorize_inputs(inputs);
     if (vectorize) {
       return vec_ctor();
@@ -260,7 +295,7 @@ Stmt* Vectorize(const Stmt* stmt) {
 class Flattener : public IRMutator {
  private:
   Expr* mutate(const FunctionCall* v) override {
-    const Tensor *t = v->tensor();
+    const Tensor* t = v->tensor();
     Buffer buffer(
         VarHandle(t->func_var()),
         t->body()->dtype(),
@@ -369,6 +404,7 @@ class DepTracker : public IRVisitor {
     tensor->body()->accept(this);
     return used_tensors;
   }
+
  private:
   void visit(const FunctionCall* v) override {
     used_tensors.push_back(const_cast<Tensor*>(v->tensor()));
@@ -389,7 +425,7 @@ std::vector<Tensor*> LoopNest::FindAllNeededTensors(
       q.push(t);
     }
   }
-  while(!q.empty()) {
+  while (!q.empty()) {
     Tensor* t = q.front();
     q.pop();
     queued.erase(t);
@@ -421,7 +457,8 @@ LoopNest::LoopNest(const std::vector<Tensor*>& output_tensors)
     : output_tensors_(output_tensors.begin(), output_tensors.end()) {
   // Find all tensors we need to compute (including dependencies) and put them
   // in a topological order
-  std::vector<Tensor*> tensors_to_compute = FindAllNeededTensors(output_tensors);
+  std::vector<Tensor*> tensors_to_compute =
+      FindAllNeededTensors(output_tensors);
 
   // Find all intermediate tensors, we'll need that for inserting alloc/free
   // statements
@@ -470,8 +507,6 @@ void LoopNest::ApplyInlines() {
       inlined_functions_.begin(), inlined_functions_.end());
   root_stmt_ = InjectInlines(root_stmt_, inlined_functions_vec);
 
-
-
   // Flatten function calls.
   Flattener flattener;
   Stmt* core_stmt = root_stmt_->accept_mutator(&flattener);
@@ -496,9 +531,7 @@ void LoopNest::ApplyInlines() {
       continue;
     }
     Stmt* alloc = new Allocate(
-        tensor->func_var(),
-        tensor->body()->dtype(),
-        tensor->dims());
+        tensor->func_var(), tensor->body()->dtype(), tensor->dims());
     allocs.push_back(alloc);
     Stmt* free = new Free(tensor->func_var());
     frees.push_back(free);
@@ -567,11 +600,7 @@ void LoopNest::SplitWithTail(
   // TODO: record history of transformations
 }
 
-void LoopNest::SplitWithMask(
-    Stmt* s,
-    int factor,
-    Stmt** outer,
-    Stmt** inner) {
+void LoopNest::SplitWithMask(Stmt* s, int factor, Stmt** outer, Stmt** inner) {
   Block* p = dynamic_cast<Block*>(s->get_parent());
   For* f = dynamic_cast<For*>(s);
   if (!f) {
@@ -612,7 +641,8 @@ void LoopNest::SplitWithMask(
   // are only materializing predicates at the last, lowering, step.
   if (tail_is_needed) {
     const IntImm* start = dynamic_cast<const IntImm*>(f->start());
-    CHECK(start && start->value() == 0) << "Non-zero start is not implemented yet";
+    CHECK(start && start->value() == 0)
+        << "Non-zero start is not implemented yet";
     const Expr* predicate =
         CompareSelect::make(ExprHandle(f->var()), ExprHandle(f->stop()), kLT)
             .node();
@@ -641,9 +671,7 @@ std::vector<Stmt*> LoopNest::getLoopStmtsFor(Tensor* t) const {
   return std::vector<Stmt*>(result.rbegin(), result.rend());
 }
 
-void LoopNest::SetGPUBlockIndex(
-    Stmt* s,
-    int block_index) {
+void LoopNest::SetGPUBlockIndex(Stmt* s, int block_index) {
   For* f = dynamic_cast<For*>(s);
   if (!f) {
     std::cerr << "Stmt is not a For loop!\n";
@@ -652,9 +680,7 @@ void LoopNest::SetGPUBlockIndex(
   f->set_gpu_block_index(block_index);
 }
 
-void LoopNest::SetGPUThreadIndex(
-    Stmt* s,
-    int thread_index) {
+void LoopNest::SetGPUThreadIndex(Stmt* s, int thread_index) {
   For* f = dynamic_cast<For*>(s);
   if (!f) {
     std::cerr << "Stmt is not a For loop!\n";

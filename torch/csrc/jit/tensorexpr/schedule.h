@@ -34,17 +34,14 @@ class TORCH_API LoopNest {
       Stmt** outer,
       Stmt** inner,
       Stmt** tail);
-  void SplitWithMask(
-      Stmt* s,
-      int factor,
-      Stmt** outer,
-      Stmt** inner);
+  void SplitWithMask(Stmt* s, int factor, Stmt** outer, Stmt** inner);
 
   void SetGPUBlockIndex(Stmt* s, int idx);
   void SetGPUThreadIndex(Stmt* s, int idx);
 
  private:
-  std::vector<Tensor*> FindAllNeededTensors(const std::vector<Tensor*>& tensors);
+  std::vector<Tensor*> FindAllNeededTensors(
+      const std::vector<Tensor*>& tensors);
   Stmt* LowerToStmt(Tensor* t);
 
   std::unordered_set<Function*> inlined_functions_;

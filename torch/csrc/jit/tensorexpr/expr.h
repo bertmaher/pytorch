@@ -7,8 +7,8 @@
 
 #include "torch/csrc/jit/tensorexpr/ir_mutator.h"
 #include "torch/csrc/jit/tensorexpr/ir_visitor.h"
-#include "torch/csrc/jit/tensorexpr/types.h"
 #include "torch/csrc/jit/tensorexpr/mem_arena.h"
+#include "torch/csrc/jit/tensorexpr/types.h"
 
 namespace torch {
 namespace jit {
@@ -38,7 +38,7 @@ enum IRNodeType {
 class Expr : public KernelScopedObject {
  public:
   explicit Expr(Dtype dtype, IRNodeType expr_type = kNone)
-    : dtype_(dtype), expr_type_(expr_type) {}
+      : dtype_(dtype), expr_type_(expr_type) {}
   Dtype dtype() const {
     return dtype_;
   }
@@ -88,9 +88,8 @@ class TORCH_API ExprHandle {
     return base_expr_node_ == nullptr;
   }
 
-#define IMM_EXPR_DECLARE(Type, Name) \
-  ExprHandle(Type v);
-AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_EXPR_DECLARE);
+#define IMM_EXPR_DECLARE(Type, Name) ExprHandle(Type v);
+  AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, IMM_EXPR_DECLARE);
 #undef IMM_EXPR_DECLARE
 
   template <class Op>
@@ -222,8 +221,8 @@ TORCH_API ExprHandle pow(const ExprHandle& v1, const ExprHandle& v2);
 TORCH_API ExprHandle fmod(const ExprHandle& v1, const ExprHandle& v2);
 TORCH_API ExprHandle remainder(const ExprHandle& v1, const ExprHandle& v2);
 
-TORCH_API ExprHandle ifThenElse(const ExprHandle& c, const ExprHandle& t, const ExprHandle& f);
-
+TORCH_API ExprHandle
+ifThenElse(const ExprHandle& c, const ExprHandle& t, const ExprHandle& f);
 
 } // namespace tensorexpr
 } // namespace jit

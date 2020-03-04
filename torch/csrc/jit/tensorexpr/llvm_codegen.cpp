@@ -60,7 +60,6 @@ LLVMCodeGen::LLVMCodeGen(
     : CodeGen(stmt, args),
       context_(std::make_unique<llvm::LLVMContext>()),
       irb_(getContext()) {
-
   // Manually map types to LLVM types.
   ByteTy_ = llvm::Type::getInt8Ty(getContext());
   CharTy_ = llvm::Type::getInt8Ty(getContext());
@@ -121,14 +120,14 @@ llvm::LLVMContext& LLVMCodeGen::getContext() {
 llvm::Type* LLVMCodeGen::dtypeToLLVM(Dtype dtype) {
   switch (dtype.scalar_type()) {
 #define TYPE_CASE(_1, n) \
-  case ScalarType::n: \
-      return n##Ty_; \
-      break;
+  case ScalarType::n:    \
+    return n##Ty_;       \
+    break;
 
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
-  default:
-    LOG(FATAL) << "Unhandled dtype: " << dtype;
+    default:
+      LOG(FATAL) << "Unhandled dtype: " << dtype;
   }
   return nullptr;
 }
@@ -206,16 +205,16 @@ static void* argToPtr(
 
   switch (bufferArg.dtype().scalar_type()) {
 #define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-        return callArg.Name##Ptr();
-        break;
+  case ScalarType::Name:    \
+    return callArg.Name##Ptr();
+    break;
 
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
 
     default:
-    LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
-             << "dtype=" << bufferArg.var()->dtype();
+      LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
+                 << "dtype=" << bufferArg.var()->dtype();
   }
   return nullptr;
 }
@@ -511,8 +510,8 @@ getFromType(llvm::Type* type, T value) {
   return llvm::ConstantFP::get(type, value);
 }
 
-#define IMM_VISIT_DECLARE(Type, Name) \
-  void LLVMCodeGen::visit(const Name##Imm* v) { \
+#define IMM_VISIT_DECLARE(Type, Name)                  \
+  void LLVMCodeGen::visit(const Name##Imm* v) {        \
     value_ = getFromType<Type>(Name##Ty_, v->value()); \
   }
 AT_FORALL_SCALAR_TYPES(IMM_VISIT_DECLARE);
@@ -626,10 +625,10 @@ void LLVMCodeGen::visit(const Ramp* v) {
 
   llvm::Type* vecType = nullptr;
   switch (v->dtype().scalar_type()) {
-#define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-      vecType = llvm::VectorType::get(Name##Ty_, lanes); \
-      break;
+#define TYPE_CASE(_1, Name)                            \
+  case ScalarType::Name:                               \
+    vecType = llvm::VectorType::get(Name##Ty_, lanes); \
+    break;
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
@@ -699,10 +698,10 @@ void LLVMCodeGen::visit(const Load* v) {
   llvm::Type* loadType = nullptr;
 
   switch (v->dtype().scalar_type()) {
-#define TYPE_CASE(_1, Name) \
-    case ScalarType::Name: \
-      loadType = llvm::VectorType::get(Name##Ty_, v->dtype().lanes()); \
-      break;
+#define TYPE_CASE(_1, Name)                                          \
+  case ScalarType::Name:                                             \
+    loadType = llvm::VectorType::get(Name##Ty_, v->dtype().lanes()); \
+    break;
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
@@ -949,7 +948,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     switch (v->op_type()) {
 #define UNARY_INTRIN_CASE(enum, intrin)                 \
   case enum: {                                          \
-    v->params().front()->accept(this);                   \
+    v->params().front()->accept(this);                  \
     value_ = irb_.CreateUnaryIntrinsic(intrin, value_); \
     return;                                             \
   } break;
@@ -1021,7 +1020,7 @@ void LLVMCodeGen::visit(const Intrinsics* v) {
     switch (v->op_type()) {
 #define UNARY_INTRIN_CASE(enum, intrin)                 \
   case enum: {                                          \
-    v->params().front()->accept(this);                   \
+    v->params().front()->accept(this);                  \
     value_ = irb_.CreateUnaryIntrinsic(intrin, value_); \
     return;                                             \
   } break;

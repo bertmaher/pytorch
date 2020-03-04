@@ -19,7 +19,6 @@ class Tensor {
     return output_index_;
   }
 
-
   // Wrappers over accessors to fields of the underlying function
   const Expr* body() const {
     return function()->body(output_index());
@@ -92,12 +91,17 @@ TORCH_API Tensor* Compute(
 TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<ExprHandle(const VarHandle&, const VarHandle&, const VarHandle&)> body_func);
+    std::function<
+        ExprHandle(const VarHandle&, const VarHandle&, const VarHandle&)>
+        body_func);
 TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
-    std::function<ExprHandle(const VarHandle&, const VarHandle&, const VarHandle&, const VarHandle&)>
-        body_func);
+    std::function<ExprHandle(
+        const VarHandle&,
+        const VarHandle&,
+        const VarHandle&,
+        const VarHandle&)> body_func);
 TORCH_API Tensor* Compute(
     const std::string& func_name,
     const std::vector<DimArg>& dim_args,
@@ -106,7 +110,9 @@ TORCH_API Tensor* Compute(
 class FunctionCall : public CallNode<FunctionCall> {
  public:
   using BaseClass = CallNode<FunctionCall>;
-  static ExprHandle make(Tensor* tensor, const std::vector<ExprHandle>& params) {
+  static ExprHandle make(
+      Tensor* tensor,
+      const std::vector<ExprHandle>& params) {
     std::vector<const Expr*> params_nodes(params.size());
     for (size_t i = 0; i < params.size(); i++) {
       params_nodes[i] = params[i].node();
@@ -122,10 +128,15 @@ class FunctionCall : public CallNode<FunctionCall> {
   }
 
   FunctionCall(Tensor* tensor, const std::vector<const Expr*>& params)
-      : BaseClass(tensor->function()->body(tensor->output_index())->dtype(), kFunctionCall, params),
+      : BaseClass(
+            tensor->function()->body(tensor->output_index())->dtype(),
+            kFunctionCall,
+            params),
         tensor_(tensor) {}
+
  private:
-  const Expr* DefaultMutator(const std::vector<const Expr*>& new_params) const override {
+  const Expr* DefaultMutator(
+      const std::vector<const Expr*>& new_params) const override {
     return new FunctionCall(tensor_, new_params);
   }
 
