@@ -403,43 +403,42 @@ void initJITBindings(PyObject* module) {
             return trigger->value();
           })
       .def(
-	   "_jit_get_te_cuda_pointwise_loop_levels",
-	   []() -> int {
-             using namespace torch::jit::tensorexpr;
-	     return GetTECudaPointwiseLoopLevels();
-	   })
+          "_jit_get_te_cuda_pointwise_loop_levels",
+          []() -> int {
+            using namespace torch::jit::tensorexpr;
+            return GetTECudaPointwiseLoopLevels();
+          })
       .def(
-	   "_jit_set_te_cuda_pointwise_loop_levels",
-	   [](int level) {
-             using namespace torch::jit::tensorexpr;
-	     return GetTECudaPointwiseLoopLevels() = level;
-	   })
+          "_jit_set_te_cuda_pointwise_loop_levels",
+          [](int level) {
+            using namespace torch::jit::tensorexpr;
+            return GetTECudaPointwiseLoopLevels() = level;
+          })
       .def(
-	   "_jit_get_te_cuda_pointwise_block_count",
-	   []() -> int {
-             using namespace torch::jit::tensorexpr;
-	     return GetTECudaPointwiseBlockCount();
-	   })
+          "_jit_get_te_cuda_pointwise_block_count",
+          []() -> int {
+            using namespace torch::jit::tensorexpr;
+            return GetTECudaPointwiseBlockCount();
+          })
       .def(
-	   "_jit_set_te_cuda_pointwise_block_count",
-	   [](int block_count) {
-             using namespace torch::jit::tensorexpr;
-	     return GetTECudaPointwiseBlockCount() = block_count;
-	   })
+          "_jit_set_te_cuda_pointwise_block_count",
+          [](int block_count) {
+            using namespace torch::jit::tensorexpr;
+            return GetTECudaPointwiseBlockCount() = block_count;
+          })
       .def(
-	   "_jit_get_te_cuda_pointwise_block_size",
-	   []() -> int {
-             using namespace torch::jit::tensorexpr;
-	     return GetTECudaPointwiseBlockSize();
-	   })
+          "_jit_get_te_cuda_pointwise_block_size",
+          []() -> int {
+            using namespace torch::jit::tensorexpr;
+            return GetTECudaPointwiseBlockSize();
+          })
       .def(
-	   "_jit_set_te_cuda_pointwise_block_size",
-	   [](int block_size) {
-             using namespace torch::jit::tensorexpr;
-	     return GetTECudaPointwiseBlockSize() = block_size;
-	   })
-      .def(
-	   "_jit_set_texpr_fuser_enabled", &SetTexprFuserEnabled)
+          "_jit_set_te_cuda_pointwise_block_size",
+          [](int block_size) {
+            using namespace torch::jit::tensorexpr;
+            return GetTECudaPointwiseBlockSize() = block_size;
+          })
+      .def("_jit_set_texpr_fuser_enabled", &SetTexprFuserEnabled)
       .def(
           "_jit_fuser_get_fused_kernel_code",
           [](Graph& g, std::vector<at::Tensor> inps) {
