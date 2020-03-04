@@ -21,8 +21,8 @@ using namespace torch::jit::tensorexpr::schedule;
 
 void testExprSimple01() {
   KernelScope kernel_scope;
-  Tensor* tensor =
-      Compute("f", {{16, "X"}, {5, "y"}}, [](const VarHandle& x, const VarHandle& y) {
+  Tensor* tensor = Compute(
+      "f", {{16, "X"}, {5, "y"}}, [](const VarHandle& x, const VarHandle& y) {
         return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
       });
   LoopNest l({tensor});
@@ -40,8 +40,8 @@ void testExprSimple01() {
 
 void testExprLower01() {
   KernelScope kernel_scope;
-  Tensor* tensor =
-      Compute("f", {{16, "x"}, {5, "y"}}, [](const VarHandle& x, const VarHandle& y) {
+  Tensor* tensor = Compute(
+      "f", {{16, "x"}, {5, "y"}}, [](const VarHandle& x, const VarHandle& y) {
         return ExprHandle(1.0f) + cast<float>(x) * x + cast<float>(y) * y;
       });
   LoopNest l({tensor});
@@ -68,8 +68,8 @@ void testExprSimple02() {
   Stmt* stmt = l.root_stmt();
   std::ostringstream oss;
   oss << *stmt;
-//   ASSERT_GT(oss.str().size(), 200);
-//   ASSERT_LT(oss.str().size(), 600);
+  //   ASSERT_GT(oss.str().size(), 200);
+  //   ASSERT_LT(oss.str().size(), 600);
 
   {
     // Compare to a reference loop structure structure.
@@ -158,7 +158,7 @@ void testExprSplitWithTailNone() {
             4,
             For::make(
                 y, 0, 5, Store::make(f, x_1 * 5 + y * 1, func(x_1, y), 1))));
-    //Stmt stmt = Block::make({stmt1, stmt2});
+    // Stmt stmt = Block::make({stmt1, stmt2});
 
     std::ostringstream oss_ref;
     oss_ref << stmt;
@@ -189,8 +189,8 @@ void testExprSplitWithMask01() {
   const int N = 5;
   Buffer a_buf("a", kFloat, {M, N});
   Buffer b_buf("b", kFloat, {M, N});
-  Tensor* tensor =
-      Compute("f", {{M, "m"}, {N, "n"}}, [&](const ExprHandle& m, const ExprHandle& n) {
+  Tensor* tensor = Compute(
+      "f", {{M, "m"}, {N, "n"}}, [&](const ExprHandle& m, const ExprHandle& n) {
         return a_buf(m, n) + b_buf(m, n) + 1.0f;
       });
   Stmt* n_outer;
@@ -284,7 +284,9 @@ void testScheduleFunctionCall01() {
   Tensor* d = Compute(
       "d",
       {{M, "m"}, {N, "n"}, {K, "k"}},
-      [&](const VarHandle& m, const VarHandle& n, const VarHandle& k) { return c->call(m, n, k) + 1; });
+      [&](const VarHandle& m, const VarHandle& n, const VarHandle& k) {
+        return c->call(m, n, k) + 1;
+      });
 
   LoopNest l({d});
   l.ApplyInlines();
@@ -454,13 +456,13 @@ void testScheduleFuserStyle() {
 
   Buffer a_buf(VarHandle("A", kHandle), kFloat, {ExprHandle(kTotalSize)});
 
-  Tensor* b =
-      Compute("f", {{kTotalSize, "i"}}, [&](const std::vector<VarHandle>& axes) {
+  Tensor* b = Compute(
+      "f", {{kTotalSize, "i"}}, [&](const std::vector<VarHandle>& axes) {
         return a_buf(axes[0]) + 11.0f;
       });
 
-  Tensor* c =
-      Compute("g", {{kTotalSize, "i"}}, [&](const std::vector<VarHandle>& axes) {
+  Tensor* c = Compute(
+      "g", {{kTotalSize, "i"}}, [&](const std::vector<VarHandle>& axes) {
         return b->call(axes[0]) + 1.0f;
       });
 
@@ -490,12 +492,15 @@ void testScheduleFuserThreeArg() {
   Buffer c(VarHandle("C", kHandle), kFloat, {ExprHandle(kTotalSize)});
   Buffer d(VarHandle("D", kHandle), kFloat, {ExprHandle(kTotalSize)});
 
-  Tensor* e = Compute(
-      "e", {{kTotalSize, "i"}}, [&](const VarHandle& i) { return a(i) + b(i); });
-  Tensor* f = Compute(
-      "f", {{kTotalSize, "i"}}, [&](const VarHandle& i) { return (*e)(i) + c(i); });
-  Tensor* g = Compute(
-      "g", {{kTotalSize, "i"}}, [&](const VarHandle& i) { return (*f)(i) + d(i); });
+  Tensor* e = Compute("e", {{kTotalSize, "i"}}, [&](const VarHandle& i) {
+    return a(i) + b(i);
+  });
+  Tensor* f = Compute("f", {{kTotalSize, "i"}}, [&](const VarHandle& i) {
+    return (*e)(i) + c(i);
+  });
+  Tensor* g = Compute("g", {{kTotalSize, "i"}}, [&](const VarHandle& i) {
+    return (*f)(i) + d(i);
+  });
 
   LoopNest l({g});
   l.ComputeInline(l.getLoopBodyFor(e));
@@ -522,8 +527,8 @@ void testScheduleDynamicShape2D() {
     VarHandle n("n", kInt);
     Buffer a(VarHandle("a", kHandle), kFloat, {m, n});
     Buffer b(VarHandle("b", kHandle), kFloat, {m, n});
-    Tensor* c =
-        Compute("c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
+    Tensor* c = Compute(
+        "c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
           return a(i, j) + b(i, j);
         });
     LoopNest l({c});

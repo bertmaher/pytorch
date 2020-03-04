@@ -21,10 +21,9 @@ using namespace torch::jit::tensorexpr::schedule;
 
 using LLVMExprEval = ExprEval<LLVMCodeGen>;
 
-
 // Typed tests, can't use gtest params here due to the way we instantiate tests.
 #define TEST_LLVM_SCALAR_TYPES(_) \
-  _(uint8_t, Byte, 24)           \
+  _(uint8_t, Byte, 24)            \
   _(int8_t, Char, -20)            \
   _(int16_t, Short, 3332)         \
   _(int, Int, 123456)             \
@@ -32,7 +31,6 @@ using LLVMExprEval = ExprEval<LLVMCodeGen>;
   _(float, Float, 0.122)          \
   _(double, Double, 0.21312)      \
   _(at::Half, Half, 0.128f)
-
 
 #define IMM_TEST(Type, Name, Val)                  \
   void testLLVM##Name##ImmTest() {                 \
@@ -301,11 +299,8 @@ void testLLVMVectorizerLoadStoreTest() {
 
   auto mask = IntImm::make(1);
   VarHandle i("i", kInt);
-  auto expr = For::make(
-      i,
-      0,
-      4,
-      Store::make(b, i, Load::make(a, i, mask), mask));
+  auto expr =
+      For::make(i, 0, 4, Store::make(b, i, Load::make(a, i, mask), mask));
   auto vectorized = Vectorize(expr);
   EXPECT_EQ(dynamic_cast<For*>(vectorized), nullptr);
 
@@ -321,7 +316,6 @@ void testLLVMVectorizerLoadStoreTest() {
   EXPECT_EQ(b_buffer[2], 1);
   EXPECT_EQ(b_buffer[3], 1);
 }
-
 
 void testLLVMMemcpyTest() {
   KernelScope kernel_scope;
@@ -915,8 +909,9 @@ void testLLVMStoreFloat() {
 void testLLVMSimpleMath01() {
   KernelScope kernel_scope;
   const int N = 1024;
-  Tensor* tensor = Compute(
-      "f", {{N, "i"}}, [](const VarHandle& i) { return cast<float>(i * i + 1); });
+  Tensor* tensor = Compute("f", {{N, "i"}}, [](const VarHandle& i) {
+    return cast<float>(i * i + 1);
+  });
   LoopNest l({tensor});
   Stmt* stmt = l.root_stmt();
   Buffer f_buf(VarHandle(tensor->func_var()), kFloat, {N});
@@ -962,8 +957,8 @@ void testLLVMBroadcastAdd() {
   const int N = 1024;
   Buffer a(VarHandle("a", kHandle), kFloat, {M, N});
   Buffer b(VarHandle("b", kHandle), kFloat, {N});
-  Tensor* c =
-      Compute("c", {{M, "i"}, {N, "j"}}, [&](const VarHandle& i, const VarHandle& j) {
+  Tensor* c = Compute(
+      "c", {{M, "i"}, {N, "j"}}, [&](const VarHandle& i, const VarHandle& j) {
         ExprHandle mask(1);
         return Load::make(a, i * N + j, mask) + Load::make(b, j, mask);
       });
@@ -1051,8 +1046,8 @@ void testLLVMTensorDynamicShapeAdd() {
     VarHandle n("n", kInt);
     Buffer a(VarHandle("a", kHandle), kFloat, {n});
     Buffer b(VarHandle("b", kHandle), kFloat, {n});
-    Tensor* c =
-        Compute("c", {{n, "n"}}, [&](const VarHandle& i) { return a(i) + b(i); });
+    Tensor* c = Compute(
+        "c", {{n, "n"}}, [&](const VarHandle& i) { return a(i) + b(i); });
     LoopNest l({c});
     Stmt* s = l.root_stmt();
     LLVMCodeGen cg(s, {a, b, c, n});
@@ -1074,8 +1069,8 @@ void testLLVMDynamicShape2D() {
     VarHandle n("n", kInt);
     Buffer a(VarHandle("a", kHandle), kFloat, {m, n});
     Buffer b(VarHandle("b", kHandle), kFloat, {m, n});
-    Tensor* c =
-        Compute("c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
+    Tensor* c = Compute(
+        "c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
           return a(i, j) + b(i, j);
         });
     LoopNest l({c});

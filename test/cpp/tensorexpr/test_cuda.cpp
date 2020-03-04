@@ -163,8 +163,8 @@ void testCudaDynamicShape2D() {
     VarHandle n("n", kInt);
     Buffer a(VarHandle("a", kHandle), kFloat, {m, n});
     Buffer b(VarHandle("b", kHandle), kFloat, {m, n});
-    Tensor* c =
-        Compute("c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
+    Tensor* c = Compute(
+        "c", {{m, "m"}, {n, "n"}}, [&](const VarHandle& i, const VarHandle& j) {
           return a(i, j) + b(i, j);
         });
     LoopNest l({c});

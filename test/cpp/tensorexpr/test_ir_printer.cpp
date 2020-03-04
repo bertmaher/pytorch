@@ -1,5 +1,5 @@
-#include "test/cpp/tensorexpr/test_base.h"
 #include <stdexcept>
+#include "test/cpp/tensorexpr/test_base.h"
 
 #include "torch/csrc/jit/tensorexpr/expr.h"
 #include "torch/csrc/jit/tensorexpr/ir.h"
@@ -51,7 +51,8 @@ void testIRPrinterLetTest02() {
   VarHandle x("x", kFloat);
   VarHandle y("y", kFloat);
   ExprHandle value = ExprHandle(3.f);
-  ExprHandle body = ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f) * y);
+  ExprHandle body =
+      ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f) * y);
   ExprHandle e1 = Let::make(x, ExprHandle(3.f), body);
   ExprHandle e2 = Let::make(y, ExprHandle(6.f), e1);
 
@@ -66,7 +67,8 @@ void testIRPrinterCastTest() {
   VarHandle x("x", kFloat);
   VarHandle y("y", kFloat);
   ExprHandle value = ExprHandle(3.f);
-  ExprHandle body = ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f) * y);
+  ExprHandle body =
+      ExprHandle(2.f) + (x * ExprHandle(3.f) + ExprHandle(4.f) * y);
   ExprHandle e1 = Let::make(x, Cast::make(kInt, ExprHandle(3.f)), body);
   ExprHandle e2 = Let::make(y, ExprHandle(6.f), e1);
 
