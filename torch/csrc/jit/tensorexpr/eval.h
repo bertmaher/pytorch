@@ -77,9 +77,6 @@ AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, VALUE_AS_VEC_DISPATCH);
 #undef VALUE_AS_VEC_DISPATCH
 
 template <typename T>
-class PaddedBuffer;
-
-template <typename T>
 inline typename std::enable_if<std::is_integral<T>::value, T>::type mod_value(
     T lhs,
     T rhs) {
