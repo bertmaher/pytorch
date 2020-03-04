@@ -290,35 +290,30 @@ void testLLVMVecLoadStoreTest() {
   EXPECT_EQ(b_buffer[3], 1);
 }
 
-#define INTRINSICS_TEST(Type, Name, Lanes)                                  \
-  void testLLVMVecLoadStore##Name##Lane##Lanes##Test() {                    \
-    KernelScope kernel_scope;                                               \
-    Buffer a(VarHandle("A", kHandle), Type, {1});                           \
-    Buffer b(VarHandle("B", kHandle), Type, {1});                           \
-    float val = 0.5f;                                                       \
-    std::vector<float> a_buffer = {val, val, val, val, val, val, val, val}; \
-    std::vector<float> b_buffer = {val, val, val, val, val, val, val, val}; \
-    auto store = Store::make(                                               \
-        b,                                                                  \
-        Ramp::make(0, 1, Lanes),                                            \
-        Name(Load::make(                                                    \
-            a,                                                              \
-            Ramp::make(0, 1, Lanes),                                        \
-            Broadcast::make(IntImm::make(1), Lanes))),                      \
-        Broadcast::make(IntImm::make(1), Lanes));                           \
-    LLVMCodeGen cg(store, {a, b});                                          \
-    std::vector<void*> args({a_buffer.data(), b_buffer.data()});            \
-    float ref = std::Name(0.5f);                                            \
-    EXPECT_EQ(cg.value<int>(args), 0);                                      \
-    EXPECT_EQ(a_buffer[0], val);                                            \
-    EXPECT_EQ(a_buffer[1], val);                                            \
-    EXPECT_EQ(a_buffer[2], val);                                            \
-    EXPECT_EQ(a_buffer[3], val);                                            \
-    EXPECT_EQ(b_buffer[0], ref);                                            \
-    EXPECT_EQ(b_buffer[1], ref);                                            \
-    EXPECT_EQ(b_buffer[2], ref);                                            \
-    EXPECT_EQ(b_buffer[3], ref);                                            \
-  }
+#define INTRINSICS_TEST(Type, Name, Lanes)                       \
+  void testLLVMVecLoadStore##Name##Lane##Lanes##Test() {         \
+    KernelScope kernel_scope;                                    \
+    Buffer a(VarHandle("A", kHandle), Type, {1});                \
+    Buffer b(VarHandle("B", kHandle), Type, {1});                \
+    float val = 0.5f;                                            \
+    std::vector<float> a_buffer(Lanes, val);                     \
+    std::vector<float> b_buffer(Lanes, val);                     \
+    auto store = Store::make(                                    \
+        b,                                                       \
+        Ramp::make(0, 1, Lanes),                                 \
+        Name(Load::make(                                         \
+            a,                                                   \
+            Ramp::make(0, 1, Lanes),                             \
+            Broadcast::make(IntImm::make(1), Lanes))),           \
+        Broadcast::make(IntImm::make(1), Lanes));                \
+    LLVMCodeGen cg(store, {a, b});                               \
+    std::vector<void*> args({a_buffer.data(), b_buffer.data()}); \
+    float ref = std::Name(0.5f);                                 \
+    EXPECT_EQ(cg.value<int>(args), 0);                           \
+    for (int i = 0; i < Lanes; i++) {                            \
+      EXPECT_EQ(a_buffer[i], val);                               \
+    }                                                            \
+  } // namespace jit
 INTRINSICS_TEST(kFloat, erf, 4)
 INTRINSICS_TEST(kFloat, erfc, 4)
 INTRINSICS_TEST(kFloat, acos, 4)

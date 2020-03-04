@@ -61,7 +61,7 @@ if (NOT MSVC)
   ENDIF()
   if (NOT (INTERN_BUILD_MOBILE AND NOT BUILD_CAFFE2_MOBILE))
     set_source_files_properties(
-        utils/threadpool/pthreadpool_new_if_impl.c PROPERTIES COMPILE_FLAGS -fno-openmp)
+        utils/threadpool/pthreadpool_new_if_impl.c PROPERTIES COMPILE_FLAGS -fno-openmp) 
   endif()
 endif()
 
