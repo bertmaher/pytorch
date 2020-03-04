@@ -150,6 +150,26 @@ namespace jit {
   _(LLVMBlockTest)              \
   _(LLVMLoadStoreTest)          \
   _(LLVMVecLoadStoreTest)       \
+  _(LLVMVecLoadStoreacosLane4Test)   \
+  _(LLVMVecLoadStoreasinLane4Test)   \
+  _(LLVMVecLoadStoreatanLane4Test)   \
+  _(LLVMVecLoadStorecoshLane4Test)   \
+  _(LLVMVecLoadStoresinhLane4Test)   \
+  _(LLVMVecLoadStoretanhLane4Test)   \
+  _(LLVMVecLoadStoreerfLane4Test)    \
+  _(LLVMVecLoadStoreerfcLane4Test)   \
+  _(LLVMVecLoadStoreexpm1Lane4Test)  \
+  _(LLVMVecLoadStorelgammaLane4Test) \
+  _(LLVMVecLoadStoreacosLane8Test)   \
+  _(LLVMVecLoadStoreasinLane8Test)   \
+  _(LLVMVecLoadStoreatanLane8Test)   \
+  _(LLVMVecLoadStorecoshLane8Test)   \
+  _(LLVMVecLoadStoresinhLane8Test)   \
+  _(LLVMVecLoadStoretanhLane8Test)   \
+  _(LLVMVecLoadStoreerfLane8Test)    \
+  _(LLVMVecLoadStoreerfcLane8Test)   \
+  _(LLVMVecLoadStoreexpm1Lane8Test)  \
+  _(LLVMVecLoadStorelgammaLane8Test) \
   _(LLVMMemcpyTest)             \
   _(LLVMBzeroTest)              \
   _(LLVMElemwiseAdd)            \
