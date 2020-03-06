@@ -407,7 +407,7 @@ Stmt* StmtClone::mutate(const Block* v) {
   for (Stmt* stmt : v->stmts()) {
     stmts.push_back(stmt->accept_mutator(this));
   }
-  return Block::make(stmts);
+  return new Block(stmts);
 }
 
 Stmt* StmtClone::mutate(const Store* v) {
