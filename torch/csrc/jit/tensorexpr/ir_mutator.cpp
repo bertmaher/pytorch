@@ -268,6 +268,9 @@ Stmt* IRMutator::mutate(const For* v) {
       body == body_new) {
     return (Stmt*)v;
   }
+  if (body_new == body) {
+    body_new = Stmt::clone(body);
+  }
   return new For(var_new, start_new, stop_new, body_new, loop_options);
 }
 
@@ -278,6 +281,8 @@ Stmt* IRMutator::mutate(const Block* v) {
     Stmt* stmt_new = stmt->accept_mutator(this);
     if (stmt != stmt_new) {
       any_change = true;
+    } else {
+      stmt_new = Stmt::clone(stmt);
     }
     if (stmt_new) {
       stmts.push_back(stmt_new);
@@ -349,6 +354,14 @@ Stmt* IRMutator::mutate(const Cond* v) {
   if (cond_old == cond_new && true_old == true_new && false_old == false_new) {
     return (Stmt*)v;
   }
+
+  if (true_old && true_new == true_old) {
+    true_new = Stmt::clone(true_old);
+  }
+  if (false_old && false_new == false_old) {
+    false_new = Stmt::clone(false_old);
+  }
+
   return new Cond(cond_new, true_new, false_new);
 }
 
@@ -422,7 +435,9 @@ Stmt* StmtClone::mutate(const Cond* v) {
 
 Stmt* Stmt::clone(Stmt* s) {
   StmtClone clone_mutator;
-  return s->accept_mutator(&clone_mutator);
+  Stmt* cloned = s->accept_mutator(&clone_mutator);
+  set_parent(cloned, nullptr);
+  return cloned;
 }
 
 } // namespace tensorexpr
