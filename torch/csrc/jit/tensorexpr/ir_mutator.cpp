@@ -359,13 +359,12 @@ const Expr* IRMutator::DefaultMutator(
 }
 
 
-class TORCH_API StmtClone : public IRMutator {
+class StmtClone : public IRMutator {
  public:
   Stmt* mutate(const LetStmt* v) override;
   Stmt* mutate(const For* v) override;
   Stmt* mutate(const Block* v) override;
   Stmt* mutate(const Store* v) override;
-
   Stmt* mutate(const Allocate* v) override;
   Stmt* mutate(const Free* v) override;
   Stmt* mutate(const Cond* v) override;
