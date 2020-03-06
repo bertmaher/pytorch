@@ -358,6 +358,74 @@ const Expr* IRMutator::DefaultMutator(
   return v->DefaultMutator(params);
 }
 
+
+class TORCH_API StmtClone : public IRMutator {
+ public:
+  Stmt* mutate(const LetStmt* v) override;
+  Stmt* mutate(const For* v) override;
+  Stmt* mutate(const Block* v) override;
+  Stmt* mutate(const Store* v) override;
+
+  Stmt* mutate(const Allocate* v) override;
+  Stmt* mutate(const Free* v) override;
+  Stmt* mutate(const Cond* v) override;
+};
+
+Stmt* StmtClone::mutate(const LetStmt* v) {
+  // Expressions are immutable => we don't need to clone them
+  const Var* var = v->var();
+  const Expr* value = v->value();
+
+  // Statements are mutable => we need to clone them
+  Stmt* body_new = v->body()->accept_mutator(this);
+
+  // Create a new LetStmt with the cloned statement for body
+  return new LetStmt(var, value, body_new);
+}
+
+Stmt* StmtClone::mutate(const For* v) {
+  // Only body needs to be cloned as only statements are mutable
+  Stmt* body_new = v->body()->accept_mutator(this);
+
+  return new For(v->var(), v->start(), v->stop(), body_new, v->loop_options());
+}
+
+Stmt* StmtClone::mutate(const Block* v) {
+  std::vector<Stmt*> stmts;
+  for (Stmt* stmt : v->stmts()) {
+    stmts.push_back(stmt->accept_mutator(this));
+  }
+  return Block::make(stmts);
+}
+
+Stmt* StmtClone::mutate(const Store* v) {
+  return new Store(v->base_handle(), v->index(), v->value(), v->mask());
+}
+
+Stmt* StmtClone::mutate(const Allocate* v) {
+  return new Allocate(v->buffer_var(), v->dtype(), v->dims());
+}
+
+Stmt* StmtClone::mutate(const Free* v) {
+  return new Free(v->buffer_var());
+}
+
+Stmt* StmtClone::mutate(const Cond* v) {
+  const Expr* cond_old = v->condition();
+  Stmt* true_old = v->true_stmt();
+  Stmt* false_old = v->false_stmt();
+
+  Stmt* true_new = true_old ? true_old->accept_mutator(this) : true_old;
+  Stmt* false_new = false_old ? false_old->accept_mutator(this) : false_old;
+
+  return new Cond(v->condition(), true_new, false_new);
+}
+
+Stmt* clone(Stmt* s) {
+  StmtClone clone_mutator;
+  return s->accept_mutator(&clone_mutator);
+}
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch

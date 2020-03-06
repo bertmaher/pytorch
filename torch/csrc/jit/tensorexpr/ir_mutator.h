@@ -99,6 +99,14 @@ class TORCH_API IRMutator {
       std::vector<const Expr*>& params);
 };
 
+/*
+ * Make a deep copy of the given statement.
+ *
+ * All statements used in children of S are cloned. Note that expressions and
+ * variables are not deep-copied: it is not necessary since they are immutable.
+ */
+TORCH_API Stmt* clone(Stmt* s);
+
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
