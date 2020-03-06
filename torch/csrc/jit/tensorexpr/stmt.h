@@ -12,15 +12,24 @@ namespace tensorexpr {
 class Buffer;
 
 // The common base between all statement node.
-class Stmt : public KernelScopedObject {
+class TORCH_API Stmt : public KernelScopedObject {
  public:
   Stmt() {}
-  TORCH_API virtual void accept(IRVisitor* visitor) const = 0;
+  virtual void accept(IRVisitor* visitor) const = 0;
   virtual Stmt* accept_mutator(IRMutator* mutator) = 0;
 
   Stmt* get_parent() const {
     return parent_;
   }
+
+  /*
+   * Make a deep copy of the given statement.
+   *
+   * All statements used in children of the statement are cloned. Note that
+   * expressions and variables are not deep-copied: it is not necessary since
+   * they are immutable.
+   */
+  static Stmt* clone(Stmt* s);
 
  protected:
   static void set_parent(Stmt* s, Stmt* new_parent) {

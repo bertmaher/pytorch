@@ -420,7 +420,7 @@ Stmt* StmtClone::mutate(const Cond* v) {
   return new Cond(v->condition(), true_new, false_new);
 }
 
-Stmt* clone(Stmt* s) {
+Stmt* Stmt::clone(Stmt* s) {
   StmtClone clone_mutator;
   return s->accept_mutator(&clone_mutator);
 }

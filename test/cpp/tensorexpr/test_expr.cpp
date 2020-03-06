@@ -477,7 +477,7 @@ void testStmtClone() {
       Store::make(VarHandle(a_buf.data()), index, 5, 1);
   Stmt* loop = For::make(index, 0, N, body);
 
-  Stmt* cloned_loop = clone(loop);
+  Stmt* cloned_loop = Stmt::clone(loop);
   std::vector<int> orig_loop_results(N);
   std::vector<int> cloned_loop_results(N);
   SimpleIREvaluator(loop, a_buf)(orig_loop_results);
