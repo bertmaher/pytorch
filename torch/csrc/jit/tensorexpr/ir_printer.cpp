@@ -264,7 +264,7 @@ void IRPrinter::visit(const For* v) {
   os() << std::endl;
   if (v->body()) {
     indent_++;
-    os() << *v->body() << std::endl;
+    os() << *v->body();
     indent_--;
   }
   emitIndent();
