@@ -483,6 +483,9 @@ Stmt* LoopNest::LowerToStmt(Tensor* t) {
   stmt_to_tensor_[body] = t;
   tensor_to_stmt_[t] = body;
 
+  if (f->ndim() == 0) {
+    return body;
+  }
   CHECK(f->ndim() >= 1);
   for (size_t i = 0; i < f->ndim(); i++) {
     // Going in reverse order: from innermost loop to the outermost
