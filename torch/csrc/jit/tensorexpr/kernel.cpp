@@ -990,27 +990,27 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
       int block_size = GetTECudaPointwiseBlockSize();
 
       if (loop_levels == 2) {
-        Stmt* outer;
-        Stmt* inner;
+        For* outer;
+        For* inner;
         const int kDefaultBlockSize = 512;
         if (block_size < 0) {
           block_size = kDefaultBlockSize;
         }
-        std::vector<Stmt*> loops = l.getLoopStmtsFor(tensor);
+        std::vector<For*> loops = l.getLoopStmtsFor(tensor);
         l.SplitWithMask(loops[0], block_size, &outer, &inner);
         l.SetGPUBlockIndex(outer, 0);
         l.SetGPUThreadIndex(inner, 0);
       } else if (loop_levels == 3) {
-        Stmt* outer;
-        Stmt* inner;
-        Stmt* inner_1;
-        Stmt* inner_2;
+        For* outer;
+        For* inner;
+        For* inner_1;
+        For* inner_2;
         // TODO: change the number of microprocessors
         const int kDefaultBlockCount = 1280;
         const int kDefaultBlockSize = 256;
         block_count = (block_count > 0) ? block_count : kDefaultBlockCount;
         block_size = (block_size > 0) ? block_size : kDefaultBlockSize;
-        std::vector<Stmt*> loops = l.getLoopStmtsFor(tensor);
+        std::vector<For*> loops = l.getLoopStmtsFor(tensor);
         l.SplitWithMask(loops[0], block_count * block_size, &outer, &inner);
         l.SplitWithMask(inner, block_size, &inner_1, &inner_2);
         l.SetGPUBlockIndex(inner_1, 0);
