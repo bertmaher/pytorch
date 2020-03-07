@@ -394,18 +394,6 @@ std::ostream& operator<<(std::ostream& stream, const Stmt& stmt) {
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, Stmt* stmt) {
-  IRPrinter::PrinterStream* printer_stream =
-      dynamic_cast<IRPrinter::PrinterStream*>(&stream);
-  if (printer_stream != nullptr) {
-    stmt->accept(printer_stream->printer());
-  } else {
-    IRPrinter p(stream);
-    p.print(*stmt);
-  }
-  return stream;
-}
-
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
