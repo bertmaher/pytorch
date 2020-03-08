@@ -1079,7 +1079,6 @@ class TestTensorExprFuser(BaseTestClass):
         assert llvm.elapsed_value() == 1 or interp.elapsed_value() == 1
 
 
-    @unittest.skip("fails on trunk")
     def test_unsqueeze(self):
         def easy(x, y):
             a = torch.unsqueeze(x, 0)
@@ -1171,7 +1170,6 @@ class TestTensorExprFuser(BaseTestClass):
             # np.testing.assert_allclose(res.cpu().numpy(), xn * yn * zn)
             # assert cuda.elapsed_value() == 1
 
-    @unittest.skip("guarding on static shapes is not working")
     def test_guard_fails(self):
         @torch.jit.script
         def test(x, y, z):
@@ -1184,7 +1182,6 @@ class TestTensorExprFuser(BaseTestClass):
         r3 = test(*[torch.rand(4).cuda() for _ in range(3)])
         assert cuda.elapsed_value() == 2
         r4 = test(*[torch.rand(7).cuda() for _ in range(3)])
-        print(test.graph_for(*[torch.rand(7).cuda() for _ in range(3)]))
         assert cuda.elapsed_value() == 2
 
     def test_bitwise_ops(self):
