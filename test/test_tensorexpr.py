@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 import unittest
 
+from torch.testing._internal.common_utils import suppress_warnings
 
 @contextlib.contextmanager
 def num_profiled_runs(num_runs):
@@ -332,6 +333,7 @@ class TestTensorExprFuser(BaseTestClass):
         np.testing.assert_allclose(a.numpy() + 2.0 * a.numpy(), x.numpy())
 
 
+    @suppress_warnings
     def test_constant(self):
         def constant(x):
             bbb = torch.tensor([1.0])
@@ -530,6 +532,7 @@ class TestTensorExprFuser(BaseTestClass):
             np.testing.assert_allclose(np.zeros(1024), x.cpu().numpy())
 
 
+    @suppress_warnings
     def test_min_max(self):
         def test(x, y):
             return torch.max(torch.min(x, y), torch.tensor([4.0]))
