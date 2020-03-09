@@ -349,10 +349,10 @@ void LLVMCodeGenImpl::emitKernel(
 void LLVMCodeGenImpl::visit(const Add* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   // TODO: Handle arg promotion.
   if (lfp && rfp) {
@@ -367,10 +367,10 @@ void LLVMCodeGenImpl::visit(const Add* v) {
 void LLVMCodeGenImpl::visit(const Sub* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   // TODO: Handle arg promotion.
   if (lfp && rfp) {
@@ -385,10 +385,10 @@ void LLVMCodeGenImpl::visit(const Sub* v) {
 void LLVMCodeGenImpl::visit(const Mul* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   // TODO: Handle arg promotion.
   if (lfp && rfp) {
@@ -403,10 +403,10 @@ void LLVMCodeGenImpl::visit(const Mul* v) {
 void LLVMCodeGenImpl::visit(const Div* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   // TODO: Handle arg promotion.
   if (lfp && rfp) {
@@ -421,10 +421,10 @@ void LLVMCodeGenImpl::visit(const Div* v) {
 void LLVMCodeGenImpl::visit(const And* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   if (!lfp && !rfp) {
     value_ = irb_.CreateAnd(lhs, rhs);
@@ -436,10 +436,10 @@ void LLVMCodeGenImpl::visit(const And* v) {
 void LLVMCodeGenImpl::visit(const Or* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   if (!lfp && !rfp) {
     value_ = irb_.CreateOr(lhs, rhs);
@@ -451,10 +451,10 @@ void LLVMCodeGenImpl::visit(const Or* v) {
 void LLVMCodeGenImpl::visit(const Xor* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   if (!lfp && !rfp) {
     value_ = irb_.CreateXor(lhs, rhs);
@@ -466,10 +466,10 @@ void LLVMCodeGenImpl::visit(const Xor* v) {
 void LLVMCodeGenImpl::visit(const Lshift* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   if (!lfp && !rfp) {
     value_ = irb_.CreateShl(lhs, rhs);
@@ -481,10 +481,10 @@ void LLVMCodeGenImpl::visit(const Lshift* v) {
 void LLVMCodeGenImpl::visit(const Rshift* v) {
   v->lhs()->accept(this);
   auto lhs = this->value_;
-  bool lfp = lhs->getType()->isFloatingPointTy();
+  bool lfp = lhs->getType()->isFPOrFPVectorTy();
   v->rhs()->accept(this);
   auto rhs = this->value_;
-  bool rfp = rhs->getType()->isFloatingPointTy();
+  bool rfp = rhs->getType()->isFPOrFPVectorTy();
 
   if (!lfp && !rfp) {
     value_ = irb_.CreateLShr(lhs, rhs);
@@ -654,10 +654,10 @@ void LLVMCodeGenImpl::visit(const Cast* v) {
   bool destUnsigned = v->dtype().scalar_type() == ScalarType::Byte;
 
   // Scalar casts
-  if (srcType->isFloatingPointTy()) {
-    if (dstType->isFloatingPointTy()) {
+  if (srcType->isFPOrFPVectorTy()) {
+    if (dstType->isFPOrFPVectorTy()) {
       value_ = irb_.CreateFPCast(value_, dstType);
-    } else if (dstType->isIntegerTy()) {
+    } else if (dstType->isIntOrIntVectorTy()) {
       if (destUnsigned) {
         value_ = irb_.CreateFPToUI(value_, dstType);
       } else {
@@ -666,14 +666,14 @@ void LLVMCodeGenImpl::visit(const Cast* v) {
     } else {
       LOG(FATAL) << "Unsupported cast!";
     }
-  } else if (srcType->isIntegerTy()) {
-    if (dstType->isFloatingPointTy()) {
+  } else if (srcType->isIntOrIntVectorTy()) {
+    if (dstType->isFPOrFPVectorTy()) {
       if (destUnsigned) {
         value_ = irb_.CreateUIToFP(value_, dstType);
       } else {
         value_ = irb_.CreateSIToFP(value_, dstType);
       }
-    } else if (dstType->isIntegerTy()) {
+    } else if (dstType->isIntOrIntVectorTy()) {
       value_ = irb_.CreateIntCast(value_, dstType, !destUnsigned);
     } else {
       LOG(FATAL) << "Unsupported cast!";
