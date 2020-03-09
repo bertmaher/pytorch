@@ -1020,6 +1020,69 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
             "Invalid loop-level: " + std::to_string(loop_levels));
       }
     }
+  } else if (backend_type == kLLVMCodeGen) {
+    l.ApplyInlines();
+
+    std::vector<For*> inner_loops;
+    std::vector<For*> worklist;
+
+    // Find outer-most For loops
+    if (For* root_f = dynamic_cast<For*>(l.root_stmt())) {
+      worklist.push_back(root_f);
+    } else if (Block* body = dynamic_cast<Block*>(l.root_stmt())) {
+      std::vector<Block*> blocks = {body};
+      while (blocks.size()) {
+        Block *b = blocks.back();
+        blocks.pop_back();
+
+        for (Stmt* s : b->stmts()) {
+          if (For* f = dynamic_cast<For*>(s)) {
+            worklist.push_back(f);
+          } else if (Block* b2 = dynamic_cast<Block*>(s)) {
+            blocks.push_back(b2);
+          }
+        }
+      }
+    }
+
+    // Traverse the For loop nest find inner-most loops, which are
+    // vectorization candidates.
+    while (worklist.size()) {
+      For* f = worklist.back();
+      worklist.pop_back();
+
+      bool contains_subloops = false;
+      if (Block* body = dynamic_cast<Block*>(f->body())) {
+        for (Stmt* s2 : body->stmts()) {
+          if (For* f2 = dynamic_cast<For*>(s2)) {
+            contains_subloops = true;
+            worklist.push_back(f2);
+          }
+        }
+      }
+
+      if (!contains_subloops) {
+        inner_loops.push_back(f);
+      }
+    }
+
+    // Vectorize inner loops.
+    for (For* loop : inner_loops) {
+      Stmt* outer1;
+      Stmt* split1;
+      Stmt* tail1;
+
+      l.SplitWithTail(loop, 8, &outer1, &split1, &tail1);
+      l.Vectorize(split1);
+
+      if (tail1) {
+        Stmt* outer2;
+        Stmt* split2;
+        Stmt* tail2;
+        l.SplitWithTail(tail1, 4, &outer2, &split2, &tail2);
+        l.Vectorize(split2);
+      }
+    }
   }
 
   l.ApplyInlines();
