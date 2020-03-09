@@ -1,8 +1,10 @@
 #include "test/cpp/tensorexpr/test_base.h"
 
 #include "test/cpp/tensorexpr/test_utils.h"
-#include "torch/csrc/jit/tensorexpr/constant_folder.h"
 #include "torch/csrc/jit/tensorexpr/hash_server.h"
+#include "torch/csrc/jit/tensorexpr/ir_simplifier.h"
+#include "torch/csrc/jit/tensorexpr/llvm_codegen.h"
+#include "torch/csrc/jit/tensorexpr/schedule.h"
 
 namespace torch {
 namespace jit {
@@ -15,8 +17,7 @@ void testConstantFoldSimple() {
   ExprHandle b(3.0f);
   ExprHandle f = (a + b);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(f.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(f);
   EXPECT_NE(newF.AsNode<FloatImm>(), nullptr);
   EXPECT_EQ(newF.AsNode<FloatImm>()->value(), 5);
 
@@ -32,8 +33,7 @@ void testConstantFoldTwoLayer() {
   ExprHandle d(5.0f);
   ExprHandle f = (a + b) - (c + d);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(f.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(f);
   EXPECT_NE(newF.AsNode<FloatImm>(), nullptr);
   EXPECT_EQ(newF.AsNode<FloatImm>()->value(), -4);
 
@@ -48,8 +48,7 @@ void testConstantFoldShifts() {
   ExprHandle c(3);
   ExprHandle f = ((a << b) << b) >> c;
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(f.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(f);
   EXPECT_NE(newF.AsNode<IntImm>(), nullptr);
   EXPECT_EQ(newF.AsNode<IntImm>()->value(), 14);
 
@@ -64,8 +63,7 @@ void testConstantFoldBitwise() {
   ExprHandle c(101);
   ExprHandle f = (a ^ b) & c;
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(f.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(f);
   EXPECT_NE(newF.AsNode<IntImm>(), nullptr);
   EXPECT_EQ(newF.AsNode<IntImm>()->value(), 37);
 
@@ -83,8 +81,7 @@ void testConstantFoldMultiOp() {
   ExprHandle f(7.0f);
   ExprHandle fn = ((a / e) - (c + d)) * (f / b);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(fn.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(fn);
   EXPECT_NE(newF.AsNode<FloatImm>(), nullptr);
 
   SimpleIRExprEval eval(newF);
@@ -105,8 +102,7 @@ void testConstantFoldMinMax() {
 
   EXPECT_EQ(fn.dtype().scalar_type(), ScalarType::Float);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(fn.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(fn);
   EXPECT_NE(newF.AsNode<FloatImm>(), nullptr);
 
   SimpleIRExprEval eval(newF);
@@ -125,8 +121,7 @@ void testConstantFoldIntrinsics() {
   ExprHandle rndHandle = Intrinsics::make(kRound, logHandle);
   ExprHandle fn = Intrinsics::make(kFabs, rndHandle);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(fn.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(fn);
   EXPECT_NE(newF.AsNode<FloatImm>(), nullptr);
   EXPECT_EQ(newF.AsNode<FloatImm>()->value(), 1);
 
@@ -141,8 +136,7 @@ void testConstantFoldWithVar() {
   VarHandle x("x", kFloat);
   ExprHandle body = x * (ExprHandle(2.f) + ExprHandle(4.f));
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(body.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(body);
   const Mul* root = newF.AsNode<Mul>();
   EXPECT_NE(root, nullptr);
   EXPECT_NE(dynamic_cast<const FloatImm*>(root->rhs()), nullptr);
@@ -158,8 +152,7 @@ void testUnFoldableExpr() {
   VarHandle y("y", kFloat);
   ExprHandle body = (ExprHandle(3) * x) + (ExprHandle(5) * y);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(body.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(body);
   const Add* root = newF.AsNode<Add>();
   EXPECT_NE(root, nullptr);
   EXPECT_EQ(dynamic_cast<const FloatImm*>(root->lhs()), nullptr);
@@ -250,8 +243,7 @@ void testHashEquivalenceAfterFolding() {
   EXPECT_NE(hash_f, hash_r);
   EXPECT_NE(hash_l, hash_r);
 
-  ConstantFolder folder;
-  ExprHandle newF = ExprHandle(f.node()->accept_mutator(&folder));
+  ExprHandle newF = IRSimplifier::simplify(f);
 
   const Mul* newRoot = newF.AsNode<Mul>();
   EXPECT_NE(newRoot, nullptr);
@@ -291,12 +283,11 @@ void testHashDifferenceTypes() {
   }
 
   // But coerced immediates are if they are the same type:
-  ConstantFolder folder;
   ExprHandle f1 = ExprHandle(2.f) + CharImm::make(1);
   ExprHandle f2 = Cast::make(kFloat, IntImm::make(3));
 
-  ExprHandle ff1 = ExprHandle(f1.node()->accept_mutator(&folder));
-  ExprHandle ff2 = ExprHandle(f2.node()->accept_mutator(&folder));
+  ExprHandle ff1 = IRSimplifier::simplify(f1);
+  ExprHandle ff2 = IRSimplifier::simplify(f2);
 
   EXPECT_EQ(hasher.hash(ff1.node()), hasher.hash(ff2.node()));
 }
@@ -350,6 +341,144 @@ void testHashLargeExpression() {
   EXPECT_NE(hash_r, hash_t);
   EXPECT_NE(hash_r, hash_f);
   EXPECT_NE(hash_t, hash_f);
+}
+
+/// (2.f + x) + 4.f => x + 6.f
+void testSimplifyAdd() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kFloat);
+  ExprHandle body = (ExprHandle(2.f) + x) + ExprHandle(4.f);
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Add* root = simplified.AsNode<Add>();
+  EXPECT_NE(root, nullptr);
+  const Var* lhs = dynamic_cast<const Var*>(root->lhs());
+  EXPECT_NE(lhs, nullptr);
+  EXPECT_EQ(lhs->name_hint(), "x");
+  const FloatImm* rhs = dynamic_cast<const FloatImm*>(root->rhs());
+  EXPECT_NE(rhs, nullptr);
+  EXPECT_EQ(rhs->value(), 6.f);
+}
+
+/// (2.f - x) - 4.f => -2.f - x
+void testSimplifySub() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kFloat);
+  ExprHandle body = (ExprHandle(2.f) - x) - ExprHandle(4.f);
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Sub* root = simplified.AsNode<Sub>();
+  EXPECT_NE(root, nullptr);
+  const FloatImm* lhs = dynamic_cast<const FloatImm*>(root->lhs());
+  EXPECT_NE(lhs, nullptr);
+  EXPECT_EQ(lhs->value(), -2.f);
+  const Var* rhs = dynamic_cast<const Var*>(root->rhs());
+  EXPECT_NE(rhs, nullptr);
+  EXPECT_EQ(rhs->name_hint(), "x");
+}
+
+/// 2.f * (1.f - x) - 4.f => -6.f - (x * 2.f)
+void testSimplifyMultiLayer() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kFloat);
+  ExprHandle body = ExprHandle(2.f) * ((ExprHandle(1.f) - x) - ExprHandle(4.f));
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Sub* root = simplified.AsNode<Sub>();
+  EXPECT_NE(root, nullptr);
+  const FloatImm* lhs = dynamic_cast<const FloatImm*>(root->lhs());
+  EXPECT_NE(lhs, nullptr);
+  EXPECT_EQ(lhs->value(), -6.f);
+  const Mul* rhs = dynamic_cast<const Mul*>(root->rhs());
+  EXPECT_NE(rhs, nullptr);
+  const Var* varX = dynamic_cast<const Var*>(rhs->lhs());
+  EXPECT_NE(varX, nullptr);
+  EXPECT_EQ(varX->name_hint(), "x");
+  const FloatImm* mulRhs = dynamic_cast<const FloatImm*>(rhs->rhs());
+  EXPECT_NE(mulRhs, nullptr);
+  EXPECT_EQ(mulRhs->value(), 2.f);
+}
+
+/// 2 * (3 * x) - (x * 4) => x * 2
+void testSimplifyMultiTerm() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kInt);
+  ExprHandle body =
+      (ExprHandle(2) * ((ExprHandle(3) * x)) - (x * ExprHandle(4)));
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Mul* root = simplified.AsNode<Mul>();
+  EXPECT_NE(root, nullptr);
+  const Var* lhs = dynamic_cast<const Var*>(root->lhs());
+  EXPECT_NE(lhs, nullptr);
+  EXPECT_EQ(lhs->name_hint(), "x");
+  const IntImm* rhs = dynamic_cast<const IntImm*>(root->rhs());
+  EXPECT_NE(rhs, nullptr);
+  EXPECT_EQ(rhs->value(), 2);
+}
+
+/// 2 * (3 * (f)x) - (x * 4) => x * 2.f
+void testSimplifyCasts() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kFloat);
+  ExprHandle body =
+      (ExprHandle(2) * ((ExprHandle(3) * x)) - (x * ExprHandle(4)));
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Mul* root = simplified.AsNode<Mul>();
+  EXPECT_NE(root, nullptr);
+  const Var* lhs = dynamic_cast<const Var*>(root->lhs());
+  EXPECT_NE(lhs, nullptr);
+  EXPECT_EQ(lhs->name_hint(), "x");
+  const FloatImm* rhs = dynamic_cast<const FloatImm*>(root->rhs());
+  EXPECT_NE(rhs, nullptr);
+  EXPECT_EQ(rhs->value(), 2);
+}
+
+/// (x + 0) * 1 => x
+void testSimplifyEliminatesNoOps() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kInt);
+  ExprHandle body = (x + ExprHandle(0)) * 1;
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Var* root = simplified.AsNode<Var>();
+  EXPECT_NE(root, nullptr);
+  EXPECT_EQ(root->name_hint(), "x");
+}
+
+/// Cannot simplify this.
+void testSimplifyMultiVar() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kInt);
+  VarHandle y("y", kInt);
+  ExprHandle body = y * 24 + x * 34;
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Add* root = simplified.AsNode<Add>();
+  EXPECT_NE(root, nullptr);
+  const Mul* lhs = dynamic_cast<const Mul*>(root->lhs());
+  EXPECT_NE(lhs, nullptr);
+  const Var* varY = dynamic_cast<const Var*>(lhs->lhs());
+  EXPECT_EQ(varY->name_hint(), "y");
+  const Mul* rhs = dynamic_cast<const Mul*>(root->rhs());
+  EXPECT_NE(rhs, nullptr);
+  const Var* varX = dynamic_cast<const Var*>(rhs->lhs());
+  EXPECT_NE(varX, nullptr);
+  EXPECT_EQ(varX->name_hint(), "x");
+}
+
+/// y + x * 0 => y
+void testSimplifyEliminatesVar() {
+  KernelScope kernel_scope;
+  VarHandle x("x", kInt);
+  VarHandle y("y", kInt);
+  ExprHandle body = y + x * ExprHandle(0);
+
+  ExprHandle simplified = IRSimplifier::simplify(body);
+  const Var* root = simplified.AsNode<Var>();
+  EXPECT_NE(root, nullptr);
+  EXPECT_EQ(root->name_hint(), "y");
 }
 
 } // namespace jit
