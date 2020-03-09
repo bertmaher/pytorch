@@ -75,7 +75,7 @@ class ConstantFolder : public IRMutator {
       node = new Intrinsics(v->op_type(), new_params);
     }
 
-    if (!allConstant) {
+    if (!allConstant || !v->isPure()) {
       return node;
     }
 

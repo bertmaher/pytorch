@@ -781,7 +781,6 @@ class TestFuser(JitTestCase):
         warmup_backward((hy + cy).sum())
 
     @unittest.skipIf(not RUN_CUDA, "fuser requires CUDA")
-    @unittest.skip("TE fuser broken")
     def test_rand_cuda(self):
         class M(torch.jit.ScriptModule):
             __constants__ = ['d']

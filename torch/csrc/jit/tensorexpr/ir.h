@@ -712,6 +712,10 @@ class Intrinsics : public CallNode<Intrinsics> {
     CHECK_EQ(OpArgCount(op_type), nparams());
   }
 
+  bool isPure() const {
+    return op_type_ != kRand;
+  }
+
  private:
   TORCH_API static int OpArgCount(IntrinsicsOp op_type);
 
