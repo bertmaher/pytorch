@@ -282,14 +282,28 @@ class Vectorizer : public IRMutator {
   const Expr* start_ = nullptr;
 };
 
-Stmt* Vectorize(const Stmt* stmt) {
-  const For* f = dynamic_cast<const For*>(stmt);
+void LoopNest::Vectorize(Stmt* stmt) {
+  For* f = dynamic_cast<For*>(stmt);
   if (!f) {
-    throw std::runtime_error("Statement is not a For loop!");
+    return;
+  }
+
+  Block* b = dynamic_cast<Block*>(f->get_parent());
+  if (!b) {
+    return;
   }
 
   Vectorizer v;
-  return v.vectorize(f);
+  Stmt* old_f = Stmt::clone(f);
+  Stmt* new_f = nullptr;
+  try {
+    new_f = v.vectorize(f);
+  } catch (std::runtime_error& e) {
+    // Partial vectorization may have corrupted f
+    new_f = old_f;
+  }
+
+  b->replace_stmt(f, new_f);
 }
 
 class Flattener : public IRMutator {

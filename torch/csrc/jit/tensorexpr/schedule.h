@@ -13,8 +13,6 @@ namespace jit {
 namespace tensorexpr {
 namespace schedule {
 
-TORCH_API Stmt* Vectorize(const Stmt*);
-
 class TORCH_API LoopNest {
  public:
   LoopNest(const std::vector<Tensor*>& output_tensors);
@@ -26,6 +24,7 @@ class TORCH_API LoopNest {
   Stmt* getLoopBodyFor(Tensor*) const;
   std::unordered_map<Tensor*, Stmt*> tensor_to_stmt_;
 
+  void Vectorize(Stmt*);
   void ComputeInline(Stmt* s);
   void ApplyInlines();
   void SplitWithTail(
