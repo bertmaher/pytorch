@@ -1059,26 +1059,6 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
 
   if (v->dtype().scalar_type() == ScalarType::Float) {
     switch (v->op_type()) {
-#define UNARY_INTRIN_CASE(enum, intrin)                 \
-  case enum: {                                          \
-    v->params().front()->accept(this);                  \
-    value_ = irb_.CreateUnaryIntrinsic(intrin, value_); \
-    return;                                             \
-  } break;
-      UNARY_INTRIN_CASE(kLog10, llvm::Intrinsic::log10)
-      UNARY_INTRIN_CASE(kLog, llvm::Intrinsic::log)
-      UNARY_INTRIN_CASE(kLog2, llvm::Intrinsic::log2)
-      UNARY_INTRIN_CASE(kExp, llvm::Intrinsic::exp)
-      UNARY_INTRIN_CASE(kCos, llvm::Intrinsic::cos)
-      UNARY_INTRIN_CASE(kSin, llvm::Intrinsic::sin)
-      UNARY_INTRIN_CASE(kSqrt, llvm::Intrinsic::sqrt)
-      UNARY_INTRIN_CASE(kFabs, llvm::Intrinsic::fabs)
-      UNARY_INTRIN_CASE(kFloor, llvm::Intrinsic::floor)
-      UNARY_INTRIN_CASE(kCeil, llvm::Intrinsic::ceil)
-      UNARY_INTRIN_CASE(kTrunc, llvm::Intrinsic::trunc)
-      UNARY_INTRIN_CASE(kRound, llvm::Intrinsic::round)
-#undef UNARY_INTRIN_CASE
-
       case kRsqrt: {
         v->params().front()->accept(this);
         value_ = irb_.CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, value_);
@@ -1135,6 +1115,18 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
     applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn));        \
   } break;
 #endif
+        SIMD_UNARY_MATH_CASE(kLog10, "log10f", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kLog, "logf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kLog2, "log2f", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kExp, "expf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kCos, "cosf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kSin, "sinf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kSqrt, "sqrtf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kFabs, "fabsf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kFloor, "floorf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kCeil, "ceilf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kTrunc, "truncf", FloatTy_)
+        SIMD_UNARY_MATH_CASE(kRound, "roundf", FloatTy_)
         SIMD_UNARY_MATH_CASE(kErf, "erff", FloatTy_)
         SIMD_UNARY_MATH_CASE(kErfc, "erfcf", FloatTy_)
         SIMD_UNARY_MATH_CASE(kTan, "tanf", FloatTy_)
@@ -1148,6 +1140,57 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
         SIMD_UNARY_MATH_CASE(kLgamma, "lgammaf", FloatTy_)
 #undef SIMD_UNARY_MATH_CASE
 
+
+#if defined(__AVX__) && !defined(_MSC_VER)
+#define SIMD_BINARY_MATH_CASE(enum, name, type)                               \
+  case enum: {                                                               \
+    llvm::FunctionCallee callee;                                             \
+    std::string fname;                                                       \
+    if (v->dtype().lanes() == 8) {                                           \
+      fname = "Sleef_" + std::string(name) + "8";                            \
+      llvm::Type* vecType = llvm::VectorType::get(type, v->dtype().lanes()); \
+      callee = module_->getOrInsertFunction(                                 \
+          fname, llvm::FunctionType::get(vecType, {vecType, vecType}, false), {});    \
+      call_simd_sleef = true;                                                \
+    } else if (v->dtype().lanes() == 4) {                                    \
+      fname = "Sleef_" + std::string(name) + "4";                            \
+      llvm::Type* vecType = llvm::VectorType::get(type, v->dtype().lanes()); \
+      callee = module_->getOrInsertFunction(                                 \
+          fname, llvm::FunctionType::get(vecType, {vecType, vecType}, false), {});    \
+      call_simd_sleef = true;                                                \
+    } else {                                                                 \
+      callee = module_->getOrInsertFunction(                                 \
+          name, llvm::FunctionType::get(type, {type, type}, false), {});           \
+    }                                                                        \
+    call_ty = callee.getFunctionType();                                      \
+    call_fn = callee.getCallee();                                            \
+    applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn));        \
+  } break;
+#else
+#define SIMD_BINARY_MATH_CASE(enum, name, type)                               \
+  case enum: {                                                               \
+    llvm::FunctionCallee callee;                                             \
+    std::string fname;                                                       \
+    if (v->dtype().lanes() == 4) {                                           \
+      fname = "Sleef_" + std::string(name) + "4";                            \
+      llvm::Type* vecType = llvm::VectorType::get(type, v->dtype().lanes()); \
+      callee = module_->getOrInsertFunction(                                 \
+          fname, llvm::FunctionType::get(vecType, {vecType, vecType}, false), {});    \
+      call_simd_sleef = true;                                                \
+    } else {                                                                 \
+      callee = module_->getOrInsertFunction(                                 \
+          name, llvm::FunctionType::get(type, {type, type}, false), {});           \
+    }                                                                        \
+    call_ty = callee.getFunctionType();                                      \
+    call_fn = callee.getCallee();                                            \
+    applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn));        \
+  } break;
+#endif
+        SIMD_BINARY_MATH_CASE(kAtan2, "atan2f", FloatTy_)
+        SIMD_BINARY_MATH_CASE(kPow, "powf", FloatTy_)
+        SIMD_BINARY_MATH_CASE(kFmod, "fmodf", FloatTy_)
+#undef SIMD_BINARY_MATH_CASE
+
 #define BINARY_MATH_CASE(enum, name, type)                             \
   case enum: {                                                         \
     auto callee = module_->getOrInsertFunction(                        \
@@ -1157,9 +1200,6 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
     applyMathFunctionAttributes(llvm::cast<llvm::Function>(call_fn));  \
   } break;
         BINARY_MATH_CASE(kRemainder, "remainderf", FloatTy_)
-        BINARY_MATH_CASE(kAtan2, "atan2f", FloatTy_)
-        BINARY_MATH_CASE(kPow, "powf", FloatTy_)
-        BINARY_MATH_CASE(kFmod, "fmodf", FloatTy_)
 #undef BINARY_MATH_CASE
 
       default: {
