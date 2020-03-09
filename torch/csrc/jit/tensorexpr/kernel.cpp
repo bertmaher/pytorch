@@ -1073,17 +1073,17 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
 
     // Vectorize inner loops.
     for (For* loop : inner_loops) {
-      Stmt* outer1;
-      Stmt* split1;
-      Stmt* tail1;
+      For* outer1;
+      For* split1;
+      For* tail1;
 
       l.SplitWithTail(loop, 8, &outer1, &split1, &tail1);
       l.Vectorize(split1);
 
       if (tail1) {
-        Stmt* outer2;
-        Stmt* split2;
-        Stmt* tail2;
+        For* outer2;
+        For* split2;
+        For* tail2;
         l.SplitWithTail(tail1, 4, &outer2, &split2, &tail2);
         l.Vectorize(split2);
       }
