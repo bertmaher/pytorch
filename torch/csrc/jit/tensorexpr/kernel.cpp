@@ -542,11 +542,16 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
             if (no_min && no_max) {
               return in;
             } else if (no_min) {
-              return Min::make(in, max, false);
+              return CompareSelect::make(in, max, max, in, kGT);
             } else if (no_max) {
-              return Max::make(in, min, false);
+              return CompareSelect::make(in, min, min, in, kLT);
             } else {
-              return Max::make(Min::make(in, max, false), min, false);
+              return CompareSelect::make(
+                  in,
+                  min,
+                  min,
+                  CompareSelect::make(in, max, max, in, kGT),
+                  kLT);
             }
           });
     } break;

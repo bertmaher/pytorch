@@ -153,6 +153,21 @@ void IRPrinter::visit(const CompareSelect* v) {
   if (rhs_prec >= self_prec) {
     os() << ")";
   }
+  os() << " ? ";
+
+  auto withParens = [&](const Expr* e) {
+    auto prec = getPrecedence(e->expr_type());
+    if (prec >= self_prec) {
+      os() << "(";
+    }
+    e->accept(this);
+    if (prec >= self_prec) {
+      os() << "(";
+    }
+  };
+  withParens(v->ret_val1());
+  os() << " : ";
+  withParens(v->ret_val2());
 }
 
 static void formatFPSuffix(std::ostream& os, double v) {

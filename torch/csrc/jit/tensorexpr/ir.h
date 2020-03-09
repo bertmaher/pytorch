@@ -532,18 +532,21 @@ class TORCH_API CompareSelect : public ExprNode<CompareSelect> {
   const Expr* ret_val1_;
   const Expr* ret_val2_;
   CompareSelectOperation compare_op_;
+
   CompareSelect(
       const Expr* lhs,
       const Expr* rhs,
       const Expr* ret_val1,
       const Expr* ret_val2,
       CompareSelectOperation cmp_op)
-      : ExprNodeBase(ToDtype<int>()),
+      : ExprNodeBase(ret_val1->dtype()),
         lhs_(lhs),
         rhs_(rhs),
         ret_val1_(ret_val1),
         ret_val2_(ret_val2),
-        compare_op_(cmp_op) {}
+        compare_op_(cmp_op) {
+    CHECK_EQ(ret_val1->dtype(), ret_val2->dtype());
+  }
 };
 
 enum IntrinsicsOp {
