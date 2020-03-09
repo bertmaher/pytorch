@@ -595,6 +595,8 @@ void LoopNest::SplitWithTail(
     *tail = For::make(i_tail, 0, tail_size, body_tail);
 
     p->append_stmt(*tail);
+  } else {
+    *tail = nullptr;
   }
 
   // TODO: record history of transformations
