@@ -333,7 +333,7 @@ class FunctionInliner : public IRMutator {
     }
   }
 
-  protected:
+ protected:
   // For the target function, insert the caller/callee pair into the replacement
   // mapping.
   const Expr* mutate(const FunctionCall* v) override {
@@ -418,8 +418,7 @@ class FunctionInliner : public IRMutator {
 class RandomInliner : public FunctionInliner {
  public:
   explicit RandomInliner(const std::vector<Function*>& funcs)
-      : FunctionInliner(funcs)
-    {}
+      : FunctionInliner(funcs) {}
 
   // Find the innermost for loop and bind any random variables in its body.
   Stmt* mutate(const For* v) override {
@@ -527,9 +526,7 @@ static Stmt* InjectInlines(
   return stmt_new;
 }
 
-static Stmt* InlineRandom(
-    Stmt* stmt,
-    const std::vector<Function*>& funcs) {
+static Stmt* InlineRandom(Stmt* stmt, const std::vector<Function*>& funcs) {
   RandomInliner inliner(funcs);
   return stmt->accept_mutator(&inliner);
 }
