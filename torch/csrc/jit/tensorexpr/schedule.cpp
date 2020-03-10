@@ -399,6 +399,126 @@ class FunctionInliner : public IRMutator {
   std::unordered_set<const Var*> func_var_set_;
 };
 
+/**
+ * Actual algorithm for "inlining" of rand().  Bind variables to rand() calls.
+ */
+class RandomInliner : public IRMutator {
+ public:
+  RandomInliner(const std::unordered_set<Function*>& funcs) : funcs_(funcs) {
+    for (auto const* func : funcs_) {
+      func_vars_.insert(func->func_var(0));
+    }
+  }
+
+  static bool is_inner_loop(const For* loop) {
+    Block* body = dynamic_cast<Block*>(loop->body());
+    if (!body) {
+      return false;
+    }
+    if (body->nstmts() != 1) {
+      return false;
+    }
+    return dynamic_cast<For*>(*body->stmts().begin()) == nullptr;
+  }
+
+  Stmt* mutate(const For* v) override {
+    const Var* var = v->var();
+    const Expr* start = v->start();
+    const Expr* stop = v->stop();
+    Stmt* body = v->body();
+    LoopOptions loop_options = v->loop_options();
+
+    // Put the new "let"s in the innermost loop.
+    if (!is_inner_loop(v)) {
+      Stmt* new_body = body->accept_mutator(this);
+      if (new_body == body) {
+        return const_cast<For*>(v);
+      }
+      if (new_body == nullptr) {
+        return nullptr;
+      }
+      return new For(var, start, stop, new_body, loop_options);
+    }
+
+    Stmt* new_body = body->accept_mutator(this);
+    for (auto const& p : random_vars_) {
+      Var* v = p.second;
+      new_body = new LetStmt(v, new Intrinsics(kRand, v->dtype()), new_body);
+    }
+    if (new_body == body) {
+      return const_cast<For*>(v);
+    }
+    if (new_body == nullptr) {
+      return nullptr;
+    }
+    return new For(var, start, stop, new_body, loop_options);
+  }
+
+  // Replace the target variable with the caller expressions.
+  const Expr* mutate(const Var* v) override {
+    auto iter = arg_mapping_.find(v);
+    if (iter == arg_mapping_.end()) {
+      return IRMutator::mutate(v);
+    } else {
+      const Expr* expr = iter->second;
+      // Continue to transform the value from the lookup table.
+      return expr->accept_mutator(this);
+    }
+  }
+
+  Stmt* mutate(const Store* v) override {
+    // Remove buffer writes in the inlined functions.
+    if (func_vars_.count(v->base_handle())) {
+      return nullptr;
+    }
+    return IRMutator::mutate(v);
+  }
+
+  // TODO: Test this with multiple different random functions.
+  //
+  // TODO: Can we have accesses to the same random tensor with different
+  // indices?  We should probably generate different random numbers for those.
+  const Expr* mutate(const FunctionCall* v) override {
+    Function* func = v->tensor()->function();
+    if (!func_vars_.count(func->func_var(0))) {
+      // Function is not in the inline set.
+      return IRMutator::mutate(v);
+    }
+    // Map callee's parameters to caller's arguments.
+    Function* prev_func = current_func_;
+    current_func_ = func;
+    if (!random_vars_.count(func)) {
+      random_vars_[func] = new Var("v", v->dtype());
+    }
+    for (int i = 0; i < func->ndim(); i++) {
+      arg_mapping_[func->arg(i)] = v->param(i);
+    }
+    // Replace params with args in the callee's body.
+    const Expr* callee_body = func->body(v->tensor()->output_index());
+    const Expr* inlined_expr = callee_body->accept_mutator(this);
+    // Remove arg mappings.
+    for (int i = 0; i < func->ndim(); i++) {
+      arg_mapping_.erase(func->arg(i));
+    }
+    current_func_ = prev_func;
+    return inlined_expr;
+  }
+
+  const Expr* mutate(const Intrinsics* v) override {
+    if (v->op_type() != kRand) {
+      return v;
+    }
+    return random_vars_[current_func_];
+  }
+
+ private:
+  Function* current_func_;
+  std::unordered_set<Function*> funcs_;
+  std::unordered_set<const Var*> func_vars_;
+  std::unordered_map<const Var*, const Expr*> arg_mapping_;
+  std::unordered_map<Function*, Var*> random_vars_;
+};
+
 static Stmt* InjectInlines(
     Stmt* stmt,
     const std::vector<Function*>& inlined_funcs) {
@@ -406,6 +526,14 @@ static Stmt* InjectInlines(
   Stmt* stmt_old = stmt;
   Stmt* stmt_new = stmt_old->accept_mutator(&inliner);
   return stmt_new;
+}
+
+static Stmt* InlineRandom(
+    Stmt* stmt,
+    const std::unordered_set<Function*>& funcs) {
+  RandomInliner inliner(funcs);
+  Stmt* new_stmt = stmt->accept_mutator(&inliner);
+  return new_stmt;
 }
 
 class DepTracker : public IRVisitor {
@@ -515,11 +643,16 @@ void LoopNest::ComputeInline(Stmt* s) {
   inlined_functions_.insert(stmt_to_tensor_.at(s)->function());
 }
 
+void LoopNest::ComputeInlineWithRandom(Stmt* s) {
+  inlined_random_functions_.insert(stmt_to_tensor_.at(s)->function());
+}
+
 void LoopNest::ApplyInlines() {
   // TODO: check if `s` is a body of a loop
   std::vector<Function*> inlined_functions_vec(
       inlined_functions_.begin(), inlined_functions_.end());
   root_stmt_ = InjectInlines(root_stmt_, inlined_functions_vec);
+  root_stmt_ = InlineRandom(root_stmt_, inlined_random_functions_);
 
   // Flatten function calls.
   Flattener flattener;
@@ -536,7 +669,8 @@ void LoopNest::ApplyInlines() {
 
   // TODO: Fix the traversal, currently the order is non-deterministic
   for (Tensor* tensor : intermediate_tensors_) {
-    if (inlined_functions_.count(tensor->function()) > 0) {
+    if (inlined_functions_.count(tensor->function()) ||
+        inlined_random_functions_.count(tensor->function())) {
       // No need to allocation memory for intermediate tensors.
       continue;
     }

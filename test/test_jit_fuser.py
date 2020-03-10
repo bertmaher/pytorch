@@ -860,7 +860,6 @@ class TestFuser(JitTestCase):
         out = script_f(x, y)
         self.assertEqual(out[0, :] + torch.zeros(4, 4, device='cuda'), out)
 
-    @unittest.skip("TE fuser broken")
     def test_rand_diamond(self):
         def fn_test_diamond(x, y):
             r = torch.rand_like(y)
@@ -873,7 +872,10 @@ class TestFuser(JitTestCase):
         y = torch.randn(4, 4, dtype=torch.float, device='cuda')
         script_f = torch.jit.script(fn_test_diamond, (x, y))
         warmup_forward(script_f, x, y)
+        start_execs = torch._C._jit_get_trigger_value("cuda_codegen_executed")
         out = script_f(x, y)
+        end_execs = torch._C._jit_get_trigger_value("cuda_codegen_executed")
+        assert (end_execs - start_execs) == 1
         self.assertEqual(out, x + y)
 
     @unittest.skipIf(IS_SANDCASTLE, "NYI: fuser CPU support for Sandcastle")

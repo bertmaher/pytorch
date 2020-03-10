@@ -3,6 +3,7 @@
 
 #include "ATen/CUDAGenerator.h"
 #include "c10/cuda/CUDAFunctions.h"
+#include "torch/csrc/jit/tensorexpr/analysis.h"
 #include "torch/csrc/jit/tensorexpr/cuda_random.h"
 #include "torch/csrc/jit/tensorexpr/eval.h"
 #include "torch/csrc/jit/tensorexpr/execution_counter.h"
@@ -386,28 +387,6 @@ class PrioritizeLoad : public IRMutator {
   // }
   // int v2 = v + 2;
   int nested_if_then_else_ = 0;
-};
-
-class HasRand : public IRVisitor {
- public:
-  HasRand(Stmt* stmt) : stmt_(stmt) {
-    stmt_->accept(this);
-  }
-
-  bool has_rand() const {
-    return has_rand_;
-  }
-
- private:
-  void visit(const Intrinsics* v) override {
-    if (v->op_type() == IntrinsicsOp::kRand) {
-      has_rand_ = true;
-    } else {
-      IRVisitor::visit(v);
-    }
-  }
-  Stmt* stmt_;
-  bool has_rand_ = false;
 };
 
 std::string CudaCodeGen::GetUniqueFuncName(const std::string& func_prefix) {
