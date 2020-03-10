@@ -1170,6 +1170,7 @@ class TestTensorExprFuser(BaseTestClass):
             # np.testing.assert_allclose(res.cpu().numpy(), xn * yn * zn)
             # assert cuda.elapsed_value() == 1
 
+    @unittest.skipIf(not torch.cuda.is_available(), "requires CUDA")
     def test_guard_fails(self):
         @torch.jit.script
         def test(x, y, z):
