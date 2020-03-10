@@ -333,7 +333,7 @@ class FunctionInliner : public IRMutator {
     }
   }
 
- private:
+  protected:
   // For the target function, insert the caller/callee pair into the replacement
   // mapping.
   const Expr* mutate(const FunctionCall* v) override {
@@ -399,28 +399,29 @@ class FunctionInliner : public IRMutator {
   std::unordered_set<const Var*> func_var_set_;
 };
 
-/**
- * Actual algorithm for "inlining" of rand().  Bind variables to rand() calls.
- */
-class RandomInliner : public IRMutator {
+// Inlining for functions containing rand().  Since rand() is stateful we can't
+// simply inline it everywhere, or else we may generate new randoms where we
+// should us a previously generated one.  As a contrived example:
+//   %1 = rand()
+//   %2 = %1 + 1
+//   %3 = %1 - 1
+//   %4 = %2 - %3
+// Fully inlining this expr would, incorrectly, yield:
+//   %4 = (rand() + 1) - (rand() - 1)
+// when in fact the two uses of %1 should cancel.  To avoid this issue, we
+// instead generate:
+//   %4 = (let x = rand(); (x + 1) - (x - 1))
+//
+// The overall approach is to replace every rand() intrinsic with a newly
+// generated variable, and then bind those variables to rand() calls in the
+// body of the innermost for loop.
+class RandomInliner : public FunctionInliner {
  public:
-  RandomInliner(const std::unordered_set<Function*>& funcs) : funcs_(funcs) {
-    for (auto const* func : funcs_) {
-      func_vars_.insert(func->func_var(0));
-    }
-  }
+  explicit RandomInliner(const std::vector<Function*>& funcs)
+      : FunctionInliner(funcs)
+    {}
 
-  static bool is_inner_loop(const For* loop) {
-    Block* body = dynamic_cast<Block*>(loop->body());
-    if (!body) {
-      return false;
-    }
-    if (body->nstmts() != 1) {
-      return false;
-    }
-    return dynamic_cast<For*>(*body->stmts().begin()) == nullptr;
-  }
-
+  // Find the innermost for loop and bind any random variables in its body.
   Stmt* mutate(const For* v) override {
     const Var* var = v->var();
     const Expr* start = v->start();
@@ -428,7 +429,7 @@ class RandomInliner : public IRMutator {
     Stmt* body = v->body();
     LoopOptions loop_options = v->loop_options();
 
-    // Put the new "let"s in the innermost loop.
+    // Bind the random variables in the innermost loop.
     if (!is_inner_loop(v)) {
       Stmt* new_body = body->accept_mutator(this);
       if (new_body == body) {
@@ -440,6 +441,8 @@ class RandomInliner : public IRMutator {
       return new For(var, start, stop, new_body, loop_options);
     }
 
+    // "Inline" all the random intrinsics by binding them up front and then
+    // using the bound variable in the body.
     Stmt* new_body = body->accept_mutator(this);
     for (auto const& p : random_vars_) {
       Var* v = p.second;
@@ -454,56 +457,34 @@ class RandomInliner : public IRMutator {
     return new For(var, start, stop, new_body, loop_options);
   }
 
-  // Replace the target variable with the caller expressions.
-  const Expr* mutate(const Var* v) override {
-    auto iter = arg_mapping_.find(v);
-    if (iter == arg_mapping_.end()) {
-      return IRMutator::mutate(v);
-    } else {
-      const Expr* expr = iter->second;
-      // Continue to transform the value from the lookup table.
-      return expr->accept_mutator(this);
-    }
-  }
-
-  Stmt* mutate(const Store* v) override {
-    // Remove buffer writes in the inlined functions.
-    if (func_vars_.count(v->base_handle())) {
-      return nullptr;
-    }
-    return IRMutator::mutate(v);
-  }
-
-  // TODO: Test this with multiple different random functions.
-  //
-  // TODO: Can we have accesses to the same random tensor with different
-  // indices?  We should probably generate different random numbers for those.
+  // Inline calls containing rand().  Create a new random variable for each
+  // call being inlined, and remember which function is currently being inlined
+  // so we can look up the right variable to replace it with.
   const Expr* mutate(const FunctionCall* v) override {
-    Function* func = v->tensor()->function();
-    if (!func_vars_.count(func->func_var(0))) {
-      // Function is not in the inline set.
-      return IRMutator::mutate(v);
-    }
-    // Map callee's parameters to caller's arguments.
     Function* prev_func = current_func_;
-    current_func_ = func;
-    if (!random_vars_.count(func)) {
-      random_vars_[func] = new Var("v", v->dtype());
+    current_func_ = v->tensor()->function();
+
+    // Remember the calling args; if we find another call with different args,
+    // bail out because this case is too complicated.
+    auto it = call_args_.find(current_func_);
+    if (it == call_args_.end()) {
+      call_args_.emplace(current_func_, std::cref(v->params()));
+    } else {
+      if (v->params() != it->second.get()) {
+        throw std::runtime_error("Complex indexing pattern in rand() tensor");
+      }
     }
-    for (int i = 0; i < func->ndim(); i++) {
-      arg_mapping_[func->arg(i)] = v->param(i);
+
+    // Assign a new random variable for this function, if needed.
+    if (!random_vars_.count(current_func_)) {
+      random_vars_[current_func_] = new Var("v", v->dtype());
     }
-    // Replace params with args in the callee's body.
-    const Expr* callee_body = func->body(v->tensor()->output_index());
-    const Expr* inlined_expr = callee_body->accept_mutator(this);
-    // Remove arg mappings.
-    for (int i = 0; i < func->ndim(); i++) {
-      arg_mapping_.erase(func->arg(i));
-    }
+    const Expr* result = FunctionInliner::mutate(v);
     current_func_ = prev_func;
-    return inlined_expr;
+    return result;
   }
 
+  // Replace rand() intrinsics.
   const Expr* mutate(const Intrinsics* v) override {
     if (v->op_type() != kRand) {
       return v;
@@ -512,11 +493,30 @@ class RandomInliner : public IRMutator {
   }
 
  private:
+  // Determine whether a loop is innermost.  An outer loop will contain nothing
+  // but a single nested for loop.
+  static bool is_inner_loop(const For* loop) {
+    Block* body = dynamic_cast<Block*>(loop->body());
+    if (!body) {
+      return false;
+    }
+    if (body->nstmts() != 1) {
+      return false;
+    }
+    return dynamic_cast<For*>(*body->stmts().begin()) == nullptr;
+  }
+
+  // Track the function currently being inlined.
   Function* current_func_;
-  std::unordered_set<Function*> funcs_;
-  std::unordered_set<const Var*> func_vars_;
-  std::unordered_map<const Var*, const Expr*> arg_mapping_;
+
+  // Map functions being inlined to the generated random variable.
   std::unordered_map<Function*, Var*> random_vars_;
+
+  // Remember arguments of calls containing rand, and force all calls to have
+  // the same argument list.  We use pointer equality of Exprs, which is
+  // extremely strict but works for simple cases.
+  using ArgVec = std::reference_wrapper<const std::vector<const Expr*>>;
+  std::unordered_map<Function*, ArgVec> call_args_;
 };
 
 static Stmt* InjectInlines(
@@ -530,10 +530,9 @@ static Stmt* InjectInlines(
 
 static Stmt* InlineRandom(
     Stmt* stmt,
-    const std::unordered_set<Function*>& funcs) {
+    const std::vector<Function*>& funcs) {
   RandomInliner inliner(funcs);
-  Stmt* new_stmt = stmt->accept_mutator(&inliner);
-  return new_stmt;
+  return stmt->accept_mutator(&inliner);
 }
 
 class DepTracker : public IRVisitor {
@@ -651,8 +650,10 @@ void LoopNest::ApplyInlines() {
   // TODO: check if `s` is a body of a loop
   std::vector<Function*> inlined_functions_vec(
       inlined_functions_.begin(), inlined_functions_.end());
+  std::vector<Function*> inlined_randoms_vec(
+      inlined_random_functions_.begin(), inlined_random_functions_.end());
   root_stmt_ = InjectInlines(root_stmt_, inlined_functions_vec);
-  root_stmt_ = InlineRandom(root_stmt_, inlined_random_functions_);
+  root_stmt_ = InlineRandom(root_stmt_, inlined_randoms_vec);
 
   // Flatten function calls.
   Flattener flattener;
