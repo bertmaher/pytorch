@@ -103,7 +103,7 @@ inline std::string to_string(const Expr* expr) {
 
 inline std::string to_string(Stmt* stmt) {
   std::ostringstream oss;
-  oss << stmt;
+  oss << *stmt;
   return oss.str();
 }
 } // namespace std

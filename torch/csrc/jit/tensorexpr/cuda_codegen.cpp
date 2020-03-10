@@ -103,7 +103,7 @@ void CudaPrinter::visit(const For* v) {
     if (!is_zero(v->start())) {
       throw std::runtime_error(
           "start must be zero for gpu_block_index: " +
-          std::to_string(ExprHandle(v->start())));
+          std::to_string(v->start()));
     }
     gpu_block_extents_[gpu_block_index] = v->stop();
   } else if (loop_options.is_gpu_thread_index()) {
@@ -117,7 +117,7 @@ void CudaPrinter::visit(const For* v) {
     if (!is_zero(v->start())) {
       throw std::runtime_error(
           "start must be zero for gpu_block_index: " +
-          std::to_string(ExprHandle(v->start())));
+          std::to_string(v->start()));
     }
     gpu_thread_extents_[gpu_thread_index] = v->stop();
   } else {
