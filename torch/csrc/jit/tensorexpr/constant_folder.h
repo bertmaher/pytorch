@@ -38,10 +38,11 @@ class ConstantFolder : public IRMutator {
       }
 
       if (const Ramp* r = dynamic_cast<const Ramp*>(rhs)) {
-        const Expr* ret =
-          Ramp::make(ExprHandle(b->value()) + ExprHandle(r->base()),
-                      ExprHandle(r->stride()),
-                      r->lanes()).node();
+        const Expr* ret = Ramp::make(
+                              ExprHandle(b->value()) + ExprHandle(r->base()),
+                              ExprHandle(r->stride()),
+                              r->lanes())
+                              .node();
         return ret->accept_mutator(this);
       }
     }
@@ -54,15 +55,27 @@ class ConstantFolder : public IRMutator {
       }
 
       if (const Ramp* r = dynamic_cast<const Ramp*>(lhs)) {
-        const Expr* ret =
-          Ramp::make(ExprHandle(b->value()) + ExprHandle(r->base()),
-                      ExprHandle(r->stride()),
-                      r->lanes()).node();
+        const Expr* ret = Ramp::make(
+                              ExprHandle(b->value()) + ExprHandle(r->base()),
+                              ExprHandle(r->stride()),
+                              r->lanes())
+                              .node();
         return ret->accept_mutator(this);
       }
     }
 
-    return mutateBinaryOp(v, this);
+    const Expr* node = v;
+
+    if (lhs != v->lhs() || rhs != v->rhs()) {
+      node = newBinaryOpOfType(v->expr_type(), lhs, rhs, false);
+    }
+
+    // Can only fold if both sides are constant.
+    if (!lhs->isConstant() || !rhs->isConstant()) {
+      return node;
+    }
+
+    return evaluateOp(node);
   }
 
   const Expr* mutate(const Sub* v) override {
@@ -75,7 +88,18 @@ class ConstantFolder : public IRMutator {
       }
     }
 
-    return mutateBinaryOp(v, this);
+    const Expr* node = v;
+
+    if (lhs != v->lhs() || rhs != v->rhs()) {
+      node = newBinaryOpOfType(v->expr_type(), lhs, rhs, false);
+    }
+
+    // Can only fold if both sides are constant.
+    if (!lhs->isConstant() || !rhs->isConstant()) {
+      return node;
+    }
+
+    return evaluateOp(node);
   }
 
   const Expr* mutate(const Mul* v) override {
@@ -122,7 +146,18 @@ class ConstantFolder : public IRMutator {
       }
     }
 
-    return mutateBinaryOp(v, this);
+    const Expr* node = v;
+
+    if (lhs != v->lhs() || rhs != v->rhs()) {
+      node = newBinaryOpOfType(v->expr_type(), lhs, rhs, false);
+    }
+
+    // Can only fold if both sides are constant.
+    if (!lhs->isConstant() || !rhs->isConstant()) {
+      return node;
+    }
+
+    return evaluateOp(node);
   }
 
   const Expr* mutate(const Div* v) override {
@@ -135,7 +170,18 @@ class ConstantFolder : public IRMutator {
       }
     }
 
-    return mutateBinaryOp(v, this);
+    const Expr* node = v;
+
+    if (lhs != v->lhs() || rhs != v->rhs()) {
+      node = newBinaryOpOfType(v->expr_type(), lhs, rhs, false);
+    }
+
+    // Can only fold if both sides are constant.
+    if (!lhs->isConstant() || !rhs->isConstant()) {
+      return node;
+    }
+
+    return evaluateOp(node);
   }
 
   const Expr* mutate(const Mod* v) override {
@@ -179,7 +225,7 @@ class ConstantFolder : public IRMutator {
     bool changed = false;
     bool allConstant = true;
     for (const auto* p : v->params()) {
-      const Expr* new_child =  p->accept_mutator(this);
+      const Expr* new_child = p->accept_mutator(this);
       new_params.push_back(new_child);
 
       changed |= p != new_child;
@@ -211,10 +257,12 @@ class ConstantFolder : public IRMutator {
       return v;
     }
 
-    return Load::make(dt,
-        VarHandle(base_handle),
-        ExprHandle(new_index),
-        ExprHandle(new_mask)).node();
+    return Load::make(
+               dt,
+               VarHandle(base_handle),
+               ExprHandle(new_index),
+               ExprHandle(new_mask))
+        .node();
   }
 
  private:
