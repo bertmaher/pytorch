@@ -1226,6 +1226,15 @@ class TestTensorExprFuser(BaseTestClass):
         y = run_where(a, b)
         np.testing.assert_allclose(x.numpy(), y.numpy())
 
+    def test_unused(self):
+        def test(x, y):
+            return x * x + torch.rand_like(y)
+        a = torch.rand(1, device="cuda")
+        b = torch.rand(1, device="cuda")
+        scripted = torch.jit.script(test, (a, b))
+        cx = CudaCodeGenExecuted()
+        scripted(a, b)
+        assert cx.elapsed_value() == 1
 
 if __name__ == '__main__':
     unittest.main()

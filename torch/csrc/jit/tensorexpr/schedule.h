@@ -22,6 +22,7 @@ class TORCH_API LoopNest {
 
   std::vector<For*> getLoopStmtsFor(Tensor*) const;
   Stmt* getLoopBodyFor(Tensor*) const;
+ bool hasLoopBodyFor(Tensor*) const;
   std::unordered_map<Tensor*, Stmt*> tensor_to_stmt_;
 
   void Vectorize(Stmt*);

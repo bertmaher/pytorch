@@ -796,7 +796,10 @@ class TestFuser(JitTestCase):
         x = torch.zeros([3, 4, 5], dtype=torch.float, device='cuda')
         m = M()
         out1 = m.create(x)
+        start_execs = torch._C._jit_get_trigger_value("cuda_codegen_executed")
         out2 = m.create(x)
+        end_execs = torch._C._jit_get_trigger_value("cuda_codegen_executed")
+        assert (end_execs - start_execs) == 1
         self.assertNotEqual(out1, out2)
         self.assertTrue(torch.all(out1 >= 0))
         self.assertTrue(torch.all(out1 < 1))

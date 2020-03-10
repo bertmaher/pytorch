@@ -981,7 +981,10 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
 
   // Compute non-output tensors_ inline
   for (auto& p : tensors_) {
-    auto const& loop = l.getLoopBodyFor(p.second);
+    if (!l.hasLoopBodyFor(p.second)) {
+      continue;
+    }
+    Stmt* loop = l.getLoopBodyFor(p.second);
     if (torch::jit::tensorexpr::HasRand(loop).has_rand()) {
       l.ComputeInlineWithRandom(loop);
     } else {

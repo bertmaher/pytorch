@@ -442,7 +442,8 @@ class RandomInliner : public FunctionInliner {
 
     // "Inline" all the random intrinsics by binding them up front and then
     // using the bound variable in the body.
-    Stmt* new_body = body->accept_mutator(this);
+    Stmt* new_body = Stmt::clone(body);
+    new_body = new_body->accept_mutator(this);
     for (auto const& p : random_vars_) {
       Var* v = p.second;
       new_body = new LetStmt(v, new Intrinsics(kRand, v->dtype()), new_body);
@@ -489,7 +490,14 @@ class RandomInliner : public FunctionInliner {
     if (v->op_type() != kRand) {
       return v;
     }
-    return random_vars_.at(current_func_);
+    if (!current_func_) {
+      return v;
+    }
+    auto it = random_vars_.find(current_func_);
+    if (it == random_vars_.end()) {
+      return v;
+    }
+    return it->second;
   }
 
  private:
@@ -505,7 +513,7 @@ class RandomInliner : public FunctionInliner {
   }
 
   // Track the function currently being inlined.
-  Function* current_func_;
+  Function* current_func_ = nullptr;
 
   // Map functions being inlined to the generated random variable.
   std::unordered_map<Function*, Var*> random_vars_;
@@ -824,6 +832,10 @@ void LoopNest::SetGPUThreadIndex(For* f, int thread_index) {
 
 Stmt* LoopNest::getLoopBodyFor(Tensor* t) const {
   return tensor_to_stmt_.at(t);
+}
+
+bool LoopNest::hasLoopBodyFor(Tensor* t) const {
+  return tensor_to_stmt_.count(t) > 0;
 }
 
 } // namespace schedule
