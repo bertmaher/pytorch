@@ -477,7 +477,8 @@ class RandomInliner : public FunctionInliner {
 
     // Assign a new random variable for this function, if needed.
     if (!random_vars_.count(current_func_)) {
-      random_vars_[current_func_] = new Var("v", v->dtype());
+      const std::string& name = current_func_->func_var(0)->name_hint();
+      random_vars_.emplace(current_func_, new Var(name, v->dtype()));
     }
     const Expr* result = FunctionInliner::mutate(v);
     current_func_ = prev_func;
@@ -489,7 +490,7 @@ class RandomInliner : public FunctionInliner {
     if (v->op_type() != kRand) {
       return v;
     }
-    return random_vars_[current_func_];
+    return random_vars_.at(current_func_);
   }
 
  private:
@@ -497,11 +498,9 @@ class RandomInliner : public FunctionInliner {
   // but a single nested for loop.
   static bool is_inner_loop(const For* loop) {
     Block* body = dynamic_cast<Block*>(loop->body());
-    if (!body) {
-      return false;
-    }
+    CHECK(body);
     if (body->nstmts() != 1) {
-      return false;
+      return true;
     }
     return dynamic_cast<For*>(*body->stmts().begin()) == nullptr;
   }
