@@ -433,7 +433,8 @@ class RandomInliner : public FunctionInliner {
     const Expr* cond_new = cond->accept_mutator(this);
     Stmt* true_new = true_stmt ? true_stmt->accept_mutator(this) : true_stmt;
     true_new = bind_random_vars(true_new);
-    Stmt* false_new = false_stmt ? false_stmt->accept_mutator(this) : false_stmt;
+    Stmt* false_new =
+        false_stmt ? false_stmt->accept_mutator(this) : false_stmt;
     false_new = bind_random_vars(false_new);
 
     if (cond_new == cond && true_new == true_stmt && false_new == false_stmt) {
