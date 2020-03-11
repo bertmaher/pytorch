@@ -61,6 +61,7 @@ class LLVMCodeGenImpl : public IRVisitor {
   LLVMCodeGenImpl(
       Stmt* stmt,
       const std::vector<CodeGen::BufferArg>& args,
+      at::Device device,
       Dtype dtype);
   ~LLVMCodeGenImpl() = default;
 
@@ -155,9 +156,10 @@ LLVMCodeGen::LLVMCodeGen(Stmt* stmt)
 LLVMCodeGen::LLVMCodeGen(
     Stmt* stmt,
     const std::vector<BufferArg>& args,
+    at::Device device,
     Dtype dtype)
-    : CodeGen(stmt, args),
-      impl_(std::make_unique<LLVMCodeGenImpl>(stmt, args, dtype)) {}
+    : CodeGen(stmt, args, device),
+      impl_(std::make_unique<LLVMCodeGenImpl>(stmt, args, device, dtype)) {}
 
 static void* argToPtr(
     const CodeGen::BufferArg& bufferArg,
@@ -206,6 +208,7 @@ llvm::JITTargetAddress LLVMCodeGenImpl::getKernelAddress() const {
 LLVMCodeGenImpl::LLVMCodeGenImpl(
     Stmt* stmt,
     const std::vector<CodeGen::BufferArg>& args,
+    at::Device device,
     Dtype dtype)
     : context_(std::make_unique<llvm::LLVMContext>()), irb_(getContext()) {
   // Manually map types to LLVM types.

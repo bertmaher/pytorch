@@ -602,6 +602,7 @@ void CudaCodeGen::CompileToNVRTC(
   // Initializes driver's API context (if necessary)
   CUdevice device = 0;
   CUcontext pctx = 0;
+
   AT_CUDA_DRIVER_CHECK(nvrtc().cuCtxGetCurrent(&pctx));
   if (!pctx) {
     std::unique_lock<std::mutex> cudaFreeMutexLock(
@@ -612,13 +613,24 @@ void CudaCodeGen::CompileToNVRTC(
   // Note: hacked at::DeviceGuard since at::DeviceGuard was failing to work
   // properly in some scenarios
   const auto prior_device = at::cuda::current_device();
-  at::cuda::set_device(device);
+  //at::cuda::set_device(device);
+  at::cuda::set_device(this->device().index());
 
   // Acquires device and NVRTC properties (for compile arch and occupancy
   // calculations)
   cudaDeviceProp* prop = at::cuda::getCurrentDeviceProperties();
   int major, minor;
   getMajorMinor(prop, major, minor);
+  const auto new_device = at::cuda::current_device();
+  std::cout << " Using CUDA device:  " << new_device << std::endl;
+  
+  //This is important
+  if (!pctx) {
+    std::unique_lock<std::mutex> cudaFreeMutexLock(
+        *(c10::cuda::CUDACachingAllocator::getFreeMutex()));
+    cudaFree(0);
+  }
+
 
 #if DEBUG_PRINT
   std::cout << "major: " << major << ", "
@@ -665,6 +677,7 @@ void CudaCodeGen::CompileToNVRTC(
   AT_CUDA_DRIVER_CHECK(nvrtc().cuModuleLoadData(&module, ptx.data()));
   AT_CUDA_DRIVER_CHECK(
       nvrtc().cuModuleGetFunction(&function_, module, func_name.c_str()));
+  at::cuda::set_device(prior_device);
 }
 
 RegisterCodeGen<CudaCodeGen> reg("cuda_codegen");

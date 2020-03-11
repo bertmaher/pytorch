@@ -1137,7 +1137,10 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
           "invalid backend type: " +
           std::to_string(static_cast<int>(backend_type_)));
   }
-  codegen_ = CreateCodeGen(codegen_name, stmt, params);
+  codegen_ = CreateCodeGen(codegen_name, stmt, params, device_);
+  std::cout << "adding hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
+  codegen_cache_.emplace(current_hashcode, std::move(codegen_));
+  std::cout << "adding hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
 }
 
 template <typename T>
@@ -1222,15 +1225,33 @@ static void checkInputs(const at::ArrayRef<IValue>& inputs, std::vector<TypePtr>
 void TensorExprKernel::PickAndCheckBackendType(
     const at::ArrayRef<IValue>& inputs) {
   checkInputs(inputs, input_types_);
+  std::vector<at::Tensor> input_tensors;
+  size_t hash_code;
 
-  at::Device device = [&inputs]() {
+  at::Device device = [&inputs, &hash_code]() {
     for (auto const& input : inputs) {
       if (input.isTensor()) {
+        at::Tensor tensor_in = input.toTensor();
+        hash_code = torch::get_hash(
+            input.toTensor().device(),
+            tensor_in.scalar_type(),
+            tensor_in.sizes().data(),
+            tensor_in.strides().data());
         return input.toTensor().device();
       }
     }
     throw std::runtime_error("No tensor inputs");
   }();
+
+  std::cout << "the entered hash code is: " << hash_code << std::endl;
+  current_hashcode = hash_code;
+  std::cout << "the new hash code is: " << current_hashcode << std::endl;
+  std::cout << " so now hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
+  if (codegen_cache_.count(current_hashcode)){
+  std::cout << " exiting so now hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
+    return;
+  }
+
   BackendType backend_type = BackendType::kUninitialized;
   if (device.type() == at::kCUDA) {
     backend_type = kCudaCodeGen;
@@ -1242,14 +1263,17 @@ void TensorExprKernel::PickAndCheckBackendType(
     ;
 #endif
   } else {
+    std::cout<<"invalid device called\n";
     throw std::runtime_error("Invalid device type");
   }
 
   if (backend_type_ == kUninitialized) {
     backend_type_ = backend_type;
     device_ = device;
+    std::cout<<"lower to backedn called\n";
     LowerToBackend(backend_type);
   } else if (backend_type_ != backend_type) {
+    std::cout<<"lower to backedn not called\n";
     // TODO: if we have to support muliptole backends with the same subgraph,
     // we need to add kernel caching.
     throw std::runtime_error(
@@ -1264,7 +1288,9 @@ void TensorExprKernel::CodeGenRun(
     case kSimpleIREval:
     case kLLVMCodeGen:
     case kCudaCodeGen:
-      codegen_->call(run_args);
+      //codegen_->call(run_args);
+      std::cout << "calling hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
+      codegen_cache_.at(current_hashcode)->call(run_args);
       break;
     default:
       throw std::runtime_error(
