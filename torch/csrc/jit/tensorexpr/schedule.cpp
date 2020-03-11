@@ -418,13 +418,31 @@ class FunctionInliner : public IRMutator {
 //
 // The overall approach is to replace every rand() intrinsic with a newly
 // generated variable, and then bind those variables to rand() calls in the
-// body of the innermost for loop.
+// body of the innermost control structure.
 class RandomInliner : public FunctionInliner {
  public:
   explicit RandomInliner(const std::vector<Function*>& funcs)
       : FunctionInliner(funcs) {}
 
-  // Find the innermost for loop and bind any random variables in its body.
+  // Bind random vars in the true and false branches of a conditional.
+  Stmt* mutate(const Cond* v) override {
+    const Expr* cond = v->condition();
+    Stmt* true_stmt = v->true_stmt();
+    Stmt* false_stmt = v->false_stmt();
+
+    const Expr* cond_new = cond->accept_mutator(this);
+    Stmt* true_new = true_stmt ? true_stmt->accept_mutator(this) : true_stmt;
+    true_new = bind_random_vars(true_new);
+    Stmt* false_new = false_stmt ? false_stmt->accept_mutator(this) : false_stmt;
+    false_new = bind_random_vars(false_new);
+
+    if (cond_new == cond && true_new == true_stmt && false_new == false_stmt) {
+      return const_cast<Cond*>(v);
+    }
+    return new Cond(cond_new, true_new, false_new);
+  }
+
+  // Bind random vars in the innermost loop where they are used.
   Stmt* mutate(const For* v) override {
     const Var* var = v->var();
     const Expr* start = v->start();
@@ -432,27 +450,10 @@ class RandomInliner : public FunctionInliner {
     Stmt* body = v->body();
     LoopOptions loop_options = v->loop_options();
 
-    // Bind the random variables in the innermost loop.
-    if (!is_inner_loop(v)) {
-      Stmt* new_body = body->accept_mutator(this);
-      if (new_body == body) {
-        return const_cast<For*>(v);
-      }
-      if (new_body == nullptr) {
-        return nullptr;
-      }
-      return new For(var, start, stop, new_body, loop_options);
-    }
-
-    // "Inline" all the random intrinsics by binding them up front and then
-    // using the bound variable in the body.
-    Stmt* new_body = Stmt::clone(body);
-    new_body = new_body->accept_mutator(this);
-    for (auto const& p : random_vars_) {
-      Var* v = p.second;
-      new_body = new LetStmt(v, new Intrinsics(kRand, v->dtype()), new_body);
-    }
-    if (new_body == body) {
+    Stmt* orig_body = Stmt::clone(body);
+    Stmt* new_body = orig_body->accept_mutator(this);
+    new_body = bind_random_vars(new_body);
+    if (new_body == orig_body) {
       return const_cast<For*>(v);
     }
     if (new_body == nullptr) {
@@ -508,15 +509,14 @@ class RandomInliner : public FunctionInliner {
   }
 
  private:
-  // Determine whether a loop is innermost.  An outer loop will contain nothing
-  // but a single nested for loop.
-  static bool is_inner_loop(const For* loop) {
-    Block* body = dynamic_cast<Block*>(loop->body());
-    CHECK(body);
-    if (body->nstmts() != 1) {
-      return true;
+  // Emit let statements for all encountered random vars, thenclear them.
+  Stmt* bind_random_vars(Stmt* s) {
+    for (auto const& p : random_vars_) {
+      Var* v = p.second;
+      s = new LetStmt(v, new Intrinsics(kRand, v->dtype()), s);
     }
-    return dynamic_cast<For*>(*body->stmts().begin()) == nullptr;
+    random_vars_.clear();
+    return s;
   }
 
   // Track the function currently being inlined.

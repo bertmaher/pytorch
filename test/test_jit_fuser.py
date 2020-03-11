@@ -871,7 +871,6 @@ class TestFuser(JitTestCase):
             b = y - r
             return a + b
 
-        print("-- testing diamond ", "-" * 80)
         x = torch.randn(4, 4, dtype=torch.float, device='cuda')
         y = torch.randn(4, 4, dtype=torch.float, device='cuda')
         script_f = torch.jit.script(fn_test_diamond, (x, y))
