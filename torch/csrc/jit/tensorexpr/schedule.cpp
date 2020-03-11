@@ -334,13 +334,17 @@ class FunctionInliner : public IRMutator {
   }
 
  protected:
+  bool should_inline(Function* func) const {
+    return func_var_set_.count(func->func_var(0)) > 0;
+  }
+
   // For the target function, insert the caller/callee pair into the replacement
   // mapping.
   const Expr* mutate(const FunctionCall* v) override {
     Function* func = v->tensor()->function();
     // TODO: Support multiple-output functions
     CHECK(func->func_vars().size() == 1);
-    if (func_var_set_.count(func->func_var(0)) > 0) {
+    if (should_inline(func)) {
       // Insert the caller/callee pair into the mapping.
       for (int i = 0; i < func->ndim(); i++) {
         const Var* func_callee_arg = dynamic_cast<const Var*>(func->arg(i));
@@ -461,6 +465,9 @@ class RandomInliner : public FunctionInliner {
   // call being inlined, and remember which function is currently being inlined
   // so we can look up the right variable to replace it with.
   const Expr* mutate(const FunctionCall* v) override {
+    if (!should_inline(v->tensor()->function())) {
+      return v;
+    }
     Function* prev_func = current_func_;
     current_func_ = v->tensor()->function();
 
