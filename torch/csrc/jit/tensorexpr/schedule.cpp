@@ -438,7 +438,7 @@ class RandomInliner : public FunctionInliner {
     false_new = bind_random_vars(false_new);
 
     if (cond_new == cond && true_new == true_stmt && false_new == false_stmt) {
-      return const_cast<Cond*>(v);
+      return const_cast<Cond*>(v); // NOLINT
     }
     return new Cond(cond_new, true_new, false_new);
   }
@@ -455,7 +455,7 @@ class RandomInliner : public FunctionInliner {
     Stmt* new_body = orig_body->accept_mutator(this);
     new_body = bind_random_vars(new_body);
     if (new_body == orig_body) {
-      return const_cast<For*>(v);
+      return const_cast<For*>(v); // NOLINT
     }
     if (new_body == nullptr) {
       return nullptr;
