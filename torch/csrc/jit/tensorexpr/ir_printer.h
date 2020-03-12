@@ -95,15 +95,6 @@ namespace std {
 using torch::jit::tensorexpr::Expr;
 using torch::jit::tensorexpr::Stmt;
 
-inline std::string to_string(const Expr* expr) {
-  std::ostringstream oss;
-  oss << *expr;
-  return oss.str();
-}
-
-inline std::string to_string(Stmt* stmt) {
-  std::ostringstream oss;
-  oss << *stmt;
-  return oss.str();
-}
+TORCH_API std::string to_string(const Expr* expr);
+TORCH_API std::string to_string(const Stmt* stmt);
 } // namespace std

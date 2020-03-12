@@ -429,3 +429,17 @@ void print(const Stmt* stmt) {
 } // namespace tensorexpr
 } // namespace jit
 } // namespace torch
+
+namespace std {
+std::string to_string(const Expr* expr) {
+  std::ostringstream oss;
+  oss << *expr;
+  return oss.str();
+}
+
+std::string to_string(const Stmt* stmt) {
+  std::ostringstream oss;
+  oss << *stmt;
+  return oss.str();
+}
+} // namespace std
