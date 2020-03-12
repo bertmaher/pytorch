@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
-#include "torch/csrc/jit/tensorexpr/exceptions.h"
-#include "torch/csrc/jit/tensorexpr/expr.h"
-#include "torch/csrc/jit/tensorexpr/stmt.h"
+#include <torch/csrc/jit/tensorexpr/exceptions.h>
+#include <torch/csrc/jit/tensorexpr/expr.h>
+#include <torch/csrc/jit/tensorexpr/stmt.h>
 
 namespace torch {
 namespace jit {
