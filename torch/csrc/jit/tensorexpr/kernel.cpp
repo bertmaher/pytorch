@@ -117,7 +117,7 @@ void TensorExprKernel::promoteInputs(std::vector<ExprHandle>& inputs) {
       AT_FORALL_SCALAR_TYPES_AND(Half, TYPE_CASE);
 #undef TYPE_CASE
       default:
-        LOG(FATAL) << "Unsupported datatype: " << highType;
+        throw unsupported_dtype();
     }
   }
 }
@@ -142,7 +142,7 @@ ExprHandle TensorExprKernel::demoteOutput(
     case at::ScalarType::Bool:
       return e;
     default:
-      LOG(FATAL) << "Unsupported datatype";
+      throw unsupported_dtype();
   }
 
   return e;
@@ -1138,9 +1138,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
           std::to_string(static_cast<int>(backend_type_)));
   }
   codegen_ = CreateCodeGen(codegen_name, stmt, params, device_);
-  std::cout << "adding hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
   codegen_cache_.emplace(current_hashcode, std::move(codegen_));
-  std::cout << "adding hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
 }
 
 template <typename T>
@@ -1232,23 +1230,17 @@ void TensorExprKernel::PickAndCheckBackendType(
     for (auto const& input : inputs) {
       if (input.isTensor()) {
         at::Tensor tensor_in = input.toTensor();
-        hash_code = torch::get_hash(
-            input.toTensor().device(),
-            tensor_in.scalar_type(),
-            tensor_in.sizes().data(),
-            tensor_in.strides().data());
+        // hashing only relies on device
+        // Profiler-Executor assures unique sizes/strides
+        hash_code = torch::get_hash(input.toTensor().device());
         return input.toTensor().device();
       }
     }
     throw std::runtime_error("No tensor inputs");
   }();
 
-  std::cout << "the entered hash code is: " << hash_code << std::endl;
   current_hashcode = hash_code;
-  std::cout << "the new hash code is: " << current_hashcode << std::endl;
-  std::cout << " so now hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
-  if (codegen_cache_.count(current_hashcode)){
-  std::cout << " exiting so now hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
+  if (codegen_cache_.count(current_hashcode)) {
     return;
   }
 
@@ -1270,10 +1262,8 @@ void TensorExprKernel::PickAndCheckBackendType(
   if (backend_type_ == kUninitialized) {
     backend_type_ = backend_type;
     device_ = device;
-    std::cout<<"lower to backedn called\n";
     LowerToBackend(backend_type);
   } else if (backend_type_ != backend_type) {
-    std::cout<<"lower to backedn not called\n";
     // TODO: if we have to support muliptole backends with the same subgraph,
     // we need to add kernel caching.
     throw std::runtime_error(
@@ -1288,8 +1278,6 @@ void TensorExprKernel::CodeGenRun(
     case kSimpleIREval:
     case kLLVMCodeGen:
     case kCudaCodeGen:
-      //codegen_->call(run_args);
-      std::cout << "calling hashcode is: " << current_hashcode << " count is: " << codegen_cache_.count(current_hashcode) << std::endl;
       codegen_cache_.at(current_hashcode)->call(run_args);
       break;
     default:

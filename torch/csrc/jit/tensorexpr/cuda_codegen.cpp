@@ -1,12 +1,13 @@
-#include "torch/csrc/jit/tensorexpr/cuda_codegen.h"
-#include "torch/csrc/jit/tensorexpr/cuda_half_support.h"
+#include <torch/csrc/jit/tensorexpr/cuda_codegen.h>
+#include <torch/csrc/jit/tensorexpr/cuda_half_support.h>
 
-#include "ATen/CUDAGenerator.h"
-#include "c10/cuda/CUDAFunctions.h"
-#include "torch/csrc/jit/tensorexpr/analysis.h"
-#include "torch/csrc/jit/tensorexpr/cuda_random.h"
-#include "torch/csrc/jit/tensorexpr/eval.h"
-#include "torch/csrc/jit/tensorexpr/execution_counter.h"
+#include <ATen/CUDAGenerator.h>
+#include <c10/cuda/CUDAFunctions.h>
+#include <torch/csrc/jit/tensorexpr/analysis.h>
+#include <torch/csrc/jit/tensorexpr/cuda_random.h>
+#include <torch/csrc/jit/tensorexpr/eval.h>
+#include <torch/csrc/jit/tensorexpr/exceptions.h>
+#include <torch/csrc/jit/tensorexpr/execution_counter.h>
 
 #define DEBUG_PRINT 0
 
@@ -556,7 +557,7 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
         AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
         default:
-          LOG(FATAL) << "Unhandled dtype in argument";
+          throw unsupported_dtype();
       }
     } else {
       args_data[i] = args[i].data();
@@ -596,6 +597,14 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
   USE_TRIGGER(cuda_codegen_executed);
 }
 
+void CudaSetContext(CUcontext pctx) {
+  if (!pctx) {
+    std::unique_lock<std::mutex> cudaFreeMutexLock(
+        *(c10::cuda::CUDACachingAllocator::getFreeMutex()));
+    cudaFree(0);
+  }
+}
+
 void CudaCodeGen::CompileToNVRTC(
     const std::string& code,
     const std::string& func_name) {
@@ -604,33 +613,22 @@ void CudaCodeGen::CompileToNVRTC(
   CUcontext pctx = 0;
 
   AT_CUDA_DRIVER_CHECK(nvrtc().cuCtxGetCurrent(&pctx));
-  if (!pctx) {
-    std::unique_lock<std::mutex> cudaFreeMutexLock(
-        *(c10::cuda::CUDACachingAllocator::getFreeMutex()));
-    cudaFree(0);
-  }
+  CudaSetContext(pctx);
 
   // Note: hacked at::DeviceGuard since at::DeviceGuard was failing to work
   // properly in some scenarios
   const auto prior_device = at::cuda::current_device();
-  //at::cuda::set_device(device);
   at::cuda::set_device(this->device().index());
+  // cudaSetDevice does not have to really change the underlying device if it
+  // doesn't have to, so calling cudaFree to force that change
+  CudaSetContext(pctx);
 
   // Acquires device and NVRTC properties (for compile arch and occupancy
   // calculations)
   cudaDeviceProp* prop = at::cuda::getCurrentDeviceProperties();
   int major, minor;
   getMajorMinor(prop, major, minor);
-  const auto new_device = at::cuda::current_device();
-  std::cout << " Using CUDA device:  " << new_device << std::endl;
   
-  //This is important
-  if (!pctx) {
-    std::unique_lock<std::mutex> cudaFreeMutexLock(
-        *(c10::cuda::CUDACachingAllocator::getFreeMutex()));
-    cudaFree(0);
-  }
-
 
 #if DEBUG_PRINT
   std::cout << "major: " << major << ", "
