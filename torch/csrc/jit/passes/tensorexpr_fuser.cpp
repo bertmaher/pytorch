@@ -13,9 +13,20 @@
 namespace torch {
 namespace jit {
 
+void registerTensorExprFuser() {
+  static bool already_registered = false;
+  if (!already_registered) {
+    RegisterPass pass(fuseTensorExprs);
+    already_registered = true;
+  }
+}
+
 static bool texpr_fuser_enabled = true;
 void setTensorExprFuserEnabled(bool val) {
   texpr_fuser_enabled = val;
+  if (val) {
+    registerTensorExprFuser();
+  }
 }
 
 const Symbol& getTensorExprSymbol() {
@@ -337,12 +348,5 @@ RegisterOperators TensorExprOps({
         getAliasAnalysisOption(AliasAnalysisKind::PURE_FUNCTION)),
 });
 
-void registerTensorExprFuser() {
-  static bool already_registered = false;
-  if (!already_registered) {
-    RegisterPass pass(fuseTensorExprs);
-    already_registered = true;
-  }
-}
 } // namespace jit
 } // namespace torch
