@@ -1366,7 +1366,7 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
   if (v->dtype().lanes() == 1 || call_simd_sleef == true) {
     value_ = irb_.CreateCall(call_ty, call_fn, params);
   } else {
-    llvm::Type* vecType = llvm::VectorType::get(FloatTy_, v->dtype().lanes());
+    llvm::Type* vecType = params[0]->getType();
     value_ = llvm::UndefValue::get(vecType);
     for (int i = 0; i < v->dtype().lanes(); ++i) {
       std::vector<llvm::Value*> call_operands;
