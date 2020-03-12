@@ -37,9 +37,7 @@ class CodeGen {
     return buffer_args_;
   }
 
-  TORCH_API virtual void call(const std::vector<CallArg>& args) {
-    LOG(FATAL) << "unimplemented call";
-  }
+  TORCH_API virtual void call(const std::vector<CallArg>& args) = 0;
 
  private:
   Stmt* stmt_;
