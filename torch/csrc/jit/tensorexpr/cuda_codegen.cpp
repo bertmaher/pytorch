@@ -6,6 +6,7 @@
 #include "torch/csrc/jit/tensorexpr/analysis.h"
 #include "torch/csrc/jit/tensorexpr/cuda_random.h"
 #include "torch/csrc/jit/tensorexpr/eval.h"
+#include "torch/csrc/jit/tensorexpr/exceptions.h"
 #include "torch/csrc/jit/tensorexpr/execution_counter.h"
 
 #define DEBUG_PRINT 0
@@ -556,7 +557,7 @@ void CudaCodeGen::call(const std::vector<CallArg>& args) {
         AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
         default:
-          LOG(FATAL) << "Unhandled dtype in argument";
+          throw unsupported_dtype();
       }
     } else {
       args_data[i] = args[i].data();

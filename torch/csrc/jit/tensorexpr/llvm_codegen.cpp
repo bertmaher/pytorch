@@ -176,8 +176,7 @@ static void* argToPtr(
 #undef TYPE_CASE
 
     default:
-      LOG(FATAL) << "Unhandled dtype for arg: " << bufferArg.var()->name_hint()
-                 << "dtype=" << bufferArg.var()->dtype();
+      throw unsupported_dtype();
   }
   return nullptr;
 }
@@ -275,7 +274,7 @@ llvm::Type* LLVMCodeGenImpl::dtypeToLLVM(Dtype dtype) {
     AT_FORALL_SCALAR_TYPES_AND2(Bool, Half, TYPE_CASE);
 #undef TYPE_CASE
     default:
-      LOG(FATAL) << "Unhandled dtype: " << dtype;
+      throw unsupported_dtype();
   }
   return nullptr;
 }
