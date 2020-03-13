@@ -75,8 +75,11 @@ class CudaPrinter : public IRPrinter {
 class TORCH_API CudaCodeGen : public CodeGen {
  public:
   template <typename... Ts>
-  CudaCodeGen(Stmt* stmt, Ts... ts) : CodeGen(stmt, std::forward<Ts>(ts)...) {
-    this->set_device(at::Device(at::kCUDA, at::cuda::current_device()));
+  CudaCodeGen(Stmt* stmt, Ts... ts)
+      : CodeGen(
+            stmt,
+            std::vector<BufferArg>({BufferArg(ts)...}),
+            at::Device(at::kCUDA, at::cuda::current_device())) {
     Initialize();
   }
 

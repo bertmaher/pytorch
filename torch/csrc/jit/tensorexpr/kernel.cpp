@@ -1138,7 +1138,7 @@ void TensorExprKernel::LowerToBackend(BackendType backend_type) {
           std::to_string(static_cast<int>(backend_type_)));
   }
   codegen_ = CreateCodeGen(codegen_name, stmt, params, device_);
-  codegen_cache_.emplace(current_hashcode, std::move(codegen_));
+  codegen_cache_.emplace(torch::get_hash(device_), std::move(codegen_));
 }
 
 template <typename T>
@@ -1224,23 +1224,18 @@ void TensorExprKernel::PickAndCheckBackendType(
     const at::ArrayRef<IValue>& inputs) {
   checkInputs(inputs, input_types_);
   std::vector<at::Tensor> input_tensors;
-  size_t hash_code;
 
-  at::Device device = [&inputs, &hash_code]() {
+  at::Device device = [&inputs]() {
     for (auto const& input : inputs) {
       if (input.isTensor()) {
         at::Tensor tensor_in = input.toTensor();
-        // hashing only relies on device
-        // Profiler-Executor assures unique sizes/strides
-        hash_code = torch::get_hash(input.toTensor().device());
         return input.toTensor().device();
       }
     }
     throw std::runtime_error("No tensor inputs");
   }();
 
-  current_hashcode = hash_code;
-  if (codegen_cache_.count(current_hashcode)) {
+  if (codegen_cache_.count(torch::get_hash(device))) {
     return;
   }
 
@@ -1255,7 +1250,6 @@ void TensorExprKernel::PickAndCheckBackendType(
     ;
 #endif
   } else {
-    std::cout<<"invalid device called\n";
     throw std::runtime_error("Invalid device type");
   }
 
@@ -1264,7 +1258,7 @@ void TensorExprKernel::PickAndCheckBackendType(
     device_ = device;
     LowerToBackend(backend_type);
   } else if (backend_type_ != backend_type) {
-    // TODO: if we have to support muliptole backends with the same subgraph,
+    // TODO: if we have to support multiple backends with the same subgraph,
     // we need to add kernel caching.
     throw std::runtime_error(
         "Inconsistent backend_type: " + std::to_string(backend_type_) + " vs " +
@@ -1278,7 +1272,7 @@ void TensorExprKernel::CodeGenRun(
     case kSimpleIREval:
     case kLLVMCodeGen:
     case kCudaCodeGen:
-      codegen_cache_.at(current_hashcode)->call(run_args);
+      codegen_cache_.at(torch::get_hash(device_))->call(run_args);
       break;
     default:
       throw std::runtime_error(

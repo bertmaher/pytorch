@@ -1,9 +1,9 @@
 #pragma once
 
-#include "torch/csrc/jit/tensorexpr/buffer.h"
-#include "torch/csrc/jit/tensorexpr/ir.h"
-#include "torch/csrc/jit/tensorexpr/tensor.h"
-#include "ATen/ATen.h"
+#include <torch/csrc/jit/tensorexpr/buffer.h>
+#include <torch/csrc/jit/tensorexpr/ir.h>
+#include <torch/csrc/jit/tensorexpr/tensor.h>
+#include <ATen/ATen.h>
 
 namespace torch {
 namespace jit {
@@ -45,7 +45,7 @@ class CodeGen {
     return device_;
   }
 
-  void set_device(at::Device device){
+  void set_device(at::Device device) {
     device_ = device;
   }
 

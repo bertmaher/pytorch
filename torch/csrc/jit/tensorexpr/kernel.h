@@ -211,7 +211,6 @@ class TensorExprKernel {
   std::unordered_map<int64_t, Tensor*> tensors_;
   std::unordered_map<int64_t, VarHandle> scalars_;
   std::unique_ptr<CodeGen> codegen_;
-  size_t current_hashcode = 0;
   std::unordered_map<size_t, std::unique_ptr<CodeGen>> codegen_cache_;
   KernelArena kernel_arena_;
   BackendType backend_type_ = BackendType::kUninitialized;
