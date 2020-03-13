@@ -1041,7 +1041,7 @@ void LLVMCodeGenImpl::visit(const IfThenElse* v) {
 }
 
 void LLVMCodeGenImpl::visit(const BaseCallNode* v) {
-  LOG(FATAL) << "Unimplemented: BaseCall";
+  throw unimplemented_lowering(v);
 }
 
 static void applyMathFunctionAttributes(llvm::Function* f) {
@@ -1205,7 +1205,7 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
 #undef BINARY_MATH_CASE
 
       default: {
-        LOG(FATAL) << "Unimplemented: Intrinsics: " << ExprHandle(v);
+        throw unimplemented_lowering(v);
       } break;
     }
 
@@ -1355,7 +1355,7 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
 #undef BINARY_MATH_CASE
 
       default: {
-        LOG(FATAL) << "Unimplemented: Intrinsics: " << ExprHandle(v);
+        throw unimplemented_lowering(v);
       } break;
     }
   }
@@ -1384,19 +1384,19 @@ void LLVMCodeGenImpl::visit(const Intrinsics* v) {
 }
 
 void LLVMCodeGenImpl::visit(const FunctionCall* v) {
-  LOG(FATAL) << "Unimplemented: FunctionCall";
+  throw unimplemented_lowering(v);
 }
 
 void LLVMCodeGenImpl::visit(const Allocate* v) {
-  LOG(FATAL) << "Unimplemented: Allocate";
+  throw unimplemented_lowering(v);
 }
 
 void LLVMCodeGenImpl::visit(const Free* v) {
-  LOG(FATAL) << "Unimplemented: Free";
+  throw unimplemented_lowering(v);
 }
 
 void LLVMCodeGenImpl::visit(const Cond* v) {
-  LOG(FATAL) << "Unimplemented: Cond";
+  throw unimplemented_lowering(v);
 }
 
 void LLVMCodeGenImpl::optimize(llvm::Module& M) {
