@@ -51,7 +51,10 @@ class ScopedVarName {
 
 static int as_int(const Expr* expr) {
   auto v = dynamic_cast<const IntImm*>(expr);
-  TORCH_CHECK(v, "Expression is not an integer constant");
+  if (!v) {
+    throw malformed_input(expr);
+  }
+
   return v->value();
 }
 
@@ -503,15 +506,19 @@ void CudaCodeGen::Initialize() {
 }
 
 void CudaCodeGen::call(const std::vector<CallArg>& args) {
-  CHECK_EQ(args.size(), buffer_args().size());
+  if (args.size() != buffer_args().size()) {
+    throw malformed_input();
+  }
 
   // TODO: move as much of this into the constructors.
   const std::vector<const Expr*>& gpu_block_extents =
       printer_->gpu_block_extents();
   const std::vector<const Expr*>& gpu_thread_extents =
       printer_->gpu_thread_extents();
-  CHECK(gpu_block_extents.size() <= 3);
-  CHECK(gpu_thread_extents.size() <= 3);
+  if (gpu_block_extents.size() > 3 || gpu_thread_extents.size() > 3) {
+    throw malformed_input();
+  }
+
   std::vector<int> gpu_block_extents_v(3, 1);
   std::vector<int> gpu_thread_extents_v(3, 1);
   // evaluate all the block/thread extents into values
@@ -608,13 +615,8 @@ void CudaSetContext(CUcontext pctx) {
 void CudaCodeGen::CompileToNVRTC(
     const std::string& code,
     const std::string& func_name) {
-  // Initializes driver's API context (if necessary)
-  CUdevice device = 0;
   CUcontext pctx = 0;
-
   AT_CUDA_DRIVER_CHECK(nvrtc().cuCtxGetCurrent(&pctx));
-  CudaSetContext(pctx);
-
   // Note: hacked at::DeviceGuard since at::DeviceGuard was failing to work
   // properly in some scenarios
   const auto prior_device = at::cuda::current_device();
@@ -628,7 +630,6 @@ void CudaCodeGen::CompileToNVRTC(
   cudaDeviceProp* prop = at::cuda::getCurrentDeviceProperties();
   int major, minor;
   getMajorMinor(prop, major, minor);
-  
 
 #if DEBUG_PRINT
   std::cout << "major: " << major << ", "

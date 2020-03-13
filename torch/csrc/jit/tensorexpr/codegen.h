@@ -45,10 +45,6 @@ class CodeGen {
     return device_;
   }
 
-  void set_device(at::Device device) {
-    device_ = device;
-  }
-
   TORCH_API virtual void call(const std::vector<CallArg>& args) = 0;
 
  private:
@@ -67,7 +63,9 @@ class CodeGen::BufferArg {
   BufferArg(const Function& func)
       : var_(func.func_var(0)), dtype_(func.body(0)->dtype()) {
     // TODO: Support multiple-output functions
-    CHECK(func.func_vars().size() == 1);
+    if (func.func_vars().size() != 1) {
+      throw unimplemented_lowering();
+    }
   }
   BufferArg(const VarHandle& var)
       : var_(var.node()), dtype_(var.dtype()), isVar_(true) {}
