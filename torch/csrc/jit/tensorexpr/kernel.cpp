@@ -45,7 +45,10 @@ static std::vector<ExprHandle> texprSizes(const c10::VaryingShape& shape) {
 }
 
 static std::vector<DimArg> texprDims(const torch::jit::Value* v) {
-  CHECK(v->type()->kind() == TypeKind::TensorType);
+  if (v->type()->kind() != TypeKind::TensorType) {
+    throw malformed_input();
+  }
+
   auto tt = v->type()->cast<TensorType>();
   std::vector<DimArg> dimArgs;
   int i = 0;
@@ -80,7 +83,11 @@ ExprHandle TensorExprKernel::constant(const torch::jit::Value* v) {
       throw unsupported_dtype();
     }
   }
-  CHECK(scalars_.count(v->unique())) << "Couldn't find scalar value";
+
+  if (!scalars_.count(v->unique())) {
+    throw malformed_input();
+  }
+
   return scalars_.at(v->unique());
 }
 
@@ -125,7 +132,10 @@ void TensorExprKernel::promoteInputs(std::vector<ExprHandle>& inputs) {
 ExprHandle TensorExprKernel::demoteOutput(
     const ExprHandle& e,
     const torch::jit::Value* v) {
-  CHECK(v->type()->kind() == TypeKind::TensorType);
+  if (v->type()->kind() != TypeKind::TensorType) {
+    throw malformed_input();
+  }
+
   auto tt = *v->type()->cast<TensorType>()->scalarType();
 
   if (tt == static_cast<at::ScalarType>(e.dtype().scalar_type())) {
@@ -900,7 +910,10 @@ Tensor* TensorExprKernel::ComputeValue(const torch::jit::Value* v) {
             auto const& n = v->node();
             int64_t dim = constant(n->inputs()[1]).AsNode<IntImm>()->value();
             if (dim < 0) {
-              CHECK(axes.size() > 0);
+              if (axes.size() == 0) {
+                throw malformed_input();
+              }
+
               dim += axes.size() - 1;
             }
 
@@ -1279,14 +1292,18 @@ ExprHandle TensorExprKernel::createInputIndexExpr(
     const c10::VaryingStrides& strides,
     const c10::VaryingStrides& contiguity,
     const std::unordered_map<int64_t, VarHandle>& sizeVars) {
-  TORCH_CHECK(
-      axes.size() == strides.size(), "strides and axes are not the same size");
+  if (axes.size() != strides.size()) {
+    throw malformed_input();
+  }
 
   std::vector<ShapeArg> strideArgs;
   std::vector<ShapeArg> sizeArgs;
   ExprHandle stride = 1;
   ExprHandle index = 0;
-  CHECK(axes.size() > 0);
+
+  if (axes.size() == 0) {
+    throw malformed_input();
+  }
   size_t n = axes.size() - 1;
 
   for (size_t i = 0; i < axes.size(); i++) {
@@ -1304,7 +1321,10 @@ ExprHandle TensorExprKernel::createInputIndexExpr(
     auto sizeVal = *sizes[n - i];
     if (sizeVal < 0) {
       auto it = sizeVars.find(sizeVal);
-      TORCH_CHECK(it != sizeVars.end());
+      if (it == sizeVars.end()) {
+        throw malformed_input();
+      }
+
       auto const& v = it->second;
       sizeArgs.emplace_back(n - i, v);
       size = v;
@@ -1427,7 +1447,9 @@ void TensorExprKernel::compile() {
 
   // Move output operands from `tensors_` to `tensor_outputs_`
   for (const auto& output : graph_->outputs()) {
-    CHECK(tensors_.count(output->unique())) << "Output must be a tensor";
+    if (!tensors_.count(output->unique())) {
+      throw malformed_input();
+    }
     tensor_outputs_.emplace_back(tensors_.at(output->unique()));
     tensors_.erase(output->unique());
   }
@@ -1494,7 +1516,9 @@ void TensorExprKernel::runKernel(Stack& stack) {
         tensorSize.push_back(it->second);
       } else {
         const IntImm* s = dynamic_cast<const IntImm*>(dim);
-        TORCH_CHECK(s);
+        if (!s) {
+          throw malformed_input(dim);
+        }
         tensorSize.push_back(s->value());
       }
     }

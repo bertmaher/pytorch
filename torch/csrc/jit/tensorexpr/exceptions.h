@@ -41,6 +41,7 @@ class unimplemented_lowering : public std::runtime_error {
 
 class malformed_input : public std::runtime_error {
  public:
+  malformed_input() : std::runtime_error("MALFORMED INPUT") { }
   malformed_input(const Expr* expr)
     : std::runtime_error("MALFORMED INPUT: " + std::to_string(expr)) { }
   malformed_input(const Stmt* stmt)

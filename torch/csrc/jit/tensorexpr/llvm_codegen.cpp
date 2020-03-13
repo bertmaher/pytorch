@@ -182,8 +182,10 @@ static void* argToPtr(
 }
 
 void LLVMCodeGen::call(const std::vector<CallArg>& args) {
-  CHECK_EQ(args.size(), buffer_args().size())
-      << "args: " << args.size() << ", buffers: " << buffer_args().size();
+  if (args.size() != buffer_args().size()) {
+    throw malformed_input();
+  }
+
   std::vector<void*> argv;
   for (size_t i = 0; i < buffer_args().size(); i++) {
     auto const& bufferArg = buffer_args()[i];
@@ -324,8 +326,9 @@ void LLVMCodeGenImpl::emitKernel(
 #if DEBUG_PRINT
   llvm::errs() << *module_;
 #endif
-  CHECK(!llvm::verifyFunction(*fn_, &llvm::outs()))
-      << "Function verification failed";
+  if (!llvm::verifyFunction(*fn_, &llvm::outs())) {
+    throw std::runtime_error("Function verification failed");
+  }
   optimize(*module_);
 
 #if DEBUG_PRINT
@@ -692,7 +695,10 @@ void LLVMCodeGenImpl::visit(const Var* v) {
 
 void LLVMCodeGenImpl::visit(const Let* v) {
   const Var* var = dynamic_cast<const Var*>(v->var());
-  CHECK(var != nullptr);
+  if (!var) {
+    throw malformed_input(v);
+  }
+
   v->value()->accept(this);
   auto value = value_;
   if (!varToVal_.count(var)) {
@@ -711,7 +717,10 @@ void LLVMCodeGenImpl::visit(const Let* v) {
 // TODO: refactor this and merge with Let
 void LLVMCodeGenImpl::visit(const LetStmt* v) {
   const Var* var = v->var();
-  CHECK(var != nullptr);
+  if (!var) {
+    throw malformed_input(v);
+  }
+
   v->value()->accept(this);
   auto value = value_;
   if (!varToVal_.count(var)) {
