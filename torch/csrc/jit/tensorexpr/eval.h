@@ -91,8 +91,7 @@ mod_value(T lhs, T rhs) {
 }
 
 inline bool mod_value(bool lhs, bool rhs) {
-  LOG(FATAL) << "Attempted modulus of bool";
-  return false;
+  throw std::runtime_error("Attempted modulus of bool");
 }
 
 class SimpleIREvaluator : public CodeGen, public IRVisitor {
@@ -587,7 +586,7 @@ class SimpleIREvaluator : public CodeGen, public IRVisitor {
   }
 
   TORCH_API void visit(const BaseCallNode* v) override {
-    LOG(FATAL) << "unsupported visit to BaseCallNode";
+    throw unimplemented_lowering(v);
   }
 
   TORCH_API void visit(const Intrinsics* v) override {

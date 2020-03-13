@@ -77,7 +77,7 @@ ExprHandle TensorExprKernel::constant(const torch::jit::Value* v) {
       // the operator-specific lowering code.
       return IntImm::make(0);
     } else {
-      LOG(FATAL) << "Unhandled constant datatype";
+      throw unsupported_dtype();
     }
   }
   CHECK(scalars_.count(v->unique())) << "Couldn't find scalar value";
@@ -1392,7 +1392,7 @@ void TensorExprKernel::bindInput(const torch::jit::Value* input) {
       break;
     }
     default: {
-      LOG(FATAL) << "Unhandled input type: " << *t;
+      throw unsupported_dtype();
       break;
     }
   }

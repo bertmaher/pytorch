@@ -26,18 +26,27 @@ namespace tensorexpr {
 class unsupported_dtype : public std::runtime_error {
  public:
   unsupported_dtype()
-    : std::runtime_error("UNSUPPORTED_DTYPE") {}
+    : std::runtime_error("UNSUPPORTED DTYPE") {}
   unsupported_dtype(const std::string& err)
-    : std::runtime_error("UNSUPPORTED_DTYPE: " + err) {}
+    : std::runtime_error("UNSUPPORTED DTYPE: " + err) {}
 };
 
 class unimplemented_lowering : public std::runtime_error {
  public:
   unimplemented_lowering(const Expr* expr)
-    : std::runtime_error(std::to_string(expr)) { }
+    : std::runtime_error("UNIMPLEMENTED LOWERING: " + std::to_string(expr)) { }
   unimplemented_lowering(const Stmt* stmt)
-    : std::runtime_error(std::to_string(stmt)) { }
+    : std::runtime_error("UNIMPLEMENTED LOWERING: " + std::to_string(stmt)) { }
 };
+
+class malformed_input : public std::runtime_error {
+ public:
+  malformed_input(const Expr* expr)
+    : std::runtime_error("MALFORMED INPUT: " + std::to_string(expr)) { }
+  malformed_input(const Stmt* stmt)
+    : std::runtime_error("MALFORMED INPUT: " + std::to_string(stmt)) { }
+};
+
 
 } // namespace tensorexpr
 } // namespace jit

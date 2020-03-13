@@ -359,7 +359,7 @@ void LLVMCodeGenImpl::visit(const Add* v) {
   } else if (!lfp && !rfp) {
     value_ = irb_.CreateAdd(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch add arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -377,7 +377,7 @@ void LLVMCodeGenImpl::visit(const Sub* v) {
   } else if (!lfp && !rfp) {
     value_ = irb_.CreateSub(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch sub arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -395,7 +395,7 @@ void LLVMCodeGenImpl::visit(const Mul* v) {
   } else if (!lfp && !rfp) {
     value_ = irb_.CreateMul(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch mul arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -413,7 +413,7 @@ void LLVMCodeGenImpl::visit(const Div* v) {
   } else if (!lfp && !rfp) {
     value_ = irb_.CreateSDiv(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch div arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -428,7 +428,7 @@ void LLVMCodeGenImpl::visit(const And* v) {
   if (!lfp && !rfp) {
     value_ = irb_.CreateAnd(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch And arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -443,7 +443,7 @@ void LLVMCodeGenImpl::visit(const Or* v) {
   if (!lfp && !rfp) {
     value_ = irb_.CreateOr(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch Or arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -458,7 +458,7 @@ void LLVMCodeGenImpl::visit(const Xor* v) {
   if (!lfp && !rfp) {
     value_ = irb_.CreateXor(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch And arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -473,7 +473,7 @@ void LLVMCodeGenImpl::visit(const Lshift* v) {
   if (!lfp && !rfp) {
     value_ = irb_.CreateShl(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch And arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -488,7 +488,7 @@ void LLVMCodeGenImpl::visit(const Rshift* v) {
   if (!lfp && !rfp) {
     value_ = irb_.CreateLShr(lhs, rhs);
   } else {
-    LOG(FATAL) << "Unhandled mismatch And arg types";
+    throw malformed_input(v);
   }
 }
 
@@ -663,7 +663,7 @@ void LLVMCodeGenImpl::visit(const Cast* v) {
         value_ = irb_.CreateFPToSI(value_, dstType);
       }
     } else {
-      LOG(FATAL) << "Unsupported cast!";
+      throw unimplemented_lowering(v);
     }
   } else if (srcType->isIntOrIntVectorTy()) {
     if (dstType->isFPOrFPVectorTy()) {
@@ -675,7 +675,7 @@ void LLVMCodeGenImpl::visit(const Cast* v) {
     } else if (dstType->isIntOrIntVectorTy()) {
       value_ = irb_.CreateIntCast(value_, dstType, !destUnsigned);
     } else {
-      LOG(FATAL) << "Unsupported cast!";
+      throw unimplemented_lowering(v);
     }
   }
 }
