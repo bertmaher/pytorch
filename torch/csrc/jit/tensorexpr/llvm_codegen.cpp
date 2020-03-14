@@ -329,7 +329,7 @@ void LLVMCodeGenImpl::emitKernel(
 #if DEBUG_PRINT
   llvm::errs() << *module_;
 #endif
-  if (!llvm::verifyFunction(*fn_, &llvm::outs())) {
+  if (llvm::verifyFunction(*fn_, &llvm::outs())) {
     throw std::runtime_error("Function verification failed");
   }
   optimize(*module_);
@@ -978,8 +978,6 @@ void LLVMCodeGenImpl::emitMaskedStore(
 }
 
 void LLVMCodeGenImpl::visit(const Store* v) {
-  value_ = llvm::ConstantInt::get(IntTy_, 0);
-
   if (v->value()->dtype().lanes() == 1) {
     v->base_handle()->accept(this);
     auto base = this->value_;
@@ -997,6 +995,8 @@ void LLVMCodeGenImpl::visit(const Store* v) {
 
       emitMaskedStore(base, idx, mask, val);
     }
+
+    value_ = llvm::ConstantInt::get(IntTy_, 0);
     return;
   }
 
@@ -1027,6 +1027,8 @@ void LLVMCodeGenImpl::visit(const Store* v) {
       auto vaddr = irb_.CreateBitOrPointerCast(
           addr, llvm::PointerType::get(val->getType(), 0));
       irb_.CreateAlignedStore(val, vaddr, 4);
+
+      value_ = llvm::ConstantInt::get(IntTy_, 0);
       return;
     }
   }
@@ -1047,6 +1049,8 @@ void LLVMCodeGenImpl::visit(const Store* v) {
       emitMaskedStore(base, sub_idx, sub_mask, sub_val);
     }
   }
+
+  value_ = llvm::ConstantInt::get(IntTy_, 0);
 }
 
 void LLVMCodeGenImpl::visit(const Broadcast* v) {
