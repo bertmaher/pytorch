@@ -615,12 +615,12 @@ void CudaSetContext(CUcontext pctx) {
 void CudaCodeGen::CompileToNVRTC(
     const std::string& code,
     const std::string& func_name) {
+  CUcontext pctx = 0;
+  AT_CUDA_DRIVER_CHECK(nvrtc().cuCtxGetCurrent(&pctx));
   // Note: hacked at::DeviceGuard since at::DeviceGuard was failing to work
   // properly in some scenarios
   const auto prior_device = at::cuda::current_device();
   at::cuda::set_device(this->device().index());
-  CUcontext pctx = 0;
-  AT_CUDA_DRIVER_CHECK(nvrtc().cuCtxGetCurrent(&pctx));
   // cudaSetDevice does not have to really change the underlying device if it
   // doesn't have to, so calling cudaFree to force that change
   CudaSetContext(pctx);
