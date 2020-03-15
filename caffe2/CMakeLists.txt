@@ -61,7 +61,7 @@ if (NOT MSVC)
   ENDIF()
   if (NOT (INTERN_BUILD_MOBILE AND NOT BUILD_CAFFE2_MOBILE))
     set_source_files_properties(
-        utils/threadpool/pthreadpool_new_if_impl.c PROPERTIES COMPILE_FLAGS -fno-openmp) 
+        utils/threadpool/pthreadpool_new_if_impl.c PROPERTIES COMPILE_FLAGS -fno-openmp)
   endif()
 endif()
 
@@ -676,6 +676,15 @@ if (LLVM_FOUND)
     support core analysis executionengine instcombine
     scalaropts transformutils native orcjit)
   target_link_libraries(torch_cpu PRIVATE ${LLVM_LINK_LIBS})
+  if (APPLE)
+    set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/unexported_symbols.lds")
+    set_target_properties(torch_cpu PROPERTIES LINK_DEPENDS ${LINKER_SCRIPT})
+    set_target_properties(torch_cpu PROPERTIES LINK_FLAGS "-Wl,-unexported_symbols_list,${LINKER_SCRIPT}")
+  elseif (UNIX)
+    set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/version_script.lds")
+    set_target_properties(torch_cpu PROPERTIES LINK_DEPENDS ${LINKER_SCRIPT})
+    set_target_properties(torch_cpu PROPERTIES LINK_FLAGS "-Wl,--version-script=${LINKER_SCRIPT}")
+  endif()
 endif (LLVM_FOUND)
 
 # This is required for older versions of CMake, which don't allow
