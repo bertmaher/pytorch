@@ -2,7 +2,6 @@
 
 #include <torch/csrc/jit/jit_log.h>
 #include <torch/csrc/jit/tensorexpr/analysis.h>
-#include <torch/csrc/jit/tensorexpr/constant_folder.h>
 #include <torch/csrc/jit/tensorexpr/ir_printer.h>
 #include <torch/csrc/jit/tensorexpr/ir_simplifier.h>
 #include <torch/csrc/jit/tensorexpr/schedule.h>
