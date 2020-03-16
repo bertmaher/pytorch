@@ -8,6 +8,7 @@
 
 namespace torch {
 namespace jit {
+
 #define TH_FORALL_TESTS(_)       \
   _(ExprBasicValueTest)          \
   _(ExprBasicValueTest02)        \
@@ -99,6 +100,14 @@ namespace jit {
   _(HashEquivalenceAfterFolding) \
   _(HashDifferenceTypes)         \
   _(HashLargeExpression)         \
+  _(SimplifyAdd)                 \
+  _(SimplifySub)                 \
+  _(SimplifyMultiLayer)          \
+  _(SimplifyMultiTerm)           \
+  _(SimplifyCasts)               \
+  _(SimplifyEliminatesNoOps)     \
+  _(SimplifyMultiVar)            \
+  _(SimplifyEliminatesVar)       \
   _(StmtClone)
 
 #define TH_FORALL_TESTS_LLVM(_)    \
