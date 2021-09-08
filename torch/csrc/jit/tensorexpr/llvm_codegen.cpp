@@ -320,6 +320,10 @@ void LLVMCodeGen::call_raw(const std::vector<void*>& args) {
   value<float>(const_cast<void**>(args.data()));
 }
 
+void LLVMCodeGen::call_fast(void* const* args, size_t) {
+  value<float>(const_cast<void**>(args));
+}
+
 void LLVMCodeGen::call(const std::vector<CallArg>& args) {
   auto& buf_args = buffer_args();
   if (args.size() != buf_args.size()) {

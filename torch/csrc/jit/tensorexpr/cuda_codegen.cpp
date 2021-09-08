@@ -1033,6 +1033,26 @@ void CudaCodeGen::Initialize() {
     }
   }
 
+  // is call_fast() allowed? (block/threads constants except block[0])
+  auto block_extents = metavar_rewriter_->gpu_block_extents();
+  auto thread_extents = metavar_rewriter_->gpu_thread_extents();
+  bool call_fast =
+      !has_random_ && block_extents.size() > 0 && thread_extents.size() > 0;
+  for (size_t i = 1; i < block_extents.size() && call_fast; i++) {
+    call_fast = call_fast && block_extents[i]->isConstant() &&
+        immediateAs<int>(block_extents[i]) == 1;
+  }
+  for (size_t i = 1; i < thread_extents.size() && call_fast; i++) {
+    call_fast = call_fast && thread_extents[i]->isConstant() &&
+        immediateAs<int>(thread_extents[i]) == 1;
+  }
+  if (call_fast && thread_extents[0]->isConstant()) {
+    thread_block_size_ = immediateAs<int>(thread_extents[0]);
+    // we assume block_extents[0] is output.numel()/thread_block_size_
+  } else {
+    thread_block_size_ = -1; // disable call_fast()
+  }
+
   GRAPH_DEBUG(
       "Fused TE CUDA kernel:\n",
       oss_.str(),
@@ -1045,6 +1065,54 @@ void CudaCodeGen::Initialize() {
       ")");
 
   CompileToNVRTC(oss_.str(), func_name);
+}
+
+void CudaCodeGen::call_fast(void* const* raw_args, size_t output_num_elements) {
+  if (C10_UNLIKELY(output_num_elements == 0))
+    return;
+  if (C10_UNLIKELY(thread_block_size_ <= 0))
+    throw std::runtime_error("call_fast() not supported for this function");
+
+  auto const& buffer_args = this->buffer_args();
+  size_t gpu_block_extents =
+      (output_num_elements + thread_block_size_ - 1) / thread_block_size_;
+  size_t gpu_thread_extents = thread_block_size_;
+
+  // In CUDA we need to pass pointers to pointers for buffers, thus we need to
+  // go over raw_args and add an extra indirection for such non-scalar
+  // arguments.
+  // Why? See some details here:
+  // https://stackoverflow.com/questions/34388712/cannot-understand-how-jcuda-culaunchkernel-work
+  std::vector<void*> ptr_to_args(buffer_args.size());
+  for (size_t i = 0; i < buffer_args.size(); i++) {
+    ptr_to_args[i] =
+        // NOLINTNEXTLINE: const_cast
+        buffer_args[i].isVar() ? raw_args[i] : const_cast<void**>(&raw_args[i]);
+  }
+
+  const auto device = this->device().index();
+  const auto prior_device = at::cuda::current_device();
+  if (prior_device != device) {
+    at::cuda::set_device(device);
+  }
+
+  auto stream = at::cuda::getCurrentCUDAStream();
+  AT_CUDA_DRIVER_CHECK(nvrtc().cuLaunchKernel(
+      function_,
+      gpu_block_extents,
+      1,
+      1,
+      gpu_thread_extents,
+      1,
+      1,
+      0,
+      stream,
+      ptr_to_args.data(),
+      nullptr));
+
+  if (prior_device != device) {
+    at::cuda::set_device(prior_device);
+  }
 }
 
 void CudaCodeGen::call_raw(const std::vector<void*>& raw_args) {
