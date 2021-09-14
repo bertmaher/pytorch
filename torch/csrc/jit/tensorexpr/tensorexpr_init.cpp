@@ -50,7 +50,7 @@ ArgValue convertPyToArgValue(py::handle inp) {
 }
 
 Dtype parsePythonDtype(py::handle obj) {
-  if (py::isinstance(obj, py::module_::import("torch").attr("dtype"))) {
+  if (THPDtype_Check(obj.ptr())) {
     return Dtype(reinterpret_cast<THPDtype*>(obj.ptr())->scalar_type);
   } else {
     throw std::runtime_error("expected a torch.dtype instance");
@@ -163,9 +163,21 @@ void initTensorExprBindings(PyObject* module) {
           [](BufHandle& self, const std::vector<ExprHandle>& v) {
             return Load::make(self, v);
           })
-      .def("load", [](BufHandle& self, const ExprHandle& v) {
-        return Load::make(self, {v});
-      });
+      .def(
+          "load",
+          [](BufHandle& self, const ExprHandle& v) {
+            return Load::make(self, {v});
+          })
+      .def(
+          "store",
+          [](BufHandle& self,
+             const std::vector<ExprHandle>& i,
+             const ExprHandle& v) { return Store::make(self, i, v); })
+      .def(
+          "store",
+          [](BufHandle& self, const ExprHandle& i, const ExprHandle& v) {
+            return Store::make(self, {i}, v);
+          });
 
   py::class_<Placeholder>(te, "Placeholder")
       .def(py::init<
