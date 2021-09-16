@@ -5,7 +5,7 @@ import torch._C._te as te
 
 import torch
 from torch import fx
-from torch.jit.te import pointwise_operator
+from torch.jit._te import pointwise_operator
 from torch.testing._internal.common_utils import run_tests
 from torch.testing._internal.jit_utils import JitTestCase
 

@@ -1,3 +1,4 @@
+"""Explicit fusion interface"""
 import copy
 import functools
 import inspect
@@ -15,7 +16,7 @@ _int = _te.ExprHandle.int
 
 
 def _argmax(x):
-    return int(torch.argmax(torch.LongTensor(x, device='cpu')))
+    return int(torch.argmax(torch.LongTensor(x, device="cpu")))
 
 
 def _zero():
@@ -31,16 +32,25 @@ def _num_args(fn: Callable):
 
 
 def _combine_dtype(a: torch.dtype, b: torch.dtype):
+    """Compute the common dtype of a and b"""
     if a == b:
         return a
     # TODO(jansel): find a cleaner way to implement this
-    return (torch.zeros(1, dtype=a, device="cpu") +
-            torch.zeros(1, dtype=b, device="cpu")).dtype
+    return (
+        torch.zeros(1, dtype=a, device="cpu") + torch.zeros(1, dtype=b, device="cpu")
+    ).dtype
+
+
+def _create_constant(value: Union[int, float], dtype: torch.dtype):
+    """Create a TensorExpr constant from value with the given dtype."""
+    return _te.Cast.make(
+        dtype,
+        {int: _te.ExprHandle.int, float: _te.ExprHandle.double}[type(value)](value),
+    )
 
 
 def _fx_replace_constants(fn: Callable, dtype: torch.dtype):
     """Convert the constants in the user function to TensorExpr constants"""
-
     def apply(arg):
         if isinstance(arg, (int, float)):
             return gm.graph.create_node("call_function", _create_constant, (arg, dtype))
@@ -54,16 +64,16 @@ def _fx_replace_constants(fn: Callable, dtype: torch.dtype):
     return gm
 
 
-def _create_constant(value: Union[int, float], dtype: torch.dtype):
-    return _te.Cast.make(dtype, {
-        int: _te.ExprHandle.int,
-        float: _te.ExprHandle.double
-    }[type(value)](value))
-
-
 class PointwiseCompiler(object):
-    def __init__(self, name: str, module_name: str, pointwise_fn: Callable,
-                 spec: List, result: _te.CompileResult):
+    """Compile the given pointwise_fn according to the list of tensor argument specs."""
+    def __init__(
+        self,
+        name: str,
+        module_name: str,
+        pointwise_fn: Callable,
+        spec: List,
+        result: _te.CompileResult,
+    ):
         self.name = name
         self.module_name = module_name
         self.pointwise_fn = pointwise_fn
@@ -82,15 +92,14 @@ class PointwiseCompiler(object):
         self.broadcasts: List[Tuple[int, int]] = []
         self.output_order: List[int] = []
 
-        self.device, = list(set(x.device.type for x in spec))
+        (self.device,) = list(set(x.device.type for x in spec))
         # TODO(jansel): support meta tensors
         self.compile_mode = {"cpu": "llvm", "cuda": "cuda"}[self.device]
 
         if spec[-1].out:
             self.dtype = spec[-1].dtype
         else:
-            self.dtype = functools.reduce(
-                _combine_dtype, [x.dtype for x in spec])
+            self.dtype = functools.reduce(_combine_dtype, [x.dtype for x in spec])
 
         self.run()
 
@@ -110,11 +119,16 @@ class PointwiseCompiler(object):
 
     def error_checks(self):
         spec = self.spec
-        layout, = list(set(x.layout for x in spec))
+        (layout,) = list(set(x.layout for x in spec))
         assert layout == torch.strided, "TODO: support other layouts"
         assert [x.out for x in spec[:-1]] == [False] * (len(spec) - 1)
-        assert all(shape_type in _SHAPE_TYPES for shape_type in itertools.chain(*self.shapes))
-        assert all(stride_type in _STRIDE_TYPES for stride_type in itertools.chain(*self.strides))
+        assert all(
+            shape_type in _SHAPE_TYPES for shape_type in itertools.chain(*self.shapes)
+        )
+        assert all(
+            stride_type in _STRIDE_TYPES
+            for stride_type in itertools.chain(*self.strides)
+        )
 
     def make_backwards(self, index: int):
         """
@@ -122,17 +136,24 @@ class PointwiseCompiler(object):
         """
         # TODO(jansel): implement this without sympy
         from sympy import symbols, diff  # type: ignore[import]
+
         vars = symbols([f"v{i}" for i in range(1 + _num_args(self.pointwise_fn))])
-        backwards_expr = diff(self.pointwise_fn(*vars[:-1]), vars[index]) * vars[-1]  # chain rule
-        return _source_to_pointwise_operator(f"lambda {','.join(map(str, vars))}: {backwards_expr}",
-                                             name=f"{self.name}.backwards{index}",
-                                             module_name=self.module_name)
+        backwards_expr = (
+            diff(self.pointwise_fn(*vars[:-1]), vars[index]) * vars[-1]
+        )  # chain rule
+        return _source_to_pointwise_operator(
+            f"lambda {','.join(map(str, vars))}: {backwards_expr}",
+            name=f"{self.name}.backwards{index}",
+            module_name=self.module_name,
+        )
 
     def handle_autograd(self):
         cnt = sum(int(x.requires_grad) for x in self.spec)
         if cnt == 0:
             return
-        assert all(x.alias_group == 0 for x in self.spec), "TODO: support aliased backwards"
+        assert all(
+            x.alias_group == 0 for x in self.spec
+        ), "TODO: support aliased backwards"
 
         for i, spec in enumerate(self.spec):
             if spec.requires_grad:
@@ -140,7 +161,9 @@ class PointwiseCompiler(object):
                 assert spec.out == 0, "TODO: support autograd on out= ?"
                 for d in range(self.ndim):
                     shape_types = {shape[d] for shape in self.shapes}
-                    assert len(shape_types) == 1, "TODO: support backwards for broadcasting"
+                    assert (
+                        len(shape_types) == 1
+                    ), "TODO: support backwards for broadcasting"
                 self.result.set_backwards(i, self.make_backwards(i))
 
     def compute_broadcasts_and_size_checks(self):
@@ -159,9 +182,9 @@ class PointwiseCompiler(object):
                     if first is None:
                         shape_from[d] = first = (a, d - (ndim - spec[a].ndim))
                     else:
-                        self.result.add_shape_check((
-                            first[0], first[1],
-                            a, d - (ndim - spec[a].ndim)))
+                        self.result.add_shape_check(
+                            (first[0], first[1], a, d - (ndim - spec[a].ndim))
+                        )
 
             if all(shapes[a][d] == "one" for a in range(nargs)):
                 self.shape_vars[d] = _one()
@@ -213,11 +236,18 @@ class PointwiseCompiler(object):
             # next the dependent ones
             while any(isinstance(x, str) for x in strides[a]):
                 for d in reversed(range(ndim)):
-                    self.replace_stride(a, d, "contiguous", lambda: strides[a][d + 1] * shapes[a][d + 1])
+                    self.replace_stride(
+                        a, d, "contiguous", lambda: strides[a][d + 1] * shapes[a][d + 1]
+                    )
                     if isinstance(strides[a][d], str):
                         break
                 for d in range(ndim):
-                    self.replace_stride(a, d, "transposed_contiguous", lambda: strides[a][d - 1] * shapes[a][d - 1])
+                    self.replace_stride(
+                        a,
+                        d,
+                        "transposed_contiguous",
+                        lambda: strides[a][d - 1] * shapes[a][d - 1],
+                    )
                     if isinstance(strides[a][d], str):
                         break
 
@@ -235,8 +265,9 @@ class PointwiseCompiler(object):
     def compute_code(self):
         bufs = [_te.BufHandle(s.dtype) for s in self.spec]
         if not self.spec[-1].out:
-            options_from = [i for i in range(len(self.spec))
-                            if self.spec[i].dtype == self.dtype][0]
+            options_from = [
+                i for i in range(len(self.spec)) if self.spec[i].dtype == self.dtype
+            ][0]
             self.result.add_allocated_output(options_from, self.output_order)
             bufs.append(_te.BufHandle(self.dtype))
 
@@ -265,12 +296,17 @@ class PointwiseCompiler(object):
         output_bufs = bufs[-1:]
         output_strides = self.strides[-1:]
 
-        inputs = [_te.Cast.make(self.dtype,
-                                buf.load(self.indexing(stride)))
-                  for buf, stride in zip(input_bufs, input_strides)]
+        inputs = [
+            _te.Cast.make(self.dtype, buf.load(self.indexing(stride)))
+            for buf, stride in zip(input_bufs, input_strides)
+        ]
         val = _fx_replace_constants(self.pointwise_fn, self.dtype)(*inputs)
-        out = _te.Block([buf.store(self.indexing(stride), val)
-                         for buf, stride in zip(output_bufs, output_strides)])
+        out = _te.Block(
+            [
+                buf.store(self.indexing(stride), val)
+                for buf, stride in zip(output_bufs, output_strides)
+            ]
+        )
 
         loops: List[_te.For] = []
         for i in self.output_order:
@@ -295,7 +331,8 @@ class PointwiseCompiler(object):
         cg = _te.construct_codegen(
             self.compile_mode,
             loopnest.simplify(),
-            bufs_args + self.stride_args + self.shape_args)
+            bufs_args + self.stride_args + self.shape_args,
+        )
         self.result.set_code(cg)
 
     def run(self):
@@ -312,15 +349,24 @@ class _CompileCache(_te.CompileCache):
 
 
 @functools.lru_cache(None)
-def _source_to_pointwise_operator(fn_str: str, name: Optional[str] = None, module_name: Optional[str] = None):
-    """ Used when creating backwards() methods """
+def _source_to_pointwise_operator(
+    fn_str: str, name: Optional[str] = None, module_name: Optional[str] = None
+):
+    """Used when creating backwards() methods"""
     return pointwise_operator(eval(fn_str), name=name, module_name=module_name)
 
 
-def pointwise_operator(fn: Callable, name: Optional[str] = None, module_name: Optional[str] = None):
+class CompileCache(_te.CompileCache):
+    pass
+
+
+def pointwise_operator(
+    fn: Callable, name: Optional[str] = None, module_name: Optional[str] = None
+):
     """
-    Decorator to create a new pointwise operator.  The operator will be
-    JIT compiled for different dtypes/devices/layouts/etc -- but supports dynamic shapes.
+    Decorator to create a new fused pointwise operator.  The operator will be
+    JIT compiled for different dtypes/devices/layouts/etc, but supports dynamic
+    shapes.
 
         @pointwise_operator
         def add(a, b):
@@ -335,7 +381,7 @@ def pointwise_operator(fn: Callable, name: Optional[str] = None, module_name: Op
         return PointwiseCompiler(str(name), str(module_name), fn, spec, result)
 
     # This items are needed to support FX tracing
-    rv = _CompileCache(name, module_name, [signature], compile_fn, _num_args(fn))
+    rv = CompileCache(name, module_name, [signature], compile_fn, _num_args(fn))
     rv.__name__ = name
     rv.__qualname__ = name
     rv.__module__ = module_name

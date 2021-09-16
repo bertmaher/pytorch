@@ -2,7 +2,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import timeit
-import torch.jit.te
+import torch.jit._te
 
 WRITE_CSV = False
 CUDA = False
@@ -11,12 +11,12 @@ NUMBER = [100, 10, 1, 1]
 REPEAT = 20
 
 
-@torch.jit.te.pointwise_operator
+@torch.jit._te.pointwise_operator
 def nnc_add(a, b):
     return a + b
 
 
-@torch.jit.te.pointwise_operator
+@torch.jit._te.pointwise_operator
 def nnc_addnorm(a, b, mean, std):
     return (a + b - mean) / std
 
