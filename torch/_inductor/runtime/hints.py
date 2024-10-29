@@ -52,6 +52,7 @@ if _is_triton_available():
             }
 
             # Instantiate AttrsDescriptor with the prepared arguments
+            #res = AttrsDescriptor.from_dict(kwargs)
             res = AttrsDescriptor.from_dict(
                 {"arg_properties": kwargs, "cls": AttrsDescriptor.__name__}
             )
